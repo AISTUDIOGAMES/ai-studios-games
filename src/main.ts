@@ -1,12 +1,11 @@
 import "./style.css";
 import { GAMES, STATUS_LABEL, safeUrl, type Game } from "./games";
+import { NFTS } from "./nfts";
 
-const logo = `
-<svg class="brand-mark" viewBox="0 0 52 52" aria-hidden="true">
-  <path d="M26 3 46 14.5V37.5L26 49 6 37.5V14.5Z" fill="none" stroke="currentColor" stroke-width="2"/>
-  <path d="M14 33 25.5 12 38 33M19 25h14M17 37h18" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="square"/>
-  <circle cx="26" cy="26" r="3" fill="#b6ff3b"/>
-</svg>`;
+/** Images live in /public/images and respect the Vite base path. */
+const img = (file: string) => `${import.meta.env.BASE_URL}images/${file}`;
+
+const logo = `<img class="brand-mark" src="${img("logo-badge.webp")}" alt="" width="64" height="64" decoding="async" />`;
 
 
 const runnerArt = `
@@ -78,7 +77,7 @@ document.querySelector<HTMLDivElement>("#app")!.innerHTML = `
         <span class="brand-type">AI STUDIOS <b>GAMES</b><small>PLAY BEYOND THE GRID</small></span>
       </a>
       <nav class="nav-links" aria-label="Main navigation">
-        <a href="#games">GAMES</a><a href="#about">THE STUDIO</a><a href="#roadmap">ROADMAP</a>
+        <a href="#games">GAMES</a><a href="#nfts">NFTS</a><a href="#about">THE STUDIO</a><a href="#roadmap">ROADMAP</a>
       </nav>
       <button class="wallet-btn" id="walletBtn"><span class="wallet-dot"></span><span id="walletLabel">CONNECT WALLET</span></button>
       <button class="menu-toggle" id="menuToggle" aria-label="Toggle navigation">☰</button>
@@ -102,11 +101,9 @@ document.querySelector<HTMLDivElement>("#app")!.innerHTML = `
           </div>
         </div>
         <div class="hero-art" aria-label="Cyberpunk neon city artwork">
-          <div class="art-scan"></div><div class="art-sun"></div>
-          <div class="city city-back"><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
-          <div class="city city-front"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
-          <div class="road"></div><div class="road-lines"></div>
-          <div class="art-label"><span>SECTOR 01 / NIGHT CITY</span><b>THE FUTURE IS PLAYABLE</b></div>
+          <img class="hero-img" src="${img("hero-banner.webp")}" alt="AI Studios Games — Vex, Kira and Titan standing in a neon cyber-city" fetchpriority="high" decoding="async" />
+          <div class="art-scan"></div>
+          
           <div class="art-coordinate">34°03' N<br/>118°15' W</div>
           <div class="art-corner corner-a"></div><div class="art-corner corner-b"></div>
         </div>
@@ -118,12 +115,24 @@ document.querySelector<HTMLDivElement>("#app")!.innerHTML = `
         <div class="games-list" id="gamesList"></div>
       </section>
 
+      <section class="nft-section" id="nfts">
+        <div class="nft-bg" style="background-image:url(${img("banner-glow.webp")})"></div>
+        <div class="section-heading"><div><div class="eyebrow"><span class="eyebrow-line"></span> THE CREW</div><h2>MEET THE <span>OPERATORS</span></h2></div><div class="section-note">THREE CLASSES.<br/>ONE GRID.</div></div>
+        <div class="nft-grid">
+          ${NFTS.map((n) => `<article class="nft-card" id="nft-${esc(n.id)}">
+            <div class="nft-frame"><img src="${img(n.image)}" alt="${esc(n.alt)}" loading="lazy" decoding="async" width="620" height="871" /></div>
+            <div class="nft-info"><div><div class="game-kicker">${esc(n.kicker)}</div><h3>${esc(n.name)}</h3><small>${esc(n.role)}</small></div><span class="nft-price">${esc(n.price)}</span></div>
+          </article>`).join("")}
+        </div>
+        <p class="nft-note">CONCEPT ART // PREVIEW ONLY // MINTING IS NOT LIVE</p>
+      </section>
+
       <section class="play-section" id="play">
         <div class="play-header"><div><div class="eyebrow"><span class="eyebrow-line"></span> LIVE TEST // LOCAL BUILD</div><h2>NEON <span>RUNNER</span></h2></div><button class="restart-btn" id="restartGame">↻ RESTART</button></div>
         <div class="game-window"><div class="game-hud"><span><i class="hud-dot"></i> SYSTEM ONLINE</span><span>SCORE <b id="score">0000</b></span><span>BEST <b id="best">0000</b></span></div><canvas id="gameCanvas" width="960" height="360" aria-label="Neon Runner platform game"></canvas><div class="game-controls"><span><kbd>←</kbd> <kbd>→</kbd> MOVE</span><span><kbd>SPACE</kbd> JUMP</span><span class="controls-note">CLICK THE GAME TO FOCUS, THEN PLAY</span></div></div>
       </section>
 
-      <section class="manifesto" id="about"><div class="manifesto-mark">${logo}</div><div><div class="eyebrow"><span class="eyebrow-line"></span> OUR DIRECTIVE</div><h2>GAMES FIRST.<br/><span>LIMITS LAST.</span></h2><p>AI Studios Games is an independent playground for strange ideas, fast experiments, and browser-native worlds. We believe Web3 should add something meaningful to the game — never get in the way of playing it.</p></div><div class="manifesto-stamp">BUILT<br/>FOR THE<br/><b>NEXT LEVEL</b></div></section>
+      <section class="manifesto" id="about"><div class="manifesto-mark">${logo}</div><div><div class="eyebrow"><span class="eyebrow-line"></span> OUR DIRECTIVE</div><h2>GAMES FIRST.<br/><span>LIMITS LAST.</span></h2><p>AI Studios Games is an independent playground for strange ideas, fast experiments, and browser-native worlds. We believe Web3 should add something meaningful to the game — never get in the way of playing it.</p></div><figure class="manifesto-coin"><img src="${img("coin.webp")}" alt="AI Studios Games bronze emblem coin" loading="lazy" decoding="async" width="170" height="170" /><figcaption>BUILT FOR THE<br/><b>NEXT LEVEL</b></figcaption></figure></div></section>
 
       <section class="roadmap-section" id="roadmap"><div class="section-heading"><div><div class="eyebrow"><span class="eyebrow-line"></span> THE MISSION LOG</div><h2>FROM PIXELS <span>TO PROTOCOL</span></h2></div><div class="section-note">A WORK IN PROGRESS.<br/>A WORLD IN MOTION.</div></div><div class="roadmap">
         <div class="roadmap-item active"><span class="roadmap-num">01</span><div><span class="roadmap-state">IN PROGRESS</span><h3>THE ARCADE</h3><p>Brand, website, first playable prototype, and Slither.Idle linked as an experiment.</p></div><span class="roadmap-icon">↗</span></div>

@@ -16,3 +16,31 @@
 /* --- Accessibility --- */
 a:focus-visible,button:focus-visible,canvas:focus-visible{outline:2px solid var(--green);outline-offset:3px}
 @media(prefers-reduced-motion:reduce){html{scroll-behavior:auto}*{transition:none!important}}
+
+/* ===== Image integration: logo badge, hero banner, NFT cards, coin ===== */
+img.brand-mark{border-radius:50%;object-fit:cover;background:#141a2b;filter:none;box-shadow:0 0 0 1.5px #b6ff3b66,0 0 14px #8a72ff40}
+.hero-img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:50% 42%;z-index:0}
+.hero-art:before{content:"";position:absolute;inset:0;z-index:2;pointer-events:none;background:linear-gradient(90deg,#090b10d0 0,transparent 32%),linear-gradient(0deg,#090b1099 0,transparent 20%)}
+
+.nft-section{position:relative;padding:90px 5.4% 80px;border-top:1px solid var(--line);isolation:isolate;overflow:hidden}
+.nft-bg{position:absolute;inset:0;z-index:-1;background-size:cover;background-position:center;opacity:.3}
+.nft-bg:after{content:"";position:absolute;inset:0;background:linear-gradient(180deg,#090b10 0,#090b1000 28%,#090b1000 68%,#090b10 100%)}
+.nft-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:28px;max-width:1080px;margin:0 auto}
+.nft-card{background:#10131bf0;border:1px solid #2b303b;padding:14px;transition:transform .25s,border-color .25s,box-shadow .25s}
+.nft-card:hover{transform:translateY(-6px);border-color:var(--purple);box-shadow:0 16px 44px #8a72ff26}
+.nft-frame{aspect-ratio:677/951;border-radius:14px;overflow:hidden;background:#0b0e16}
+.nft-frame img{display:block;width:100%;height:100%;object-fit:cover}
+.nft-info{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:16px 4px 4px}
+.nft-info h3{font:800 24px 'Barlow Condensed',sans-serif;letter-spacing:1.2px;margin:6px 0 0}
+.nft-info small{display:block;font-size:8px;letter-spacing:1px;color:#858a98;margin-top:6px}
+.nft-price{font:700 11px 'Space Mono',monospace;color:var(--green);border:1px solid #4a6b1d;padding:7px 9px;white-space:nowrap}
+.nft-note{text-align:center;font-size:8px;letter-spacing:1.2px;color:#737987;margin:34px 0 0}
+
+.manifesto-coin{margin:0;position:relative;z-index:1;text-align:center}
+.manifesto-coin img{display:block;width:170px;height:170px;object-fit:cover;border-radius:50%;border:1px solid #51477f;box-shadow:0 0 34px #8a72ff30;transform:rotate(-4deg);margin:0 auto}
+.manifesto-coin figcaption{margin-top:14px;color:#9b8cff;font:700 12px/1.4 'Barlow Condensed',sans-serif;letter-spacing:1px}
+.manifesto-coin figcaption b{color:var(--green)}
+
+@media(max-width:950px){.nft-grid{gap:14px}.nft-info{flex-direction:column;align-items:flex-start}.manifesto-coin img{width:130px;height:130px}}
+@media(max-width:700px){.nft-section{padding:64px 6% 56px}.nft-grid{grid-template-columns:1fr;max-width:340px}.nft-info{flex-direction:row;align-items:center}.manifesto-coin img{width:120px;height:120px}}
+@media(max-width:700px){.hero{padding-bottom:300px}.hero-art{opacity:1}.hero-img{object-position:50% 50%}}
