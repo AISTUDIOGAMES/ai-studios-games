@@ -18,7 +18,7 @@ export const STATUS_LABEL: Record<GameStatus, string> = {
   experiment: "EXPERIMENT",
   prototype: "PROTOTYPE",
   live: "LIVE",
-  SLITHER_IDLE_URL = https://mburns2026.github.io/solana-slither-idle/index.html "";
+  soon: "COMING SOON",
 };
 
 /**
@@ -26,7 +26,7 @@ export const STATUS_LABEL: Record<GameStatus, string> = {
  * for example "https://slitheridle.example.com".
  * While it is empty, the card shows "LINK COMING SOON" instead of a play button.
  */
-export const SLITHER_IDLE_URL = https://mburns2026.github.io/solana-slither-idle/index.html "";
+export const SLITHER_IDLE_URL = "https://mburns2026.github.io/solana-slither-idle/index.html";
 
 /**
  * Every game on the platform is one entry in this list.
