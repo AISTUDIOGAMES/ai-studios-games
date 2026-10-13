@@ -1,4 +1,5 @@
 import "./style.css";
+import { GAMES, STATUS_LABEL, safeUrl, type Game } from "./games";
 
 const logo = `
 <svg class="brand-mark" viewBox="0 0 52 52" aria-hidden="true">
@@ -6,6 +7,67 @@ const logo = `
   <path d="M14 33 25.5 12 38 33M19 25h14M17 37h18" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="square"/>
   <circle cx="26" cy="26" r="3" fill="#b6ff3b"/>
 </svg>`;
+
+
+const runnerArt = `
+  <div class="game-art">
+    <div class="game-sky"></div><div class="moon"></div><div class="game-city"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
+    <div class="platform p1"></div><div class="platform p2"></div><div class="platform p3"></div>
+    <div class="player-sprite"><span></span></div><div class="game-art-tag">EARLY ACCESS // BUILD 0.1</div>
+    <div class="game-art-title">NEON<br/><b>RUNNER</b></div>
+  </div>`;
+
+const slitherArt = `
+  <div class="game-art slither-art">
+    <div class="game-sky"></div>
+    <svg class="slither-svg" viewBox="0 0 400 300" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
+      <defs><linearGradient id="slitherGrad" x1="0" x2="1" y1="0" y2="0"><stop offset="0" stop-color="#8a72ff"/><stop offset="1" stop-color="#b6ff3b"/></linearGradient></defs>
+      <path d="M-10 232 C60 232 70 120 140 130 S225 242 292 196 S330 104 352 100" fill="none" stroke="url(#slitherGrad)" stroke-width="18" stroke-linecap="round"/>
+      <circle cx="352" cy="100" r="12" fill="#b6ff3b"/><circle cx="356" cy="95" r="3" fill="#10131b"/><circle cx="356" cy="106" r="3" fill="#10131b"/>
+      <circle cx="96" cy="64" r="5" fill="#ff4fd8"/><circle cx="210" cy="82" r="5" fill="#b6ff3b"/><circle cx="250" cy="268" r="5" fill="#ff4fd8"/><circle cx="48" cy="150" r="4" fill="#b6ff3b"/><circle cx="330" cy="220" r="4" fill="#ff4fd8"/>
+    </svg>
+    <div class="game-art-tag">EXPERIMENT // TEST BUILD</div>
+    <div class="game-art-title">SLITHER<br/><b>.IDLE</b></div>
+  </div>`;
+
+function artFor(game: Game): string {
+  return game.id === "slither-idle" ? slitherArt : runnerArt;
+}
+
+function esc(value: string): string {
+  return value.replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c] as string);
+}
+
+function actionFor(game: Game): string {
+  if (game.kind === "local") {
+    return `<button class="button button-primary launch-btn" id="launchGame">LAUNCH PROTOTYPE <span>↗</span></button>`;
+  }
+  const href = safeUrl(game.url);
+  if (!href) {
+    return `<span class="button button-ghost launch-btn is-disabled" role="link" aria-disabled="true">LINK COMING SOON</span>`;
+  }
+  return `<a class="button button-primary launch-btn" href="${esc(href)}" target="_blank" rel="noopener noreferrer">PLAY ${esc(game.title)} <span>↗</span></a>`;
+}
+
+function renderGames(): void {
+  const list = document.querySelector<HTMLDivElement>("#gamesList");
+  if (!list) return;
+  list.innerHTML = GAMES.map(
+    (game) => `
+    <article class="game-card" id="game-${esc(game.id)}">
+      ${artFor(game)}
+      <div class="game-info">
+        <div class="game-info-top">
+          <div><div class="game-kicker">${esc(game.kicker)}</div><h3>${esc(game.title)}</h3></div>
+          <span class="status-pill is-${game.status}"><i></i> ${STATUS_LABEL[game.status]}</span>
+        </div>
+        <p>${esc(game.summary)}</p>
+        <div class="game-meta">${game.meta.map((m) => `<span>${esc(m)}</span>`).join("")}</div>
+        ${actionFor(game)}
+      </div>
+    </article>`
+  ).join("");
+}
 
 document.querySelector<HTMLDivElement>("#app")!.innerHTML = `
   <div class="site-shell">
@@ -34,7 +96,7 @@ document.querySelector<HTMLDivElement>("#app")!.innerHTML = `
             <a class="button button-ghost" href="#about"><span class="play-icon">▶</span> MEET THE STUDIO</a>
           </div>
           <div class="hero-stats">
-            <div><strong>01</strong><span>GAME IN DEVELOPMENT</span></div>
+            <div><strong>${String(GAMES.length).padStart(2, "0")}</strong><span>GAMES IN THE ARCADE</span></div>
             <i></i><div><strong>∞</strong><span>WORLDS TO EXPLORE</span></div>
             <i></i><div><strong class="green">◎</strong><span>SOLANA-READY VISION</span></div>
           </div>
@@ -53,30 +115,18 @@ document.querySelector<HTMLDivElement>("#app")!.innerHTML = `
 
       <section class="section games-section" id="games">
         <div class="section-heading"><div><div class="eyebrow"><span class="eyebrow-line"></span> THE ARCADE</div><h2>ENTER THE <span>PLAYGROUND</span></h2></div><div class="section-note">SMALL WORLDS.<br/>BIG ENERGY.</div></div>
-        <article class="game-card">
-          <div class="game-art">
-            <div class="game-sky"></div><div class="moon"></div><div class="game-city"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
-            <div class="platform p1"></div><div class="platform p2"></div><div class="platform p3"></div>
-            <div class="player-sprite"><span></span></div><div class="game-art-tag">EARLY ACCESS // BUILD 0.1</div>
-            <div class="game-art-title">NEON<br/><b>RUNNER</b></div>
-          </div>
-          <div class="game-info"><div class="game-info-top"><div><div class="game-kicker">01 / PLATFORMER</div><h3>NEON RUNNER</h3></div><span class="status-pill"><i></i> PROTOTYPE</span></div>
-            <p>Dash across a fractured cyber-city. Jump the gaps, chase your high score, and see how far you can go.</p>
-            <div class="game-meta"><span>⌁ SINGLE PLAYER</span><span>◈ BROWSER GAME</span><span>◎ WEB3 LATER</span></div>
-            <button class="button button-primary launch-btn" id="launchGame">LAUNCH PROTOTYPE <span>↗</span></button>
-          </div>
-        </article>
+        <div class="games-list" id="gamesList"></div>
       </section>
 
       <section class="play-section" id="play">
         <div class="play-header"><div><div class="eyebrow"><span class="eyebrow-line"></span> LIVE TEST // LOCAL BUILD</div><h2>NEON <span>RUNNER</span></h2></div><button class="restart-btn" id="restartGame">↻ RESTART</button></div>
-        <div class="game-window"><div class="game-hud"><span><i class="hud-dot"></i> SYSTEM ONLINE</span><span>SCORE <b id="score">0000</b></span><span>BEST <b id="best">0000</b></span></div><canvas id="gameCanvas" width="960" height="360" aria-label="Neon Runner platform game"></canvas><div class="game-controls"><span><kbd>←</kbd> <kbd>→</kbd> MOVE</span><span><kbd>SPACE</kbd> JUMP</span><span class="controls-note">TIP: KEEP MOVING TO BUILD YOUR SCORE</span></div></div>
+        <div class="game-window"><div class="game-hud"><span><i class="hud-dot"></i> SYSTEM ONLINE</span><span>SCORE <b id="score">0000</b></span><span>BEST <b id="best">0000</b></span></div><canvas id="gameCanvas" width="960" height="360" aria-label="Neon Runner platform game"></canvas><div class="game-controls"><span><kbd>←</kbd> <kbd>→</kbd> MOVE</span><span><kbd>SPACE</kbd> JUMP</span><span class="controls-note">CLICK THE GAME TO FOCUS, THEN PLAY</span></div></div>
       </section>
 
       <section class="manifesto" id="about"><div class="manifesto-mark">${logo}</div><div><div class="eyebrow"><span class="eyebrow-line"></span> OUR DIRECTIVE</div><h2>GAMES FIRST.<br/><span>LIMITS LAST.</span></h2><p>AI Studios Games is an independent playground for strange ideas, fast experiments, and browser-native worlds. We believe Web3 should add something meaningful to the game — never get in the way of playing it.</p></div><div class="manifesto-stamp">BUILT<br/>FOR THE<br/><b>NEXT LEVEL</b></div></section>
 
       <section class="roadmap-section" id="roadmap"><div class="section-heading"><div><div class="eyebrow"><span class="eyebrow-line"></span> THE MISSION LOG</div><h2>FROM PIXELS <span>TO PROTOCOL</span></h2></div><div class="section-note">A WORK IN PROGRESS.<br/>A WORLD IN MOTION.</div></div><div class="roadmap">
-        <div class="roadmap-item active"><span class="roadmap-num">01</span><div><span class="roadmap-state">IN PROGRESS</span><h3>THE ARCADE</h3><p>Brand, website, first playable browser prototype.</p></div><span class="roadmap-icon">↗</span></div>
+        <div class="roadmap-item active"><span class="roadmap-num">01</span><div><span class="roadmap-state">IN PROGRESS</span><h3>THE ARCADE</h3><p>Brand, website, first playable prototype, and Slither.Idle linked as an experiment.</p></div><span class="roadmap-icon">↗</span></div>
         <div class="roadmap-item"><span class="roadmap-num">02</span><div><span class="roadmap-state">UP NEXT</span><h3>WALLET CONNECT</h3><p>Optional Solana wallet connection and Devnet experiments.</p></div><span class="roadmap-icon">◎</span></div>
         <div class="roadmap-item"><span class="roadmap-num">03</span><div><span class="roadmap-state">ON THE HORIZON</span><h3>ON-CHAIN WORLDS</h3><p>Explore meaningful ownership, achievements, and game integrations.</p></div><span class="roadmap-icon">◇</span></div>
       </div></section>
@@ -85,6 +135,8 @@ document.querySelector<HTMLDivElement>("#app")!.innerHTML = `
     <div class="toast" id="toast" role="status" aria-live="polite"></div>
   </div>
 `;
+
+renderGames();
 
 const toast = document.querySelector<HTMLDivElement>("#toast")!;
 let toastTimer: number | undefined;
@@ -174,7 +226,14 @@ class RunnerGame {
 }
 const game = new RunnerGame();
 function loop(){game.update();game.draw();requestAnimationFrame(loop);}
-window.addEventListener("keydown", e => { if([" ","ArrowUp","ArrowDown","ArrowLeft","ArrowRight"].includes(e.key)) e.preventDefault(); keys.add(e.key); if(e.key===" "||e.key==="ArrowUp"||e.key==="w") game.jump(); });
-window.addEventListener("keyup", e => keys.delete(e.key));
+// Keys only control the game while the canvas has focus, so Space and the arrows still scroll the page and activate buttons everywhere else.
+canvas.addEventListener("keydown", e => {
+  const key = e.key.length === 1 ? e.key.toLowerCase() : e.key;
+  if ([" ", "ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight"].includes(key)) e.preventDefault();
+  keys.add(key);
+  if (key === " " || key === "ArrowUp" || key === "w") game.jump();
+});
+canvas.addEventListener("keyup", e => keys.delete(e.key.length === 1 ? e.key.toLowerCase() : e.key));
+canvas.addEventListener("blur", () => keys.clear());
 canvas.tabIndex=0;
 loop();
