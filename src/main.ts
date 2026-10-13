@@ -8,14 +8,6 @@ const img = (file: string) => `${import.meta.env.BASE_URL}images/${file}`;
 const logo = `<img class="brand-mark" src="${img("logo-badge.webp")}" alt="" width="64" height="64" decoding="async" />`;
 
 
-const runnerArt = `
-  <div class="game-art">
-    <div class="game-sky"></div><div class="moon"></div><div class="game-city"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
-    <div class="platform p1"></div><div class="platform p2"></div><div class="platform p3"></div>
-    <div class="player-sprite"><span></span></div><div class="game-art-tag">EARLY ACCESS // BUILD 0.1</div>
-    <div class="game-art-title">NEON<br/><b>RUNNER</b></div>
-  </div>`;
-
 const slitherArt = `
   <div class="game-art slither-art">
     <div class="game-sky"></div>
@@ -30,7 +22,14 @@ const slitherArt = `
   </div>`;
 
 function artFor(game: Game): string {
-  return game.id === "slither-idle" ? slitherArt : runnerArt;
+  if (game.cover) {
+    return `
+  <div class="game-art game-cover">
+    <img src="${img(game.cover)}" alt="${esc(game.title)} cover art" loading="lazy" decoding="async" />
+    <div class="game-art-tag">${esc(STATUS_LABEL[game.status])} // TEST BUILD</div>
+  </div>`;
+  }
+  return slitherArt;
 }
 
 function esc(value: string): string {
@@ -38,9 +37,6 @@ function esc(value: string): string {
 }
 
 function actionFor(game: Game): string {
-  if (game.kind === "local") {
-    return `<button class="button button-primary launch-btn" id="launchGame">LAUNCH PROTOTYPE <span>↗</span></button>`;
-  }
   const href = safeUrl(game.url);
   if (!href) {
     return `<span class="button button-ghost launch-btn is-disabled" role="link" aria-disabled="true">LINK COMING SOON</span>`;
@@ -127,11 +123,6 @@ document.querySelector<HTMLDivElement>("#app")!.innerHTML = `
         <p class="nft-note">CONCEPT ART // PREVIEW ONLY // MINTING IS NOT LIVE</p>
       </section>
 
-      <section class="play-section" id="play">
-        <div class="play-header"><div><div class="eyebrow"><span class="eyebrow-line"></span> LIVE TEST // LOCAL BUILD</div><h2>NEON <span>RUNNER</span></h2></div><button class="restart-btn" id="restartGame">↻ RESTART</button></div>
-        <div class="game-window"><div class="game-hud"><span><i class="hud-dot"></i> SYSTEM ONLINE</span><span>SCORE <b id="score">0000</b></span><span>BEST <b id="best">0000</b></span></div><canvas id="gameCanvas" width="960" height="360" aria-label="Neon Runner platform game"></canvas><div class="game-controls"><span><kbd>←</kbd> <kbd>→</kbd> MOVE</span><span><kbd>SPACE</kbd> JUMP</span><span class="controls-note">CLICK THE GAME TO FOCUS, THEN PLAY</span></div></div>
-      </section>
-
       <section class="manifesto" id="about"><div class="manifesto-mark">${logo}</div><div><div class="eyebrow"><span class="eyebrow-line"></span> OUR DIRECTIVE</div><h2>GAMES FIRST.<br/><span>LIMITS LAST.</span></h2><p>AI Studios Games is an independent playground for strange ideas, fast experiments, and browser-native worlds. We believe Web3 should add something meaningful to the game — never get in the way of playing it.</p></div><figure class="manifesto-coin"><img src="${img("coin.webp")}" alt="AI Studios Games bronze emblem coin" loading="lazy" decoding="async" width="170" height="170" /><figcaption>BUILT FOR THE<br/><b>NEXT LEVEL</b></figcaption></figure></div></section>
 
       <section class="roadmap-section" id="roadmap"><div class="section-heading"><div><div class="eyebrow"><span class="eyebrow-line"></span> THE MISSION LOG</div><h2>FROM PIXELS <span>TO PROTOCOL</span></h2></div><div class="section-note">A WORK IN PROGRESS.<br/>A WORLD IN MOTION.</div></div><div class="roadmap">
@@ -155,11 +146,6 @@ function notify(message: string) {
   window.clearTimeout(toastTimer);
   toastTimer = window.setTimeout(() => toast.classList.remove("show"), 3200);
 }
-document.querySelector("#launchGame")?.addEventListener("click", () => {
-  document.querySelector("#play")?.scrollIntoView({ behavior: "smooth" });
-  setTimeout(() => (document.querySelector<HTMLCanvasElement>("#gameCanvas"))?.focus(), 400);
-});
-document.querySelector("#restartGame")?.addEventListener("click", () => game.reset());
 document.querySelector("#menuToggle")?.addEventListener("click", () => document.querySelector(".nav-links")?.classList.toggle("open"));
 
 type SolanaProvider = { isPhantom?: boolean; publicKey?: { toString(): string }; connect: () => Promise<{ publicKey: { toString(): string } }>; disconnect?: () => Promise<void> };
@@ -189,60 +175,3 @@ document.querySelector("#walletBtn")?.addEventListener("click", async () => {
     notify("Wallet connection cancelled or unavailable.");
   }
 });
-
-// Small playable endless-runner prototype. No wallet or blockchain interaction is needed to play.
-const canvas = document.querySelector<HTMLCanvasElement>("#gameCanvas")!;
-const ctx = canvas.getContext("2d")!;
-const scoreEl = document.querySelector<HTMLElement>("#score")!;
-const bestEl = document.querySelector<HTMLElement>("#best")!;
-const keys = new Set<string>();
-class RunnerGame {
-  x = 110; y = 260; vy = 0; grounded = true; speed = 4; score = 0; best = 0; frame = 0; obstacles: {x:number,w:number,h:number}[] = []; started = false;
-  reset() { this.x=110; this.y=260; this.vy=0; this.grounded=true; this.speed=4; this.score=0; this.frame=0; this.obstacles=[]; this.started=false; }
-  jump() { if (this.grounded) { this.vy=-11.5; this.grounded=false; this.started=true; } }
-  update() {
-    this.frame++;
-    if (keys.has("ArrowLeft") || keys.has("a")) this.x=Math.max(24,this.x-4);
-    if (keys.has("ArrowRight") || keys.has("d")) { this.x=Math.min(350,this.x+3); this.started=true; }
-    if (keys.has(" ") || keys.has("ArrowUp") || keys.has("w")) this.jump();
-    this.vy += .48; this.y += this.vy;
-    if (this.y >= 260) { this.y=260; this.vy=0; this.grounded=true; }
-    if (this.started && this.frame % 82 === 0) this.obstacles.push({x:canvas.width+20,w:18+Math.random()*20,h:25+Math.random()*34});
-    this.obstacles.forEach(o=>o.x-=this.speed);
-    this.obstacles=this.obstacles.filter(o=>o.x+o.w>0);
-    if (this.started) this.score += .12;
-    this.speed=Math.min(7,this.speed+.0007);
-    for (const o of this.obstacles) if (this.x+25>o.x && this.x<o.x+o.w && this.y+34>294-o.h) { this.started=false; this.best=Math.max(this.best,Math.floor(this.score)); this.obstacles=[]; this.x=110; this.y=260; this.vy=0; this.score=0; notify("Run ended — press SPACE to jump back in."); break; }
-    scoreEl.textContent=String(Math.floor(this.score)).padStart(4,"0");
-    bestEl.textContent=String(this.best).padStart(4,"0");
-  }
-  draw() {
-    const w=canvas.width,h=canvas.height;
-    ctx.clearRect(0,0,w,h);
-    const g=ctx.createLinearGradient(0,0,0,h); g.addColorStop(0,"#11162b");g.addColorStop(1,"#090c14");ctx.fillStyle=g;ctx.fillRect(0,0,w,h);
-    ctx.strokeStyle="rgba(120,112,255,.13)";ctx.lineWidth=1;
-    for(let x=0;x<w;x+=40){ctx.beginPath();ctx.moveTo(x,0);ctx.lineTo(x,h);ctx.stroke();}
-    for(let y=15;y<h;y+=35){ctx.beginPath();ctx.moveTo(0,y);ctx.lineTo(w,y);ctx.stroke();}
-    for(let i=0;i<15;i++){const bx=(i*87-(this.frame*.45)%87);const bh=45+(i*37)%115;ctx.fillStyle="#121a2a";ctx.fillRect(bx,294-bh,50,bh);ctx.fillStyle=i%3===0?"#b6ff3b":"#7a5cff";for(let wy=307-bh;wy<285;wy+=17){ctx.fillRect(bx+9,wy,4,7);ctx.fillRect(bx+25,wy,4,7);}}
-    ctx.fillStyle="#161e2b";ctx.fillRect(0,294,w,66);ctx.fillStyle="#b6ff3b";ctx.fillRect(0,294,w,2);
-    ctx.strokeStyle="rgba(182,255,59,.22)";for(let x=-40-(this.frame%55);x<w;x+=55){ctx.beginPath();ctx.moveTo(x,360);ctx.lineTo(x+50,294);ctx.stroke();}
-    this.obstacles.forEach(o=>{ctx.shadowBlur=12;ctx.shadowColor="#ff4fd8";ctx.fillStyle="#ff4fd8";ctx.fillRect(o.x,294-o.h,o.w,o.h);ctx.shadowBlur=0;ctx.fillStyle="#ffc2f0";ctx.fillRect(o.x+4,294-o.h+4,3,o.h-8);});
-    // Stylized neon runner
-    ctx.shadowBlur=18;ctx.shadowColor="#b6ff3b";ctx.fillStyle="#b6ff3b";ctx.fillRect(this.x,this.y,24,34);ctx.shadowBlur=0;
-    ctx.fillStyle="#0b0e13";ctx.fillRect(this.x+5,this.y+7,15,5);ctx.fillStyle="#7a5cff";ctx.fillRect(this.x+7,this.y+21,10,4);
-    if(!this.started){ctx.fillStyle="rgba(7,9,15,.64)";ctx.fillRect(0,0,w,h);ctx.textAlign="center";ctx.fillStyle="#b6ff3b";ctx.font="700 13px monospace";ctx.fillText("PRESS SPACE TO START",w/2,164);ctx.fillStyle="#e7e9ef";ctx.font="12px monospace";ctx.fillText("DODGE THE GLITCHES // SURVIVE THE GRID",w/2,190);}
-  }
-}
-const game = new RunnerGame();
-function loop(){game.update();game.draw();requestAnimationFrame(loop);}
-// Keys only control the game while the canvas has focus, so Space and the arrows still scroll the page and activate buttons everywhere else.
-canvas.addEventListener("keydown", e => {
-  const key = e.key.length === 1 ? e.key.toLowerCase() : e.key;
-  if ([" ", "ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight"].includes(key)) e.preventDefault();
-  keys.add(key);
-  if (key === " " || key === "ArrowUp" || key === "w") game.jump();
-});
-canvas.addEventListener("keyup", e => keys.delete(e.key.length === 1 ? e.key.toLowerCase() : e.key));
-canvas.addEventListener("blur", () => keys.clear());
-canvas.tabIndex=0;
-loop();

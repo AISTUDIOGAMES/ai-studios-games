@@ -44,3 +44,7 @@ img.brand-mark{border-radius:50%;object-fit:cover;background:#141a2b;filter:none
 @media(max-width:950px){.nft-grid{gap:14px}.nft-info{flex-direction:column;align-items:flex-start}.manifesto-coin img{width:130px;height:130px}}
 @media(max-width:700px){.nft-section{padding:64px 6% 56px}.nft-grid{grid-template-columns:1fr;max-width:340px}.nft-info{flex-direction:row;align-items:center}.manifesto-coin img{width:120px;height:120px}}
 @media(max-width:700px){.hero{padding-bottom:300px}.hero-art{opacity:1}.hero-img{object-position:50% 50%}}
+
+.game-cover img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:50% 45%}
+.game-cover:after{content:"";position:absolute;inset:0;background:linear-gradient(180deg,#090b1099 0,transparent 25%,transparent 75%,#090b1066 100%);pointer-events:none}
+.game-cover .game-art-tag{z-index:2;text-shadow:0 1px 6px #000}
