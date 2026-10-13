@@ -11,6 +11,8 @@ export interface Game {
   kind: GameKind;
   /** Public https address (external games only). Leave "" until it is ready to link. */
   url: string;
+  /** Cover image file inside public/images. When empty, the card shows a generated illustration. */
+  cover?: string;
   meta: string[];
 }
 
@@ -26,7 +28,7 @@ export const STATUS_LABEL: Record<GameStatus, string> = {
  * for example "https://slitheridle.example.com".
  * While it is empty, the card shows "LINK COMING SOON" instead of a play button.
  */
-export const SLITHER_IDLE_URL = "";
+export const SLITHER_IDLE_URL = "https://mburns2026.github.io/solana-slither-idle/index.html";
 
 /**
  * Every game on the platform is one entry in this list.
@@ -42,18 +44,8 @@ export const GAMES: Game[] = [
     status: "experiment",
     kind: "external",
     url: SLITHER_IDLE_URL,
+    cover: "slither-cover.webp",
     meta: ["◈ BROWSER GAME", "⌁ AUTO-BOT IDLE PLAY", "◎ TEST BUILD // NO REAL VALUE"],
-  },
-  {
-    id: "neon-runner",
-    kicker: "02 / PLATFORMER",
-    title: "NEON RUNNER",
-    summary:
-      "Dash across a fractured cyber-city. Jump the gaps, chase your high score, and see how far you can go.",
-    status: "prototype",
-    kind: "local",
-    url: "",
-    meta: ["⌁ SINGLE PLAYER", "◈ BROWSER GAME", "◎ WEB3 LATER"],
   },
 ];
 
