@@ -22,10 +22,23 @@ npm run preview
 ## What's included
 - Responsive landing page with custom inline SVG brand mark
 - Neon cyberpunk visual system (acid green, electric purple, dark graphite)
-- Game catalog card and roadmap section
-- Playable canvas endless-runner prototype (Arrow keys / A-D to move, Space / Up to jump)
+- Game catalog driven by one list (`src/games.ts`): Slither.Idle (external link, experiment) and Neon Runner (playable on the page)
+- NFT showcase (`src/nfts.ts`): 5 character cards (Lyra, Kai, Jax, Aeon, Orion) with rarity and planned price. Display only
+- Roadmap section
+- Playable canvas endless-runner prototype (click the game to focus it, then Arrow keys / A-D to move, Space / Up to jump)
 - Optional browser-injected Solana wallet connect/disconnect detection (`window.solana`, e.g. Phantom)
-- No blockchain transactions, tokens, NFTs, backend, or database are enabled in this prototype
+- No blockchain transactions, tokens, minting, purchases, backend, or database are enabled in this prototype
+
+## Linking a game (Slither.Idle)
+1. Open `src/games.ts`.
+2. Set `SLITHER_IDLE_URL` to the public https address of the Slither.Idle site.
+3. Commit and push. The card's button changes from "LINK COMING SOON" to "PLAY SLITHER.IDLE" and opens the game in a new tab.
+
+## Adding an NFT card
+1. Put the image in `public/nfts/`.
+2. Add an object to the `NFTS` list in `src/nfts.ts` (name, title, rarity, `priceSol` or `null`, image, alt text, optional attributes).
+
+Only https links are accepted. To launch another game, add an object to the `GAMES` list, set its `status` (`experiment`, `prototype`, `live` or `soon`), and add its artwork in `artFor()` in `src/main.ts`.
 
 ## Solana integration roadmap
 This prototype only requests a wallet connection when the user clicks Connect Wallet. It does not request signatures or transactions. For production, choose and pin a supported Solana SDK/provider integration, configure Devnet RPC, handle wallet-standard providers and errors, and independently validate game scores server-side before using them for rewards or on-chain actions. Never request or store a user's seed phrase or private key.
@@ -41,11 +54,15 @@ Suggested next steps:
 ```text
 ai-studios-games/
 ├── index.html
-├── public/images/      # all site artwork
 ├── package.json
 ├── tsconfig.json
 ├── README.md
+├── public/
+│   └── nfts/           # NFT card images
 └── src/
+    ├── games.ts        # catalog data: add or edit games here
+    ├── nfts.ts         # NFT card data: add or edit cards here
     ├── main.ts
-    └── style.css
+    ├── style.css
+    └── vite-env.d.ts
 ```
