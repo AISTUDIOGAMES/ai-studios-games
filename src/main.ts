@@ -1,6 +1,7 @@
 import "./style.css";
 import { GAMES, STATUS_LABEL, safeUrl, type Game } from "./games";
 import { NFTS } from "./nfts";
+import { CHARACTERS, GROUP_LABEL, PROLOGUE, UNIVERSE, type Character } from "./lore";
 
 /** Images live in /public/images and respect the Vite base path. */
 const img = (file: string) => `${import.meta.env.BASE_URL}images/${file}`;
@@ -34,6 +35,66 @@ function artFor(game: Game): string {
 
 function esc(value: string): string {
   return value.replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c] as string);
+}
+
+function renderLore(): void {
+  const root = document.querySelector<HTMLDivElement>("#loreRoot");
+  if (!root) return;
+  const groups: Character["group"][] = ["supreme", "operator"];
+  root.innerHTML = `
+    <div class="lore-prologue">
+      <div class="lore-chapter"><span>CHAPTER 00</span><b>${esc(PROLOGUE.kicker)}</b></div>
+      <h3>${esc(PROLOGUE.title)}</h3>
+      <div class="lore-text">${PROLOGUE.paragraphs.map((p) => `<p>${esc(p)}</p>`).join("")}</div>
+    </div>
+    <div class="dossier" id="dossier" aria-live="polite"></div>
+    <div class="roster" role="tablist" aria-label="Characters of ${esc(UNIVERSE)}">
+      ${groups.map((g) => `<div class="roster-group"><div class="roster-label">${esc(GROUP_LABEL[g])}</div><div class="roster-row">${CHARACTERS.filter((c) => c.group === g).map((c) => `<button class="roster-btn" role="tab" id="tab-${esc(c.id)}" data-char="${esc(c.id)}" aria-selected="false" aria-controls="dossier" style="--accent:${esc(c.accent)}"><img src="${img(c.thumb)}" alt="" width="120" height="150" loading="lazy" decoding="async" /><span>${esc(c.name)}</span></button>`).join("")}</div></div>`).join("")}
+    </div>`;
+
+  const dossier = root.querySelector<HTMLDivElement>("#dossier")!;
+  const tabs = Array.from(root.querySelectorAll<HTMLButtonElement>(".roster-btn"));
+
+  function show(id: string): void {
+    const c = CHARACTERS.find((x) => x.id === id);
+    if (!c) return;
+    dossier.style.setProperty("--accent", c.accent);
+    dossier.setAttribute("role", "tabpanel");
+    dossier.setAttribute("aria-labelledby", `tab-${c.id}`);
+    dossier.innerHTML = `
+      <div class="dossier-stage"><img src="${img(c.sprite)}" alt="${esc(c.alt)}" decoding="async" /></div>
+      <div class="dossier-body">
+        <div class="dossier-kicker">DOSSIER // ${esc(UNIVERSE)}</div>
+        <h3>${esc(c.name)}</h3>
+        <div class="dossier-role">${esc(c.role)}</div>
+        ${c.bio.map((p) => `<p>${esc(p)}</p>`).join("")}
+        <a class="button button-ghost dossier-card-link" href="#nft-${esc(c.id)}">SEE THE CARD <span>↓</span></a>
+      </div>`;
+    tabs.forEach((t) => {
+      const on = t.dataset.char === c.id;
+      t.setAttribute("aria-selected", String(on));
+      t.tabIndex = on ? 0 : -1;
+    });
+  }
+
+  tabs.forEach((t, i) => {
+    t.addEventListener("click", () => show(t.dataset.char!));
+    t.addEventListener("keydown", (e) => {
+      if (e.key !== "ArrowRight" && e.key !== "ArrowLeft") return;
+      const next = tabs[(i + (e.key === "ArrowRight" ? 1 : tabs.length - 1)) % tabs.length];
+      next.focus();
+      show(next.dataset.char!);
+      e.preventDefault();
+    });
+  });
+
+  // Every "READ BIO" button on the NFT cards opens that character's dossier.
+  document.addEventListener("click", (e) => {
+    const link = (e.target as HTMLElement).closest<HTMLElement>("[data-bio]");
+    if (link?.dataset.bio) show(link.dataset.bio);
+  });
+
+  show(CHARACTERS[0].id);
 }
 
 function actionFor(game: Game): string {
@@ -73,7 +134,7 @@ document.querySelector<HTMLDivElement>("#app")!.innerHTML = `
         <span class="brand-type">AI STUDIOS <b>GAMES</b><small>PLAY BEYOND THE GRID</small></span>
       </a>
       <nav class="nav-links" aria-label="Main navigation">
-        <a href="#games">GAMES</a><a href="#nfts">NFTS</a><a href="#about">THE STUDIO</a><a href="#roadmap">ROADMAP</a>
+        <a href="#lore">LORE</a><a href="#games">GAMES</a><a href="#nfts">NFTS</a><a href="#about">THE STUDIO</a><a href="#roadmap">ROADMAP</a>
       </nav>
       <button class="wallet-btn" id="walletBtn"><span class="wallet-dot"></span><span id="walletLabel">CONNECT WALLET</span></button>
       <button class="menu-toggle" id="menuToggle" aria-label="Toggle navigation">☰</button>
@@ -106,6 +167,11 @@ document.querySelector<HTMLDivElement>("#app")!.innerHTML = `
         <div class="hero-bottomline"><span>SCROLL TO ENTER</span><span class="scroll-mark">↓</span><span class="bottom-right">EST. 2026 <b>///</b> DIGITAL WORLDS, REAL OWNERSHIP</span></div>
       </section>
 
+      <section class="lore-section" id="lore">
+        <div class="section-heading"><div><div class="eyebrow"><span class="eyebrow-line"></span> THE UNIVERSE</div><h2>AI WORLD <span>OWL</span></h2></div><div class="section-note">ONE GRID.<br/>EIGHT LEGENDS.</div></div>
+        <div id="loreRoot"></div>
+      </section>
+
       <section class="section games-section" id="games">
         <div class="section-heading"><div><div class="eyebrow"><span class="eyebrow-line"></span> THE ARCADE</div><h2>ENTER THE <span>PLAYGROUND</span></h2></div><div class="section-note">SMALL WORLDS.<br/>BIG ENERGY.</div></div>
         <div class="games-list" id="gamesList"></div>
@@ -118,12 +184,13 @@ document.querySelector<HTMLDivElement>("#app")!.innerHTML = `
           ${NFTS.map((n) => `<article class="nft-card${n.accent ? " nft-" + n.accent : ""}" id="nft-${esc(n.id)}">
             <div class="nft-frame"><img src="${img(n.image)}" alt="${esc(n.alt)}" loading="lazy" decoding="async" width="620" height="871" /></div>
             <div class="nft-info"><div><div class="game-kicker">${esc(n.kicker)}</div><h3>${esc(n.name)}</h3><small>${esc(n.role)}</small></div><span class="nft-price">${esc(n.price)}</span></div>
+            <a class="button button-ghost nft-bio" href="#lore" data-bio="${esc(n.id)}">READ BIO <span>→</span></a>
           </article>`).join("")}
         </div>
         <p class="nft-note">CONCEPT ART // PREVIEW ONLY // MINTING IS NOT LIVE</p>
       </section>
 
-      <section class="manifesto" id="about"><div class="manifesto-mark">${logo}</div><div><div class="eyebrow"><span class="eyebrow-line"></span> OUR DIRECTIVE</div><h2>GAMES FIRST.<br/><span>LIMITS LAST.</span></h2><p>AI Studios Games is an independent playground for strange ideas, fast experiments, and browser-native worlds. We believe Web3 should add something meaningful to the game — never get in the way of playing it.</p></div><figure class="manifesto-coin"><img src="${img("coin.webp")}" alt="AI Studios Games bronze emblem coin" loading="lazy" decoding="async" width="170" height="170" /><figcaption>BUILT FOR THE<br/><b>NEXT LEVEL</b></figcaption></figure></div></section>
+      <section class="manifesto" id="about"><div class="manifesto-mark">${logo}</div><div><div class="eyebrow"><span class="eyebrow-line"></span> OUR DIRECTIVE</div><h2>GAMES FIRST.<br/><span>LIMITS LAST.</span></h2><p>AI Studios Games is an independent playground for strange ideas, fast experiments, and browser-native worlds. We believe Web3 should add something meaningful to the game — never get in the way of playing it.</p></div><figure class="manifesto-coin"><img src="${img("coin.webp")}" alt="AI Studios Games bronze emblem coin" loading="lazy" decoding="async" width="170" height="170" /><figcaption>BUILT FOR THE<br/><b>NEXT LEVEL</b></figcaption></figure></section>
 
       <section class="roadmap-section" id="roadmap"><div class="section-heading"><div><div class="eyebrow"><span class="eyebrow-line"></span> THE MISSION LOG</div><h2>FROM PIXELS <span>TO PROTOCOL</span></h2></div><div class="section-note">A WORK IN PROGRESS.<br/>A WORLD IN MOTION.</div></div><div class="roadmap">
         <div class="roadmap-item active"><span class="roadmap-num">01</span><div><span class="roadmap-state">IN PROGRESS</span><h3>THE ARCADE</h3><p>Brand, website, first playable prototype, and Slither.Idle linked as an experiment.</p></div><span class="roadmap-icon">↗</span></div>
@@ -137,6 +204,7 @@ document.querySelector<HTMLDivElement>("#app")!.innerHTML = `
 `;
 
 renderGames();
+renderLore();
 
 const toast = document.querySelector<HTMLDivElement>("#toast")!;
 let toastTimer: number | undefined;

@@ -53,3 +53,44 @@ img.brand-mark{border-radius:50%;object-fit:cover;background:#141a2b;filter:none
 .nft-gold{border-color:#6b5a2b;box-shadow:0 0 28px #c9a24b1f}
 .nft-gold:hover{border-color:#e0b95a;box-shadow:0 16px 44px #c9a24b33}
 .nft-gold .nft-price{color:#f0cf7a;border-color:#7a6430}
+
+/* --- Lore / dossier --- */
+.lore-section{padding:90px 5.4% 80px;border-top:1px solid var(--line);background:radial-gradient(900px 420px at 85% 20%,#8a72ff14,transparent 70%),radial-gradient(700px 380px at 5% 90%,#3dffd00d,transparent 70%)}
+.lore-section>*{max-width:1240px;margin-left:auto;margin-right:auto}
+.lore-prologue{display:grid;grid-template-columns:minmax(0,5fr) minmax(0,6fr);gap:10px 56px;padding:34px;background:#10131bf0;border:1px solid #2b303b;border-left:3px solid var(--purple);margin-bottom:34px}
+.lore-chapter{grid-column:1/-1;display:flex;gap:14px;align-items:center;font-size:8px;letter-spacing:1.4px;color:#858a98}
+.lore-chapter b{color:var(--purple);font-weight:700}
+.lore-prologue h3{font:800 clamp(30px,3.4vw,46px)/1 'Barlow Condensed',sans-serif;letter-spacing:.6px;margin:8px 0 0}
+.lore-text p{margin:0 0 14px;font-size:11px;line-height:2;color:#b9bdc9}
+.lore-text p:last-child{margin:0}
+.dossier{--accent:#8a72ff;display:grid;grid-template-columns:minmax(0,5fr) minmax(0,6fr);gap:40px;align-items:center;padding:34px;background:linear-gradient(135deg,#10131b,#0b0e16);border:1px solid color-mix(in srgb,var(--accent) 38%,#2b303b);box-shadow:0 0 44px color-mix(in srgb,var(--accent) 12%,transparent);transition:border-color .3s,box-shadow .3s}
+.dossier-stage{position:relative;display:flex;align-items:flex-end;justify-content:center;height:clamp(340px,44vw,520px);border-radius:14px;background:radial-gradient(closest-side at 50% 55%,color-mix(in srgb,var(--accent) 24%,transparent),transparent 78%),#0b0e16;border:1px solid #232834;overflow:hidden}
+.dossier-stage img{max-width:92%;max-height:96%;width:auto;height:auto;object-fit:contain;filter:drop-shadow(0 0 22px color-mix(in srgb,var(--accent) 45%,transparent));animation:spriteIn .45s ease both}
+@keyframes spriteIn{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
+.dossier-kicker{font-size:8px;letter-spacing:1.4px;color:var(--accent);margin-bottom:10px}
+.dossier-body h3{font:800 clamp(46px,6vw,84px)/.9 'Barlow Condensed',sans-serif;letter-spacing:1px;margin:0;color:#fff}
+.dossier-role{display:inline-block;margin:16px 0 20px;padding:7px 10px;font-size:9px;font-weight:700;letter-spacing:1px;color:var(--accent);border:1px solid color-mix(in srgb,var(--accent) 50%,transparent)}
+.dossier-body p{margin:0 0 14px;font-size:11px;line-height:2;color:#b9bdc9;max-width:560px}
+.dossier-card-link{margin-top:10px}
+.dossier-card-link:hover{border-color:var(--accent)}
+.roster{display:grid;grid-template-columns:repeat(2,minmax(0,auto));justify-content:space-between;gap:20px 40px;margin-top:26px}
+.roster-label{font-size:8px;letter-spacing:1.3px;color:#737987;margin-bottom:12px}
+.roster-row{display:flex;gap:10px;flex-wrap:wrap}
+.roster-btn{--accent:#8a72ff;display:flex;flex-direction:column;align-items:center;gap:4px;width:92px;padding:8px 6px 8px;background:#0d1017;border:1px solid #2b303b;color:#9aa0ae;font:700 8px 'Space Mono',monospace;letter-spacing:1px;cursor:pointer;transition:transform .2s,border-color .2s,color .2s,background .2s}
+.roster-btn img{width:56px;height:70px;object-fit:contain;display:block}
+.roster-btn:hover{transform:translateY(-3px);border-color:var(--accent);color:#fff}
+.roster-btn[aria-selected="true"]{border-color:var(--accent);color:var(--accent);background:color-mix(in srgb,var(--accent) 10%,#0d1017);box-shadow:0 0 18px color-mix(in srgb,var(--accent) 25%,transparent)}
+.roster-btn:focus-visible,.nft-bio:focus-visible{outline:2px solid var(--accent,var(--purple));outline-offset:2px}
+.nft-bio{width:100%;margin-top:12px;min-height:40px;font-size:8px}
+@media(max-width:950px){
+  .lore-section{padding:72px 6% 64px}
+  .lore-prologue,.dossier{grid-template-columns:1fr;gap:20px;padding:24px}
+  .roster{grid-template-columns:1fr}
+  .dossier-stage{height:clamp(300px,70vw,440px)}
+}
+@media(max-width:700px){
+  .lore-section{padding:60px 5% 54px}
+  .roster-btn{width:calc(25% - 8px);min-width:68px}
+  .roster-row{gap:8px}
+}
+@media(prefers-reduced-motion:reduce){.dossier-stage img{animation:none}}
