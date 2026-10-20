@@ -30,9 +30,12 @@ export const STATUS_LABEL: Record<GameStatus, string> = {
  */
 export const SLITHER_IDLE_URL = "https://mburns2026.github.io/solana-slither-idle/index.html";
 
+/** Public address of the Bomber Idle site (https only). */
+export const BOMBER_IDLE_URL = "https://mburns2026.github.io/bomberidle/";
+
 /**
  * Every game on the platform is one entry in this list.
- * To launch a new game: add an object here, and (for artwork) a case in artFor() in main.ts.
+ * To launch a new game: add an object here and put its cover image in public/images (set `cover`).
  */
 export const GAMES: Game[] = [
   {
@@ -46,6 +49,18 @@ export const GAMES: Game[] = [
     url: SLITHER_IDLE_URL,
     cover: "slither-cover.webp",
     meta: ["◈ BROWSER GAME", "⌁ AUTO-BOT IDLE PLAY", "◎ TEST BUILD // NO REAL VALUE"],
+  },
+  {
+    id: "bomber-idle",
+    kicker: "02 / BOMBER + IDLE",
+    title: "BOMBER.IDLE",
+    summary:
+      "An idle bomber game starring the Operators. Send your crew out to blow up blocks and collect coins, keep an eye on their stamina, and build a roster of rarer heroes across missions and maps. It runs on its own site and opens in a new tab.",
+    status: "experiment",
+    kind: "external",
+    url: BOMBER_IDLE_URL,
+    cover: "bomber-cover.webp",
+    meta: ["◈ BROWSER GAME", "⌁ IDLE OPERATORS", "◎ EXPERIMENT BUILD"],
   },
 ];
 
