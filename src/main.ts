@@ -1,6 +1,7 @@
 import "./style.css";
 import { GAMES, STATUS_LABEL, safeUrl, type Game } from "./games";
 import { NFTS } from "./nfts";
+import { initHeroBanner } from "./heroFx";
 import { CHARACTERS, GROUP_LABEL, PROLOGUE, UNIVERSE, type Character } from "./lore";
 
 /** Images live in /public/images and respect the Vite base path. */
@@ -157,10 +158,21 @@ document.querySelector<HTMLDivElement>("#app")!.innerHTML = `
             <i></i><div><strong class="green">◎</strong><span>SOLANA-READY VISION</span></div>
           </div>
         </div>
-        <div class="hero-art" aria-label="Cyberpunk neon city artwork">
-          <img class="hero-img" src="${img("hero-banner.webp")}" alt="AI Studios Games — Vex, Kira and Titan standing in a neon cyber-city" fetchpriority="high" decoding="async" />
-          <div class="art-scan"></div>
-          
+        <div class="hero-art" id="heroArt" aria-label="Cyberpunk neon city artwork">
+          <div class="hb-cover">
+            <div class="hb-stage">
+              <div class="hb-center"><div class="hb-media">
+                <img class="hero-img" src="${img("hero-banner-live.webp")}" alt="AI Studios Games — Vex, Kira and Titan standing in a neon cyber-city under the owl emblem" width="1584" height="672" fetchpriority="high" decoding="async" />
+                <i class="hb-glow"></i><i class="hb-eye hb-eye-blue"></i><i class="hb-eye hb-eye-purple"></i>
+                <div class="hb-glitch hb-g1" style="background-image:url(${img("hero-banner-live.webp")})"></div>
+                <div class="hb-glitch hb-g2" style="background-image:url(${img("hero-banner-live.webp")})"></div>
+              </div>
+              </div>
+            </div>
+            <canvas class="hb-fx" aria-hidden="true"></canvas>
+          </div>
+          <div class="hb-sweep"></div><div class="hb-scanbar"></div><div class="art-scan"></div>
+          <div class="hb-hud"><span class="hb-live"><i></i>LIVE FEED</span><span>GRID-01 // SIGNAL STABLE</span><span id="hbClock">00:00:00</span></div>
           <div class="art-coordinate">34°03' N<br/>118°15' W</div>
           <div class="art-corner corner-a"></div><div class="art-corner corner-b"></div>
         </div>
@@ -205,6 +217,7 @@ document.querySelector<HTMLDivElement>("#app")!.innerHTML = `
 
 renderGames();
 renderLore();
+initHeroBanner();
 
 const toast = document.querySelector<HTMLDivElement>("#toast")!;
 let toastTimer: number | undefined;

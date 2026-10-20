@@ -94,3 +94,42 @@ img.brand-mark{border-radius:50%;object-fit:cover;background:#141a2b;filter:none
   .roster-row{gap:8px}
 }
 @media(prefers-reduced-motion:reduce){.dossier-stage img{animation:none}}
+
+/* --- Animated hero banner --- */
+.hero-art{container-type:size}
+.hb-cover{position:absolute;inset:0;overflow:hidden;animation:hbBoot 1.3s cubic-bezier(.2,.7,.2,1) both}
+.hb-stage{position:absolute;inset:0;transform:translate3d(var(--px,0px),var(--py,0px),0);will-change:transform}
+.hb-center{position:absolute;left:50%;top:50%;width:max(100%,calc(100cqh * 1584 / 672));height:max(100%,calc(100cqw * 672 / 1584));transform:translate(-50%,-50%)}
+.hb-media{position:absolute;inset:0;transform-origin:50% 80%;animation:hbKen 22s ease-in-out infinite alternate;will-change:transform}
+.hb-media .hero-img{object-fit:fill;object-position:center}
+.hb-glow{position:absolute;left:50%;top:22%;width:32%;aspect-ratio:1;transform:translate(-50%,-50%);border-radius:50%;background:radial-gradient(circle,#3dff9a8c 0,#3dff9a33 42%,transparent 70%);mix-blend-mode:screen;pointer-events:none;animation:hbPulse 3.2s ease-in-out infinite}
+.hb-eye{position:absolute;width:3.4%;aspect-ratio:1;transform:translate(-50%,-50%);border-radius:50%;mix-blend-mode:screen;pointer-events:none;animation:hbEye 2.6s ease-in-out infinite}
+.hb-eye-blue{left:47.8%;top:18%;background:radial-gradient(circle,#7fd8ffe6,#2ea8ff66 45%,transparent 70%)}
+.hb-eye-purple{left:51.9%;top:17.7%;background:radial-gradient(circle,#e59cffe6,#b04dff66 45%,transparent 70%);animation-delay:-1.1s}
+.hb-glitch{position:absolute;inset:0;background-size:100% 100%;opacity:0;mix-blend-mode:screen;pointer-events:none}
+.hb-g1{filter:hue-rotate(80deg) saturate(2.2);animation:hbGlitchA 8s steps(1,end) infinite 2s}
+.hb-g2{filter:hue-rotate(-90deg) saturate(2.2);animation:hbGlitchB 8s steps(1,end) infinite 2s}
+.hb-fx{position:absolute;inset:0;width:100%;height:100%;z-index:1;pointer-events:none}
+.hb-sweep{position:absolute;inset:0;z-index:3;pointer-events:none;mix-blend-mode:screen;background:linear-gradient(105deg,transparent 40%,#b6ff3b26 47%,#ffffff2e 50%,#8a72ff26 53%,transparent 60%);transform:translateX(-130%);animation:hbSweep 7s ease-in-out infinite 1.6s}
+.hb-scanbar{position:absolute;inset:0;z-index:4;pointer-events:none;background:linear-gradient(180deg,transparent 84%,#b6ff3b18 96%,#b6ff3b40 99%,transparent 100%);transform:translateY(-100%);animation:hbScan 5.5s linear infinite}
+.hb-hud{position:absolute;z-index:6;left:11%;top:18px;display:flex;gap:16px;align-items:center;flex-wrap:wrap;font-size:8px;letter-spacing:1.2px;color:#c5c5d5;text-shadow:0 1px 6px #000}
+.hb-live{display:inline-flex;align-items:center;gap:7px;color:var(--green);font-weight:700}
+.hb-live i{width:7px;height:7px;border-radius:50%;background:#ff3b5c;box-shadow:0 0 10px #ff3b5c;animation:hbBlink 1.2s steps(1,end) infinite}
+.hero-art.hb-hit .hb-cover{animation:hbHit .45s ease-out}
+.hero-art.is-paused *,.hero-art.is-paused *:before{animation-play-state:paused!important}
+.hero-art.is-still .hb-cover,.hero-art.is-still .hb-media,.hero-art.is-still .hb-glow,.hero-art.is-still .hb-eye,.hero-art.is-still .hb-glitch,.hero-art.is-still .hb-sweep,.hero-art.is-still .hb-scanbar,.hero-art.is-still .hb-live i{animation:none!important}
+.hero-art.is-still .hb-media{transform:scale(1.03)}
+.hero-art.is-still .hb-glow{opacity:.55}
+.hero-art.is-still .hb-sweep,.hero-art.is-still .hb-scanbar{display:none}
+@keyframes hbBoot{0%{clip-path:inset(47% 0 47% 0);filter:brightness(3.2) saturate(0)}35%{clip-path:inset(0 0 0 0);filter:brightness(2) saturate(.4)}100%{clip-path:inset(0 0 0 0);filter:none}}
+@keyframes hbKen{from{transform:scale(1.03) translate3d(0,0,0)}to{transform:scale(1.08) translate3d(-1%,0,0)}}
+@keyframes hbPulse{0%,100%{opacity:.35;transform:translate(-50%,-50%) scale(.9)}50%{opacity:.95;transform:translate(-50%,-50%) scale(1.12)}}
+@keyframes hbEye{0%,100%{opacity:.45}45%{opacity:1}50%{opacity:.2}55%{opacity:1}}
+@keyframes hbGlitchA{0%,91%,100%{opacity:0}92%{opacity:.55;transform:translateX(-7px);clip-path:inset(14% 0 66% 0)}94%{opacity:.5;transform:translateX(6px);clip-path:inset(58% 0 20% 0)}96%{opacity:.45;transform:translateX(-4px);clip-path:inset(34% 0 44% 0)}98%{opacity:0}}
+@keyframes hbGlitchB{0%,91%,100%{opacity:0}93%{opacity:.5;transform:translateX(7px);clip-path:inset(40% 0 38% 0)}95%{opacity:.5;transform:translateX(-6px);clip-path:inset(8% 0 76% 0)}97%{opacity:.4;transform:translateX(4px);clip-path:inset(70% 0 10% 0)}99%{opacity:0}}
+@keyframes hbSweep{0%,55%{transform:translateX(-130%)}85%,100%{transform:translateX(130%)}}
+@keyframes hbScan{from{transform:translateY(-100%)}to{transform:translateY(100%)}}
+@keyframes hbBlink{50%{opacity:.15}}
+@keyframes hbHit{0%{filter:brightness(2.4) saturate(1.6);transform:scale(1.015)}100%{filter:none;transform:none}}
+@media(max-width:700px){.hb-hud{left:12%;top:10px;gap:10px;font-size:7px}.hb-hud span:nth-child(2){display:none}}
+@media(prefers-reduced-motion:reduce){.hb-cover,.hb-media,.hb-glow,.hb-eye,.hb-glitch,.hb-sweep,.hb-scanbar,.hb-live i{animation:none!important}.hb-sweep,.hb-scanbar{display:none}}
