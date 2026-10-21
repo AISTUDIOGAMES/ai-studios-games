@@ -1,3 +1,4 @@
+import { initWallet } from "./wallet";
 import "./style.css";
 import { GAMES, STATUS_LABEL, safeUrl, type Game } from "./games";
 import { NFTS } from "./nfts";
