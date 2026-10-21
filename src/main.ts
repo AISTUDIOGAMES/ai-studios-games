@@ -369,30 +369,4 @@ function notify(message: string) {
 }
 document.querySelector("#menuToggle")?.addEventListener("click", () => document.querySelector(".nav-links")?.classList.toggle("open"));
 
-type SolanaProvider = { isPhantom?: boolean; publicKey?: { toString(): string }; connect: () => Promise<{ publicKey: { toString(): string } }>; disconnect?: () => Promise<void> };
-declare global { interface Window { solana?: SolanaProvider } }
-let connectedAddress = "";
-document.querySelector("#walletBtn")?.addEventListener("click", async () => {
-  const label = document.querySelector<HTMLSpanElement>("#walletLabel")!;
-  const provider = window.solana;
-  if (connectedAddress && provider?.disconnect) {
-    try { await provider.disconnect(); } catch { /* wallet may already be disconnected */ }
-    connectedAddress = "";
-    label.textContent = "CONNECT WALLET";
-    notify("Wallet disconnected from this prototype.");
-    return;
-  }
-  if (!provider?.connect) {
-    notify("No Solana wallet detected. Install a compatible wallet such as Phantom to test connection.");
-    window.open("https://phantom.app/", "_blank", "noopener,noreferrer");
-    return;
-  }
-  try {
-    const result = await provider.connect();
-    connectedAddress = result.publicKey.toString();
-    label.textContent = connectedAddress.slice(0, 4) + "…" + connectedAddress.slice(-4);
-    notify("Wallet connected. No transaction was requested.");
-  } catch {
-    notify("Wallet connection cancelled or unavailable.");
-  }
-});
+initWallet(notify);
