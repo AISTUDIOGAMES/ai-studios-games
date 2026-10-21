@@ -30,12 +30,9 @@ export const STATUS_LABEL: Record<GameStatus, string> = {
  */
 export const SLITHER_IDLE_URL = "https://mburns2026.github.io/solana-slither-idle/index.html";
 
-/** Public address of the Bomber Idle site (https only). */
-export const BOMBER_IDLE_URL = "https://mburns2026.github.io/bomberidle/";
-
 /**
  * Every game on the platform is one entry in this list.
- * To launch a new game: add an object here and put its cover image in public/images (set `cover`).
+ * To launch a new game: add an object here, and (for artwork) a case in artFor() in main.ts.
  */
 export const GAMES: Game[] = [
   {
@@ -51,22 +48,23 @@ export const GAMES: Game[] = [
     meta: ["◈ BROWSER GAME", "⌁ AUTO-BOT IDLE PLAY", "◎ TEST BUILD // NO REAL VALUE"],
   },
   {
-    id: "bomber-idle",
-    kicker: "02 / BOMBER + IDLE",
-    title: "BOMBER.IDLE",
+    id: "gridbreakers",
+    kicker: "02 / TURN-BASED RPG",
+    title: "OWL: GRIDBREAKERS",
     summary:
-      "An idle bomber game starring the Operators. Send your crew out to blow up blocks and collect coins, keep an eye on their stamina, and build a roster of rarer heroes across missions and maps. It runs on its own site and opens in a new tab.",
-    status: "experiment",
+      "A turn-based RPG in the universe of the Grid. Build a squad of three Operators, fight through five sectors, and unlock the legendary Aeon and Orion. Opens in a new tab.",
+    status: "prototype",
     kind: "external",
-    url: BOMBER_IDLE_URL,
-    cover: "bomber-cover.webp",
-    meta: ["◈ BROWSER GAME", "⌁ IDLE OPERATORS", "◎ EXPERIMENT BUILD"],
+    url: "/rpg.html",
+    cover: "rpg-cover.webp",
+    meta: ["⌁ TURN-BASED RPG", "◈ 8 OPERATORS", "◎ BROWSER PROTOTYPE"],
   },
 ];
 
-/** Returns a safe https address, or null when the link is empty or invalid. */
+/** Returns a safe https address or same-site path, or null when the link is empty or invalid. */
 export function safeUrl(raw: string): string | null {
   if (!raw) return null;
+  if (/^\/[^/\\]/.test(raw)) return raw; // same-site path such as "/rpg.html"
   try {
     const parsed = new URL(raw);
     return parsed.protocol === "https:" ? parsed.href : null;
