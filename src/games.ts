@@ -30,6 +30,9 @@ export const STATUS_LABEL: Record<GameStatus, string> = {
  */
 export const SLITHER_IDLE_URL = "https://mburns2026.github.io/solana-slither-idle/index.html";
 
+/** Public address of the Bomber Idle client (GitHub Pages). */
+export const BOMBER_IDLE_URL = "https://mburns2026.github.io/bomberidle/";
+
 /**
  * Every game on the platform is one entry in this list.
  * To launch a new game: add an object here, and (for artwork) a case in artFor() in main.ts.
@@ -58,6 +61,18 @@ export const GAMES: Game[] = [
     url: "/rpg.html",
     cover: "rpg-cover.webp",
     meta: ["⌁ TURN-BASED RPG", "◈ 8 OPERATORS", "◎ BROWSER PROTOTYPE"],
+  },
+  {
+    id: "bomber-idle",
+    kicker: "03 / GRID BOMBER + IDLE",
+    title: "BOMBER.IDLE",
+    summary:
+      "An idle grid bomber. Send your Operators into the field to plant bombs, blow open chests and farm $BOMBERSI while you are away. Manage stamina, speed and luck, and level up legends like Jax and Orion. Opens in a new tab.",
+    status: "experiment",
+    kind: "external",
+    url: BOMBER_IDLE_URL,
+    cover: "bomberidle-cover.svg",
+    meta: ["◈ BROWSER GAME", "⌁ IDLE GRID FARMING", "◎ TEST BUILD // NO REAL VALUE"],
   },
 ];
 
