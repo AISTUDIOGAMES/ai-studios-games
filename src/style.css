@@ -133,3 +133,58 @@ img.brand-mark{border-radius:50%;object-fit:cover;background:#141a2b;filter:none
 @keyframes hbHit{0%{filter:brightness(2.4) saturate(1.6);transform:scale(1.015)}100%{filter:none;transform:none}}
 @media(max-width:700px){.hb-hud{left:12%;top:10px;gap:10px;font-size:7px}.hb-hud span:nth-child(2){display:none}}
 @media(prefers-reduced-motion:reduce){.hb-cover,.hb-media,.hb-glow,.hb-eye,.hb-glitch,.hb-sweep,.hb-scanbar,.hb-live i{animation:none!important}.hb-sweep,.hb-scanbar{display:none}}
+
+/* --- Growth: share, log, join, FAQ --- */
+.sr-only{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+.announce-link{color:#11160a;text-decoration:underline;text-underline-offset:3px}
+.announce-link:hover{text-decoration-thickness:2px}
+.game-actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:20px}
+.game-actions .launch-btn{margin-top:0}
+.share-btn{cursor:pointer;gap:12px;background:transparent;color:inherit;font-family:inherit}
+.log-section,.join-section,.faq-section{padding:0 8% 94px}
+.log-section{padding-top:94px}
+.log-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:18px}
+.log-item{padding:24px;background:var(--panel);border:1px solid #2a2e38;border-top:2px solid var(--purple);transition:transform .2s,border-color .2s}
+.log-item:hover{transform:translateY(-3px);border-color:var(--green)}
+.log-top{display:flex;justify-content:space-between;gap:10px;font-size:8px;letter-spacing:1.2px;color:#737987}
+.log-top b{color:var(--green)}
+.log-item h3{margin:14px 0 10px;font:800 26px/1 'Barlow Condensed',sans-serif;letter-spacing:.5px}
+.log-item p{margin:0;font-size:10px;line-height:1.9;color:#969ba9}
+.join{display:grid;grid-template-columns:minmax(0,1.2fr) minmax(0,1fr);gap:36px;padding:40px;background:linear-gradient(110deg,#141625,#11131b);border:1px solid #2d2e42}
+.join-main h3{margin:0;font:800 clamp(30px,3.4vw,44px)/1 'Barlow Condensed',sans-serif;letter-spacing:.5px}
+.join-main>p{margin:14px 0 0;font-size:10px;line-height:2;color:#a4a9b6;max-width:520px}
+.waitlist{display:flex;gap:10px;flex-wrap:wrap;margin-top:22px}
+.waitlist input[type=email]{flex:1 1 220px;min-height:47px;padding:0 14px;background:#0b0e14;border:1px solid #343944;color:#e9eaf0;font:inherit;font-size:10px}
+.waitlist input[type=email]:focus{outline:none;border-color:var(--green)}
+.waitlist button{cursor:pointer;font-family:inherit}
+.waitlist button:disabled{opacity:.6;cursor:wait}
+.hp{position:absolute;left:-9999px;width:1px;height:1px;opacity:0}
+.wl-note{flex-basis:100%;margin:2px 0 0;font-size:8px;line-height:1.8;color:#7d8391}
+.wl-note.is-ok{color:var(--green)}.wl-note.is-error{color:#ff6b8a}
+.socials{display:flex;gap:10px;flex-wrap:wrap;margin-top:22px}
+.official{padding:24px;background:#0d1017;border:1px solid #2d3140;align-self:start}
+.official h4{margin:0 0 14px;font-size:8px;letter-spacing:1.4px;color:var(--green)}
+.official ul{list-style:none;margin:0;padding:0;display:grid;gap:10px}
+.official li{display:flex;flex-direction:column;gap:2px;padding-bottom:10px;border-bottom:1px solid #1f2430;font-size:8px;letter-spacing:.8px}
+.official li span{color:#737987}
+.official li a{color:#d7dae4;word-break:break-all;font-size:9px;letter-spacing:.2px}
+.official li a:hover{color:var(--green)}
+.safety{margin:16px 0 0;padding:12px 14px;border-left:3px solid var(--pink);background:#ff4fd810;font-size:9px;line-height:1.9;color:#c7cad4}
+.safety b{color:var(--pink)}
+.faq-list{display:grid;gap:10px;max-width:920px}
+.faq-item{background:var(--panel);border:1px solid #2a2e38}
+.faq-item[open]{border-color:var(--purple)}
+.faq-item summary{cursor:pointer;list-style:none;padding:18px 22px;font-size:11px;font-weight:700;letter-spacing:.4px;display:flex;justify-content:space-between;gap:16px;align-items:center}
+.faq-item summary::-webkit-details-marker{display:none}
+.faq-item summary:after{content:"+";color:var(--green);font-size:16px;line-height:1}
+.faq-item[open] summary:after{content:"–"}
+.faq-item summary:focus-visible{outline:2px solid var(--green);outline-offset:-2px}
+.faq-item p{margin:0;padding:0 22px 20px;font-size:10px;line-height:2;color:#a4a9b6}
+.legal-note{margin:0;padding:22px 5.4%;border-top:1px solid #252a34;font-size:7px;letter-spacing:.7px;line-height:2;color:#6c7282;text-align:center}
+@media(max-width:950px){
+  .log-section,.join-section,.faq-section{padding-left:5%;padding-right:5%;padding-bottom:70px}
+  .log-section{padding-top:70px}
+  .log-grid{grid-template-columns:1fr}
+  .join{grid-template-columns:1fr;padding:26px;gap:26px}
+}
+@media(max-width:700px){.game-actions .button{flex:1 1 100%}}
