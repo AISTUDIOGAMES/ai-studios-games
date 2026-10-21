@@ -43,6 +43,8 @@ let aborted = false;
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms / speed));
 const unitById = (id) => (battle ? [...battle.party, ...battle.enemies].find((u) => u.id === id) : null);
 
+const E_COLOR = (u) => (u.team === "p" ? E.HEROES[u.key] : E.ENEMIES[u.key]).color;
+
 /* --------------------------------------------------------------- screens */
 function setScreen(html, cls = "") { aborted = true; root.innerHTML = `<div class="screen ${cls}">${html}</div>`; return root.firstElementChild; }
 const muteLabel = () => (save.muted ? "SOUND OFF" : "SOUND ON");
@@ -131,8 +133,8 @@ function unitHTML(u) {
   const art = p ? `<img class="u-sprite" src="${IMG(d.sprite)}" alt="${esc(u.name)}" />` : enemyArt(d.art, d.color);
   return `<div class="unit ${p ? "p" : "e"} ${u.boss ? "boss" : ""} ${u.final ? "final" : ""}" id="u-${u.id}" data-id="${u.id}" style="--c:${d.color}">
     <div class="u-top"><span class="u-name">${esc(u.name)}</span><div class="u-fx"></div></div>
+    <div class="bars"><span class="badge">${p ? esc(d.role.slice(0, 3).toUpperCase()) : u.boss ? "BOSS" : "FOE"}</span><div class="bcol"><div class="hp"><i></i><b></b></div>${p ? '<div class="ult"><i></i><b>ULT</b></div>' : ""}</div></div>
     <div class="u-art">${art}<div class="u-fl"></div></div>
-    <div class="bars"><div class="hp"><i></i><b></b></div>${p ? '<div class="ult"><i></i><b>ULT</b></div>' : ""}</div>
   </div>`;
 }
 function setHp(id, hp, max) {
@@ -170,6 +172,27 @@ function drawTurnbar(activeId) {
     return `<span class="tb ${u.team} ${u.id === activeId ? "now" : ""}" style="--c:${c}" title="${esc(u.name)}">${esc(u.name.replace("THE ", "").slice(0, 2))}</span>`;
   }).join("");
 }
+function flash(color) {
+  const f = $("#flash"); if (!f) return;
+  f.style.setProperty("--fc", color + "99"); f.classList.remove("on"); void f.offsetWidth; f.classList.add("on");
+}
+function quake() {
+  const a = $("#arena"); if (!a) return;
+  a.classList.remove("quake"); void a.offsetWidth; a.classList.add("quake");
+}
+/** Orb of light that travels from the acting unit to its target. */
+function shoot(fromId, toId) {
+  const arena = $("#arena"), a = $("#u-" + fromId + " .u-art"), b = $("#u-" + toId + " .u-art");
+  if (!arena || !a || !b || typeof Element.prototype.animate !== "function") return Promise.resolve();
+  const R = arena.getBoundingClientRect(), ra = a.getBoundingClientRect(), rb = b.getBoundingClientRect();
+  const pt = (r) => [r.left - R.left + r.width / 2, r.top - R.top + r.height * 0.55];
+  const [x1, y1] = pt(ra), [x2, y2] = pt(rb);
+  const orb = document.createElement("div"); orb.className = "orb"; orb.style.setProperty("--c", getComputedStyle(a.parentElement).getPropertyValue("--c"));
+  arena.appendChild(orb);
+  const dur = 170 / speed;
+  const anim = orb.animate([{ transform: `translate(${x1}px,${y1}px) scale(.6)` }, { transform: `translate(${x2}px,${y2}px) scale(1.2)` }], { duration: dur, easing: "ease-in" });
+  return new Promise((res) => { anim.onfinish = () => { orb.remove(); res(); }; setTimeout(() => { orb.remove(); res(); }, dur + 120); });
+}
 async function banner(text, ult) {
   const b = $("#banner"); if (!b) return;
   b.textContent = text; b.className = `banner show ${ult ? "ult" : ""}`;
@@ -183,10 +206,14 @@ async function play(events) {
     if (aborted) return;
     const u = e.id ? unitById(e.id) : null;
     switch (e.t) {
-      case "round": $("#round").textContent = `ROUND ${e.n}`; logLine(`— ROUND ${e.n} —`, "sep"); break;
-      case "turn": drawTurnbar(e.id); document.querySelectorAll(".unit.active").forEach((x) => x.classList.remove("active")); $("#u-" + e.id)?.classList.add("active"); break;
-      case "act": actor = u; logLine(`<b>${esc(u.name)}</b> uses <i>${esc(e.name)}</i>`, u.team); if (e.ult) sfx.ult(); pulse(e.id, u.team === "p" ? "lunge-r" : "lunge-l", 380); await banner(e.name.toUpperCase(), e.ult); break;
+      case "round": actor = null; $("#round").textContent = `ROUND ${e.n}`; logLine(`— ROUND ${e.n} —`, "sep"); break;
+      case "turn": actor = null; drawTurnbar(e.id); document.querySelectorAll(".unit.active").forEach((x) => x.classList.remove("active")); $("#u-" + e.id)?.classList.add("active"); break;
+      case "act": actor = u; logLine(`<b>${esc(u.name)}</b> uses <i>${esc(e.name)}</i>`, u.team); if (e.ult) sfx.ult(); pulse(e.id, u.team === "p" ? "lunge-up" : "lunge-down", 380);
+        if (e.ult) { flash(E_COLOR(u)); $("#arena")?.classList.add("cine"); }
+        await banner(e.name.toUpperCase(), e.ult); $("#arena")?.classList.remove("cine"); break;
       case "dmg":
+        if (actor && actor.id !== u.id && actor.alive) await shoot(actor.id, u.id);
+        if (e.crit) quake();
         setHp(e.id, e.hp, e.max); floatText(e.id, e.absorbed && !e.amount ? "ABSORBED" : `-${e.amount}`, e.crit ? "crit" : "dmg"); pulse(e.id, "hurt", 350);
         e.crit ? sfx.crit() : sfx.hit(); logLine(`&nbsp;&nbsp;→ ${esc(u.name)} takes <b>${e.amount}</b>${e.crit ? " (CRIT)" : ""}${e.absorbed ? ` (${e.absorbed} absorbed)` : ""}`, "dim");
         refreshUnit(u); await sleep(240); break;
@@ -255,8 +282,10 @@ async function startBattle() {
     <div class="hud"><div><b>${esc(st.name)}</b> <span id="round">ROUND 1</span></div><div class="hud-r"><button id="spd" class="btn tiny">SPEED ×1</button><button id="mute" class="btn tiny">${muteLabel()}</button><button id="quit" class="btn tiny">QUIT</button></div></div>
     <div class="turnbar" id="turnbar"></div>
     <div class="arena" id="arena" style="--sky1:${st.sky[0]};--sky2:${st.sky[1]}">
-      <div class="side party" id="partySide">${battle.party.map(unitHTML).join("")}</div>
+      <div class="floorwrap"><div class="floor"></div></div>
       <div class="side foes" id="foeSide">${battle.enemies.map(unitHTML).join("")}</div>
+      <div class="side party" id="partySide">${battle.party.map(unitHTML).join("")}</div>
+      <div class="flash" id="flash"></div>
       <div class="banner" id="banner"></div>
     </div>
     <div class="command" id="command"></div>
