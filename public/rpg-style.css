@@ -76,7 +76,7 @@ h1,h2,h3{font-family:'Barlow Condensed','Arial Narrow',Impact,sans-serif;margin:
 .arena.quake{animation:quake .32s}@keyframes quake{25%{transform:translate(-5px,3px)}50%{transform:translate(5px,-3px)}75%{transform:translate(-3px,2px)}}
 .arena:before{content:"";position:absolute;inset:0;z-index:3;background:repeating-linear-gradient(0deg,#ffffff05 0 1px,transparent 1px 4px),radial-gradient(120% 90% at 50% 50%,transparent 55%,#000a 100%);pointer-events:none}
 /* perspective floor: far rows are small and faded, near rows are large */
-.floorwrap{position:absolute;left:0;right:0;bottom:0;height:58%;overflow:hidden;perspective:380px;perspective-origin:50% 0;pointer-events:none;-webkit-mask-image:linear-gradient(180deg,transparent 0,#000 38%);mask-image:linear-gradient(180deg,transparent 0,#000 38%)}
+.floorwrap{position:absolute;left:-40%;right:-40%;bottom:-16px;height:64%;overflow:hidden;perspective:380px;perspective-origin:50% 0;pointer-events:none;-webkit-mask-image:linear-gradient(180deg,transparent 0,#000 38%);mask-image:linear-gradient(180deg,transparent 0,#000 38%)}
 .floor{position:absolute;left:-70%;right:-70%;top:0;bottom:-30%;transform-origin:50% 0;transform:rotateX(64deg);background:linear-gradient(90deg,color-mix(in srgb,var(--purple) 55%,transparent) 1px,transparent 1px) 0 0/64px 64px,linear-gradient(180deg,color-mix(in srgb,var(--green) 38%,transparent) 1px,transparent 1px) 0 0/64px 64px;animation:gridrun 5s linear infinite}
 @keyframes gridrun{to{background-position:0 0,0 64px}}
 .side{position:relative;z-index:2;display:flex;justify-content:center;align-items:flex-end}
@@ -112,7 +112,19 @@ h1,h2,h3{font-family:'Barlow Condensed','Arial Narrow',Impact,sans-serif;margin:
 .flash{position:absolute;inset:0;z-index:4;pointer-events:none;opacity:0;background:radial-gradient(circle at 50% 58%,var(--fc,#fff8),transparent 72%)}
 .flash.on{animation:flash .6s ease-out}@keyframes flash{0%{opacity:1}100%{opacity:0}}
 .arena.cine .unit:not(.active){opacity:.4}
-.orb{position:absolute;left:0;top:0;z-index:5;width:18px;height:18px;margin:-9px 0 0 -9px;border-radius:50%;pointer-events:none;background:radial-gradient(circle,#fff,var(--c) 55%,transparent 72%);box-shadow:0 0 18px 6px var(--c)}
+/* camera: .cam zooms with the units; scenery layers zoom less, which gives the parallax */
+.cam{position:relative;flex:1;display:flex;flex-direction:column;justify-content:space-between;z-index:2;transform:translate(var(--tx,0px),var(--ty,0px)) scale(var(--z,1));transition:transform var(--camt,.45s) cubic-bezier(.2,.8,.2,1)}
+.scene{position:absolute;left:0;right:0;top:0;pointer-events:none;transition:transform var(--camt,.45s) cubic-bezier(.2,.8,.2,1)}
+.scene svg{display:block;width:100%;height:100%}
+.scene.far{bottom:62%;opacity:.9;transform:translate(calc(var(--tx,0px)*.2),calc(var(--ty,0px)*.2)) scale(calc(1 + (var(--z,1) - 1)*.2))}
+.scene.mid{bottom:58%;transform:translate(calc(var(--tx,0px)*.45),calc(var(--ty,0px)*.45)) scale(calc(1 + (var(--z,1) - 1)*.45))}
+/* hit effects (positioned inside .cam) */
+.fx{position:absolute;z-index:6;pointer-events:none}
+.fx.orb{left:0;top:0;width:18px;height:18px;margin:-9px 0 0 -9px;border-radius:50%;background:radial-gradient(circle,#fff,var(--c) 55%,transparent 72%);box-shadow:0 0 18px 6px var(--c)}
+.fx.slash{width:130px;height:4px;margin:-2px 0 0 -65px;background:linear-gradient(90deg,transparent,#fff,var(--c),transparent);box-shadow:0 0 14px var(--c)}
+.fx.ring{width:30px;height:12px;margin:-6px 0 0 -15px;border:3px solid var(--c);border-radius:50%;box-shadow:0 0 18px var(--c)}
+.fx.beam{transform-origin:0 50%;margin-top:-3px;border-radius:3px;background:linear-gradient(90deg,var(--c),#fff);box-shadow:0 0 16px var(--c)}
+.fx.pillar{width:46px;height:260px;margin:-260px 0 0 -23px;transform-origin:50% 100%;background:linear-gradient(180deg,transparent,#fff9 35%,var(--c));box-shadow:0 0 30px var(--c)}
 .hp{position:relative;height:13px;background:#1a1f2b;border:1px solid #000;overflow:hidden}.hp i{position:absolute;inset:0 auto 0 0;width:100%;background:linear-gradient(90deg,#2fbf71,#b6ff3b);transition:width .35s}.unit.e .hp i{background:linear-gradient(90deg,#b0225a,var(--bad))}
 .hp b{position:absolute;inset:0;display:grid;place-items:center;font:700 8px 'Space Mono',monospace;color:#fff;text-shadow:0 1px 2px #000}
 .ult{position:relative;height:6px;background:#1a1f2b}.ult i{position:absolute;inset:0 auto 0 0;width:0;background:linear-gradient(90deg,#6a52e0,var(--c));transition:width .3s}.ult b{display:none}
@@ -148,10 +160,10 @@ h1,h2,h3{font-family:'Barlow Condensed','Arial Narrow',Impact,sans-serif;margin:
 }
 @media(max-width:700px){
   .screen{padding:14px 4vw}.page-head h2{font-size:34px}.pick-grid{grid-template-columns:repeat(2,1fr)}.det-r{grid-template-columns:1fr}
-  .arena{height:auto;min-height:430px;padding:10px;gap:6px}.side.foes,.side.party{height:auto}
+  .arena{height:auto;min-height:430px;padding:10px;gap:6px}.cam{min-height:410px}.side.foes,.side.party{height:auto}
   .side.party .unit:nth-child(2),.side.foes .unit:nth-child(2n){margin-bottom:0}
   .unit.p{width:31%}.unit.e{width:26%}.unit.e.boss{width:38%}.unit.p .u-art{height:104px}.unit.e .u-art{height:78px}.unit.e.boss .u-art{height:110px}.u-name{font-size:12px}.unit.e .u-name{font-size:11px}.unit.boss .eart{max-width:150px}
   .banner{font-size:18px}.banner.ult{font-size:24px}
   .cmd-head{gap:6px}.hint{margin-left:0}.passive{display:none}.cbtn small{display:none}.cbtn{min-height:50px}
 }
-@media(prefers-reduced-motion:reduce){.eart,.floor,.unit.active .u-art:after,.arena.quake,.unit.targetable:after,.ult.ready,.cbtn.ult:not(.off){animation:none}}
+@media(prefers-reduced-motion:reduce){.cam,.scene{transition:none}.eart,.floor,.unit.active .u-art:after,.arena.quake,.unit.targetable:after,.ult.ready,.cbtn.ult:not(.off){animation:none}}

@@ -1,0 +1,14 @@
+Coloque aqui as imagens do site (NAO estao neste zip, eu nao tive acesso a elas).
+
+Usadas pelo RPG (rpg-ui.js / rpg.html):
+  logo-badge.webp       selo da tela de titulo
+  favicon.png           icone da aba
+  uni-lyra.webp  uni-titan.webp  uni-kai.webp  uni-vex.webp
+  uni-kira.webp  uni-jax.webp    uni-aeon.webp uni-orion.webp   (sprites dos 8 Operators)
+
+Usadas pelo site (games.ts / main.ts):
+  slither-cover.webp    capa do Slither.Idle
+  rpg-cover.webp        capa do OWL: Gridbreakers
+
+ATENCAO: universe.ts comenta que os sprites ficam em public/images/universe,
+mas o RPG procura em images/uni-*.webp. Confira onde os arquivos realmente estao.

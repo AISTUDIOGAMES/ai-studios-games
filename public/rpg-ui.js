@@ -1,5 +1,8 @@
 import * as E from "./rpg-engine.js";
 import { enemyArt } from "./rpg-art.js";
+import { sceneArt } from "./rpg-scenes.js";
+import { startWorld, savedSquad } from "./world.js";
+import { hasWorldSave } from "./world-save.js";
 
 const $ = (s, r = document) => r.querySelector(s);
 const root = $("#root");
@@ -39,14 +42,15 @@ const sfx = {
 let run = null;       // { party, stage, mods }
 let battle = null;
 let speed = 1;
-let aborted = false;
+let epoch = 0;          // bumps on every screen change: any async loop from an older screen stops itself
+let worldHandle = null; // running explorable world, stopped by setScreen
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms / speed));
 const unitById = (id) => (battle ? [...battle.party, ...battle.enemies].find((u) => u.id === id) : null);
 
 const E_COLOR = (u) => (u.team === "p" ? E.HEROES[u.key] : E.ENEMIES[u.key]).color;
 
 /* --------------------------------------------------------------- screens */
-function setScreen(html, cls = "") { aborted = true; root.innerHTML = `<div class="screen ${cls}">${html}</div>`; return root.firstElementChild; }
+function setScreen(html, cls = "") { epoch++; keyHandler = null; if (worldHandle) { worldHandle.stop(); worldHandle = null; } root.innerHTML = `<div class="screen ${cls}">${html}</div>`; return root.firstElementChild; }
 const muteLabel = () => (save.muted ? "SOUND OFF" : "SOUND ON");
 function bindMute(btn) { btn.addEventListener("click", () => { save.muted = !save.muted; persist(); btn.textContent = muteLabel(); }); }
 
@@ -57,24 +61,25 @@ function showTitle() {
       <div class="eyebrow">OWL STUDIOS GAME // PROTOTYPE 0.1</div>
       <h1>OWL<span>:</span> GRIDBREAKERS</h1>
       <p class="lead">A turn-based RPG set in the Grid. Pick three Operators, push through five sectors and stand against the Static.</p>
-      <div class="title-btns"><button class="btn primary" id="start">NEW RUN</button><a class="btn" href="/">BACK TO SITE</a><button class="btn ghost" id="mute">${muteLabel()}</button></div>
+      <div class="title-btns"><button class="btn primary" id="explore">${hasWorldSave() && savedSquad(worldHost) ? "CONTINUE EXPLORING" : "EXPLORE THE GRID"}</button><button class="btn" id="start">NEW RUN</button><a class="btn" href="/">BACK TO SITE</a><button class="btn ghost" id="mute">${muteLabel()}</button></div>
       <div class="title-meta">${save.clears ? `RUNS CLEARED: ${save.clears} // ` : ""}LEGENDARY OPERATORS UNLOCKED: ${save.unlocked.length}/2</div>
     </div>`, "title");
   $("#start").addEventListener("click", () => { sfx.click(); showSelect(); });
+  $("#explore").addEventListener("click", () => { sfx.click(); const sq = savedSquad(worldHost); sq ? enterWorld(null) : showSelect("world"); });
   bindMute($("#mute"));
 }
 
 function statLine(d) { return `<span>HP <b>${d.hp}</b></span><span>ATK <b>${d.atk}</b></span><span>DEF <b>${d.def}</b></span><span>SPD <b>${d.spd}</b></span>`; }
 
-function showSelect() {
+function showSelect(mode = "run") {
   const picked = [];
   let focus = "lyra";
   setScreen(`
-    <header class="page-head"><div><div class="eyebrow">STEP 1 // BUILD YOUR SQUAD</div><h2>CHOOSE <span>3 OPERATORS</span></h2></div><button class="btn ghost" id="back">← TITLE</button></header>
+    <header class="page-head"><div><div class="eyebrow">${mode === "world" ? "EXPLORE // CHOOSE YOUR SQUAD" : "STEP 1 // BUILD YOUR SQUAD"}</div><h2>CHOOSE <span>3 OPERATORS</span></h2></div><button class="btn ghost" id="back">← TITLE</button></header>
     <p class="tip">Tip: mix roles. A healer or shield-giver (Lyra, Vex, Aeon) keeps the squad alive; tanks like Titan protect the fragile.</p>
     <div class="pick-grid" id="grid"></div>
     <div class="detail" id="detail"></div>
-    <div class="pick-foot"><span id="count"></span><button class="btn primary" id="go" disabled>START RUN</button></div>`, "select");
+    <div class="pick-foot"><span id="count"></span><button class="btn primary" id="go" disabled>${mode === "world" ? "ENTER THE GRID" : "START RUN"}</button></div>`, "select");
   const draw = () => {
     $("#grid").innerHTML = E.HERO_ORDER.map((k) => {
       const d = E.HEROES[k], lock = isLocked(k), on = picked.includes(k);
@@ -100,7 +105,7 @@ function showSelect() {
     draw();
   });
   $("#back").addEventListener("click", showTitle);
-  $("#go").addEventListener("click", () => { sfx.click(); startRun(picked); });
+  $("#go").addEventListener("click", () => { sfx.click(); mode === "world" ? enterWorld(picked) : startRun(picked); });
   draw();
 }
 
@@ -122,6 +127,30 @@ function showStory() {
       <button class="btn primary" id="fight">ENTER THE SECTOR</button>
     </div>`, "story");
   $("#fight").addEventListener("click", () => { sfx.click(); startBattle(); });
+}
+
+/* ----------------------------------------------------------------- world */
+const worldHost = {
+  img: IMG, hero: (k) => E.HEROES[k], locked: isLocked,
+  fight: (keys, stage, done) => fightEncounter(keys, stage, done),
+  resume: () => enterWorld(null), pickSquad: () => showSelect("world"), exit: () => showTitle(),
+};
+function enterWorld(squad) {
+  const el = setScreen("", "worldscreen");
+  worldHandle = startWorld(el, worldHost, squad);
+}
+/** Runs one battle with the existing engine; `done("win" | "lose" | "flee")` brings the player back to the world. */
+function fightEncounter(keys, stageIdx, done) {
+  run = { party: keys.map((k, i) => E.makeHero(k, i)), stage: stageIdx, mods: {}, encounter: done, keys };
+  startBattle();
+}
+function finishEncounter(res) { const cb = run.encounter; if (res === "win") sfx.win(); run = null; cb(res); }
+function encounterLost() {
+  sfx.lose(); const { keys, stage, encounter } = run;
+  setScreen(`<div class="end-wrap lose"><div class="eyebrow">SIGNAL LOST</div><h2>THE SQUAD <span>FALLS</span></h2><p class="lead">The Static wins this round. Try again, or fall back to the last safe point.</p>
+    <div class="title-btns"><button class="btn primary" id="retry">TRY AGAIN</button><button class="btn" id="safe">RETURN TO SAFE POINT</button></div></div>`, "end");
+  $("#retry").addEventListener("click", () => { sfx.click(); fightEncounter(keys, stage, encounter); });
+  $("#safe").addEventListener("click", () => { sfx.click(); run = { encounter }; finishEncounter("lose"); });
 }
 
 /* ---------------------------------------------------------------- battle */
@@ -180,18 +209,60 @@ function quake() {
   const a = $("#arena"); if (!a) return;
   a.classList.remove("quake"); void a.offsetWidth; a.classList.add("quake");
 }
-/** Orb of light that travels from the acting unit to its target. */
-function shoot(fromId, toId) {
-  const arena = $("#arena"), a = $("#u-" + fromId + " .u-art"), b = $("#u-" + toId + " .u-art");
-  if (!arena || !a || !b || typeof Element.prototype.animate !== "function") return Promise.resolve();
-  const R = arena.getBoundingClientRect(), ra = a.getBoundingClientRect(), rb = b.getBoundingClientRect();
-  const pt = (r) => [r.left - R.left + r.width / 2, r.top - R.top + r.height * 0.55];
-  const [x1, y1] = pt(ra), [x2, y2] = pt(rb);
-  const orb = document.createElement("div"); orb.className = "orb"; orb.style.setProperty("--c", getComputedStyle(a.parentElement).getPropertyValue("--c"));
-  arena.appendChild(orb);
-  const dur = 170 / speed;
-  const anim = orb.animate([{ transform: `translate(${x1}px,${y1}px) scale(.6)` }, { transform: `translate(${x2}px,${y2}px) scale(1.2)` }], { duration: dur, easing: "ease-in" });
-  return new Promise((res) => { anim.onfinish = () => { orb.remove(); res(); }; setTimeout(() => { orb.remove(); res(); }, dur + 120); });
+/* ---------------------------------------------------------- camera + hits */
+/** Centre of an element in the coordinate space of `stop`, ignoring transforms (so it stays correct while the camera is zoomed). */
+function ctr(el, stop) {
+  let x = el.offsetWidth / 2, y = el.offsetHeight * 0.55;
+  for (let n = el; n && n !== stop; n = n.offsetParent) { x += n.offsetLeft; y += n.offsetTop; }
+  return [x, y];
+}
+/** Moves the camera to a unit (or back to the wide shot when id is null). z = zoom, sec = move time. */
+function camTo(id, z = 1, sec = 0.45) {
+  const a = $("#arena"); if (!a) return;
+  let tx = 0, ty = 0;
+  const el = id && $("#u-" + id + " .u-art");
+  if (el && z > 1) {
+    const W = a.clientWidth, H = a.clientHeight, [px, py] = ctr(el, a);
+    tx = Math.max(-W * (z - 1) / 2, Math.min(W * (z - 1) / 2, (px - W / 2) * (0.35 - z)));
+    ty = Math.max(-H * (z - 1) / 2, Math.min(H * (z - 1) / 2, (py - H / 2) * (0.35 - z)));
+  }
+  a.style.setProperty("--z", z); a.style.setProperty("--tx", `${tx}px`); a.style.setProperty("--ty", `${ty}px`); a.style.setProperty("--camt", `${sec / speed}s`);
+}
+const FX_STYLE = { kira: "slash", kai: "slash", jax: "slash", titan: "impact", vex: "beam", aeon: "beam", orion: "holy", lyra: "orb" };
+const fxStyle = (u) => (u.team === "p" ? FX_STYLE[u.key] || "orb" : u.boss ? "impact" : "orb");
+function fxEl(cls, x, y, c, css = "") {
+  const d = document.createElement("div"); d.className = `fx ${cls}`; d.style.cssText = `left:${x}px;top:${y}px;--c:${c};${css}`; $("#cam").appendChild(d); return d;
+}
+function runFx(el, frames, ms, delay = 0) {
+  return new Promise((res) => {
+    const end = () => { el.remove(); res(); };
+    if (!el.animate) return end();
+    const an = el.animate(frames, { duration: ms / speed, delay: delay / speed, easing: "ease-out", fill: "both" });
+    an.onfinish = end; setTimeout(end, (ms + delay) / speed + 150);
+  });
+}
+/** Plays the visual for one hit, by attack style: orb, slash, impact, beam or holy pillar. */
+async function strike(a, t, big) {
+  const cam = $("#cam"), A = $("#u-" + a.id + " .u-art"), T = $("#u-" + t.id + " .u-art"); if (!cam || !A || !T) return;
+  const c = E_COLOR(a), [x1, y1] = ctr(A, cam), [x2, y2] = ctr(T, cam), feet = y2 + T.offsetHeight * 0.4;
+  switch (fxStyle(a)) {
+    case "slash": {
+      const angs = big ? [-40, 35, 90] : [-35, 35];
+      await Promise.all(angs.map((g, i) => runFx(fxEl("slash", x2, y2, c), [{ transform: `rotate(${g}deg) scaleX(0)`, opacity: 1 }, { transform: `rotate(${g}deg) scaleX(1.5)`, opacity: 1, offset: 0.45 }, { transform: `rotate(${g}deg) scaleX(1.6)`, opacity: 0 }], 220, i * 70)));
+      break;
+    }
+    case "impact": quake(); await runFx(fxEl("ring", x2, feet, c), [{ transform: "scale(.3)", opacity: 1 }, { transform: `scale(${big ? 10 : 6})`, opacity: 0 }], 380); break;
+    case "beam": {
+      const len = Math.hypot(x2 - x1, y2 - y1), g = (Math.atan2(y2 - y1, x2 - x1) * 180) / Math.PI;
+      await runFx(fxEl("beam", x1, y1, c, `width:${len}px;height:${big ? 12 : 6}px`), [{ transform: `rotate(${g}deg) scaleX(0)`, opacity: 1 }, { transform: `rotate(${g}deg) scaleX(1)`, opacity: 1, offset: 0.5 }, { transform: `rotate(${g}deg) scaleX(1)`, opacity: 0 }], 280);
+      break;
+    }
+    case "holy": await runFx(fxEl("pillar", x2, feet, c), [{ transform: "scaleY(0)", opacity: 1 }, { transform: "scaleY(1)", opacity: 1, offset: 0.4 }, { transform: "scaleY(1)", opacity: 0 }], 340); break;
+    default: {
+      const orb = fxEl("orb", 0, 0, c);
+      await runFx(orb, [{ transform: `translate(${x1}px,${y1}px) scale(.6)` }, { transform: `translate(${x2}px,${y2}px) scale(1.2)` }], 190);
+    }
+  }
 }
 async function banner(text, ult) {
   const b = $("#banner"); if (!b) return;
@@ -201,33 +272,34 @@ async function banner(text, ult) {
 }
 
 async function play(events) {
-  let actor = null;
+  const my = epoch; let actor = null, hits = 0;
   for (const e of events) {
-    if (aborted) return;
+    if (my !== epoch) return;
     const u = e.id ? unitById(e.id) : null;
     switch (e.t) {
       case "round": actor = null; $("#round").textContent = `ROUND ${e.n}`; logLine(`— ROUND ${e.n} —`, "sep"); break;
       case "turn": actor = null; drawTurnbar(e.id); document.querySelectorAll(".unit.active").forEach((x) => x.classList.remove("active")); $("#u-" + e.id)?.classList.add("active"); break;
-      case "act": actor = u; logLine(`<b>${esc(u.name)}</b> uses <i>${esc(e.name)}</i>`, u.team); if (e.ult) sfx.ult(); pulse(e.id, u.team === "p" ? "lunge-up" : "lunge-down", 380);
+      case "act": actor = u; hits = 0; camTo(e.id, e.ult ? 1.32 : 1.16, 0.4); logLine(`<b>${esc(u.name)}</b> uses <i>${esc(e.name)}</i>`, u.team); if (e.ult) sfx.ult(); pulse(e.id, u.team === "p" ? "lunge-up" : "lunge-down", 380);
         if (e.ult) { flash(E_COLOR(u)); $("#arena")?.classList.add("cine"); }
         await banner(e.name.toUpperCase(), e.ult); $("#arena")?.classList.remove("cine"); break;
       case "dmg":
-        if (actor && actor.id !== u.id && actor.alive) await shoot(actor.id, u.id);
-        if (e.crit) quake();
+        hits += 1; camTo(hits === 1 ? e.id : null, hits === 1 ? (e.crit ? 1.42 : 1.26) : 1.14, 0.22);
+        if (actor && actor.id !== u.id && actor.alive) await strike(actor, u, !!(e.crit || actor.ult));
+        if (e.crit) { quake(); await sleep(110); }
         setHp(e.id, e.hp, e.max); floatText(e.id, e.absorbed && !e.amount ? "ABSORBED" : `-${e.amount}`, e.crit ? "crit" : "dmg"); pulse(e.id, "hurt", 350);
         e.crit ? sfx.crit() : sfx.hit(); logLine(`&nbsp;&nbsp;→ ${esc(u.name)} takes <b>${e.amount}</b>${e.crit ? " (CRIT)" : ""}${e.absorbed ? ` (${e.absorbed} absorbed)` : ""}`, "dim");
         refreshUnit(u); await sleep(240); break;
-      case "heal": setHp(e.id, e.hp, e.max); floatText(e.id, `+${e.amount}`, "heal"); sfx.heal(); logLine(`&nbsp;&nbsp;→ ${esc(u.name)} recovers <b>${e.amount}</b>`, "dim"); await sleep(180); break;
+      case "heal": camTo(e.id, 1.12, 0.3); setHp(e.id, e.hp, e.max); floatText(e.id, `+${e.amount}`, "heal"); sfx.heal(); logLine(`&nbsp;&nbsp;→ ${esc(u.name)} recovers <b>${e.amount}</b>`, "dim"); await sleep(180); break;
       case "dodge": floatText(e.id, "DODGE", "good"); await sleep(220); break;
       case "text": floatText(e.id, e.msg, e.cls); await sleep(260); break;
       case "status": floatText(e.id, e.label, e.name === "mark" || e.name === "weaken" || e.name === "stun" || e.name === "confuse" ? "bad" : "good"); if (u) refreshUnit(u); await sleep(110); break;
-      case "dead": pulse(e.id, "hurt", 400); logLine(`<b>${esc(u.name)}</b> is down!`, "bad"); if (u) refreshUnit(u); await sleep(380); break;
+      case "dead": camTo(e.id, 1.3, 0.3); pulse(e.id, "hurt", 400); logLine(`<b>${esc(u.name)}</b> is down!`, "bad"); if (u) refreshUnit(u); await sleep(380); break;
       case "revive": setHp(e.id, e.hp, e.max); floatText(e.id, "REVIVED", "heal"); sfx.heal(); if (u) refreshUnit(u); await sleep(240); break;
       case "spawn": $("#foeSide").insertAdjacentHTML("beforeend", unitHTML(e.unit)); refreshUnit(e.unit); logLine(`<b>${esc(e.unit.name)}</b> emerges from the noise`, "bad"); sfx.buff(); await sleep(350); break;
       default: break;
     }
   }
-  if (!aborted) refreshAll();
+  if (my === epoch) { refreshAll(); camTo(null, 1, 0.5); }
 }
 
 /* player input */
@@ -278,47 +350,52 @@ document.addEventListener("keydown", (e) => keyHandler && keyHandler(e));
 async function startBattle() {
   const st = E.STAGES[run.stage];
   battle = E.createBattle(run.party, run.stage, run.mods);
+  const scene = sceneArt(run.stage);
   setScreen(`
     <div class="hud"><div><b>${esc(st.name)}</b> <span id="round">ROUND 1</span></div><div class="hud-r"><button id="spd" class="btn tiny">SPEED ×1</button><button id="mute" class="btn tiny">${muteLabel()}</button><button id="quit" class="btn tiny">QUIT</button></div></div>
     <div class="turnbar" id="turnbar"></div>
     <div class="arena" id="arena" style="--sky1:${st.sky[0]};--sky2:${st.sky[1]}">
-      <div class="floorwrap"><div class="floor"></div></div>
-      <div class="side foes" id="foeSide">${battle.enemies.map(unitHTML).join("")}</div>
-      <div class="side party" id="partySide">${battle.party.map(unitHTML).join("")}</div>
+      <div class="scene far">${scene.far}</div><div class="scene mid">${scene.mid}</div>
+      <div class="cam" id="cam">
+        <div class="floorwrap"><div class="floor"></div></div>
+        <div class="side foes" id="foeSide">${battle.enemies.map(unitHTML).join("")}</div>
+        <div class="side party" id="partySide">${battle.party.map(unitHTML).join("")}</div>
+      </div>
       <div class="flash" id="flash"></div>
       <div class="banner" id="banner"></div>
     </div>
     <div class="command" id="command"></div>
     <div class="log" id="log"></div>`, "battle");
-  aborted = false;
+  const my = epoch;
   $("#spd").addEventListener("click", (e) => { speed = speed === 1 ? 2 : speed === 2 ? 3 : 1; e.target.textContent = `SPEED ×${speed}`; });
   bindMute($("#mute"));
-  $("#quit").addEventListener("click", () => { if (confirm("Quit this run?")) { keyHandler = null; showTitle(); } });
+  $("#quit").addEventListener("click", () => { if (!confirm(run.encounter ? "Flee this fight and return to the Grid?" : "Quit this run?")) return; keyHandler = null; if (run.encounter) finishEncounter("flee"); else showTitle(); });
   $("#arena").addEventListener("click", (e) => { const el = e.target.closest(".unit.targetable"); if (el && pendingTarget) { const f = pendingTarget; sfx.click(); f(el.dataset.id); } });
   battle.party.concat(battle.enemies).forEach((u) => setHp(u.id, u.hp, u.max));
   refreshAll();
   logLine(`Entering <b>${esc(st.name)}</b>`, "sep");
   await sleep(500);
 
-  while (!battle.over && !aborted) {
+  while (!battle.over && my === epoch) {
     const t = E.nextTurn(battle);
     await play(t.events);
-    if (aborted) return;
+    if (my !== epoch) return;
     if (t.skipped) { await sleep(250); continue; }
     const u = t.unit;
     let evs;
     if (u.team === "e") { clearCommand(`${esc(u.name)} is acting…`); await sleep(350); evs = E.enemyAct(battle, u); }
     else {
-      const c = await waitChoice(u); keyHandler = null; clearCommand("");
+      const c = await waitChoice(u); if (my !== epoch) return; keyHandler = null; clearCommand("");
       evs = E.playerAct(battle, u, c.slot, c.target);
     }
     await play(evs);
     await sleep(120);
   }
-  if (aborted) return;
+  if (my !== epoch) return;
   keyHandler = null; clearCommand("");
   await sleep(500);
-  if (battle.over === "win") stageClear(); else showEnd(false);
+  if (run.encounter) { if (battle.over === "win") finishEncounter("win"); else encounterLost(); }
+  else if (battle.over === "win") stageClear(); else showEnd(false);
 }
 
 /* --------------------------------------------------------- after battle */
