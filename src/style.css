@@ -231,3 +231,57 @@ img.brand-mark{border-radius:50%;object-fit:cover;background:#141a2b;filter:none
 .token-safe li::before{content:"◆";position:absolute;left:0;top:9px;color:var(--purple);font-size:9px}
 .token-disclaimer{margin:22px 0 0;font-size:8px;line-height:2;letter-spacing:.8px;color:#6f7585}
 @media(max-width:950px){.token-section{padding:0 5% 70px}.token-perks{grid-template-columns:1fr}.token-split{grid-template-columns:1fr}.token-legend{grid-template-columns:1fr}}
+
+/* =====================================================================
+   Refined buttons (v2): chamfered neon primary, bracketed ghost buttons,
+   animated wallet button and nav underline. Same palette as the site.
+   ===================================================================== */
+.button{position:relative;isolation:isolate;min-height:48px;padding:0 24px;gap:14px;border:0;font-family:'Space Mono',monospace;font-size:10px;font-weight:700;letter-spacing:1.4px;cursor:pointer;-webkit-tap-highlight-color:transparent;transition:transform .2s ease,box-shadow .25s ease,background-color .25s ease,color .2s ease,filter .2s ease}
+.button span{display:inline-block;transition:transform .25s ease}
+.button:hover span{transform:translate(2px,-2px)}
+.button:hover .play-icon{transform:scale(1.25)}
+.button:active{transform:translateY(0) scale(.98)}
+
+/* Primary: neon green with cut corners and a light sweep on hover */
+.button-primary{background:linear-gradient(180deg,#c9ff63 0%,#b6ff3b 55%,#a2ea2b 100%);color:#0c1106;clip-path:polygon(12px 0,100% 0,100% calc(100% - 12px),calc(100% - 12px) 100%,0 100%,0 12px)}
+.button-primary::before{content:"";position:absolute;inset:0;z-index:-1;background:linear-gradient(105deg,transparent 35%,rgba(255,255,255,.55) 50%,transparent 65%);transform:translateX(-120%);transition:transform .6s ease}
+.button-primary:hover{filter:brightness(1.06);box-shadow:none}
+.button-primary:hover::before{transform:translateX(120%)}
+.button-primary:focus-visible{outline:2px solid #0c1106;outline-offset:-5px}
+
+/* Ghost: dark glass with neon corner brackets that grow on hover */
+.button-ghost{background:rgba(13,16,23,.72);color:#e9eaf0;box-shadow:inset 0 0 0 1px #343944}
+.button-ghost::before,.button-ghost::after{content:"";position:absolute;width:9px;height:9px;border:0 solid var(--green);pointer-events:none;transition:width .25s ease,height .25s ease,border-color .25s ease}
+.button-ghost::before{top:-1px;left:-1px;border-top-width:2px;border-left-width:2px}
+.button-ghost::after{bottom:-1px;right:-1px;border-bottom-width:2px;border-right-width:2px}
+.button-ghost:hover{color:#fff;background:rgba(138,114,255,.09);box-shadow:inset 0 0 0 1px #5a4fa8,0 0 22px #8a72ff24}
+.button-ghost:hover::before,.button-ghost:hover::after{width:18px;height:18px}
+.button-ghost:focus-visible{outline:2px solid var(--green);outline-offset:3px}
+
+/* Disabled ("LINK COMING SOON") */
+.button.is-disabled{opacity:.5;cursor:not-allowed;filter:none}
+.button.is-disabled:hover{transform:none;background:rgba(13,16,23,.72);box-shadow:inset 0 0 0 1px #343944;color:#e9eaf0}
+.button.is-disabled::before,.button.is-disabled::after{width:9px;height:9px}
+.button.is-disabled:hover span{transform:none}
+
+/* Wallet button */
+.wallet-btn{position:relative;height:42px;padding:0 18px;border:0;gap:10px;font-weight:700;font-size:9px;letter-spacing:1.3px;background:rgba(182,255,59,.04);box-shadow:inset 0 0 0 1px #3b4a24;clip-path:polygon(9px 0,100% 0,100% calc(100% - 9px),calc(100% - 9px) 100%,0 100%,0 9px);transition:background-color .25s ease,box-shadow .25s ease,color .2s ease}
+.wallet-btn:hover{background:rgba(182,255,59,.1);box-shadow:inset 0 0 0 1px var(--green);color:#fff}
+.wallet-btn:active{background:rgba(182,255,59,.16)}
+.wallet-btn:focus-visible{outline:2px solid var(--green);outline-offset:-4px}
+.wallet-dot{animation:dotPulse 2.4s ease-out infinite}
+@keyframes dotPulse{0%{box-shadow:0 0 0 0 rgba(182,255,59,.55)}70%,100%{box-shadow:0 0 0 7px rgba(182,255,59,0)}}
+
+/* Navigation links: neon underline slides in */
+.nav-links a{position:relative;padding:6px 0}
+.nav-links a::after{content:"";position:absolute;left:0;right:0;bottom:0;height:2px;background:var(--green);transform:scaleX(0);transform-origin:left;transition:transform .25s ease}
+.nav-links a:hover::after{transform:scaleX(1)}
+
+@media(max-width:700px){
+  .button{min-height:50px;padding:0 20px;font-size:9px;letter-spacing:1.1px}
+  .wallet-btn{height:36px;padding:0 11px;font-size:8px;letter-spacing:.8px;clip-path:polygon(7px 0,100% 0,100% calc(100% - 7px),calc(100% - 7px) 100%,0 100%,0 7px)}
+}
+@media(prefers-reduced-motion:reduce){
+  .button,.button span,.button::before,.button::after,.wallet-btn,.nav-links a::after{transition:none!important}
+  .wallet-dot{animation:none!important}
+}

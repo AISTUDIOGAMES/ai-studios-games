@@ -149,7 +149,7 @@ const liveSocials = SOCIALS.filter((s) => safeUrl(s.url));
 const waitlistOn = !!safeUrl(WAITLIST_ENDPOINT);
 const officialLinks = [
   { label: "WEBSITE", url: SITE_URL },
-  ...GAMES.filter((g) => safeUrl(g.url)).map((g) => ({ label: g.title, url: g.url })),
+  ...GAMES.filter((g) => safeUrl(g.url)).map((g) => ({ label: g.title, url: g.url.startsWith("/") ? SITE_URL + g.url : g.url })),
   ...liveSocials.map((s) => ({ label: s.label, url: s.url })),
 ];
 
