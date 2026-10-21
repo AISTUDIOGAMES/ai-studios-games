@@ -3,7 +3,7 @@ export interface FaqItem { q: string; a: string }
 
 /** Newest first. Add a line here every time something ships: a fresh log shows visitors the studio is active. */
 export const NEWS: NewsItem[] = [
-  { date: "OCT 2026", tag: "NEW GAME", title: "Bomber.Idle joins the arcade", text: "Send your Operators out to blow up blocks and collect coins. A second experiment, running on its own site." },
+  { date: "OCT 2026", tag: "NEW GAME", title: "Bomber.Idle joins the arcade", text: "Send your Operators out to blow up blocks and collect coins. A second experiment, now playable right here on the site." },
   { date: "OCT 2026", tag: "LORE", title: "The AI World Owl universe is live", text: "Read the prologue and open the dossier of every Operator, from Orion to Vex." },
   { date: "OCT 2026", tag: "COLLECTION", title: "Operator card previews", text: "Eight collectible concept cards are on display. Minting is not live yet." },
 ];
