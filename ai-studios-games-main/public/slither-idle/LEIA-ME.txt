@@ -1,1 +1,0 @@
-Somente o frontend do Slither.Idle. Backend (worker.js, wrangler.toml, payout.mjs, schema.sql) fica no repositorio original e NAO deve ir para public/.
