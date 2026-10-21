@@ -1,3 +1,4 @@
+import { tokenSection } from "./tokenomics";
 import { initWallet } from "./wallet";
 import "./style.css";
 import { GAMES, STATUS_LABEL, safeUrl, type Game } from "./games";
