@@ -58,6 +58,7 @@ html,body{width:100%;height:100%;overflow:hidden;background:#05070a;font-family:
   <div class="tk"><span data-i="bal">tSLITHERI:</span> <span id="balance-display">0.00</span></div>
   <div class="tk" style="color:#ff4757"><span data-i="brn">Burned 🔥:</span> <span id="burn-display">0</span></div>
   <div class="tk"><span data-i="dly">Daily rewards:</span> <span id="daily-display">0</span></div><div class="dbar"><i id="daily-bar"></i></div>
+  <div class="tk" style="color:#f3ba2f"><span data-i="afk">Farm AFK:</span> <span id="afk-amt">0.00</span> <button class="btn" id="afk-claim-btn" style="padding:3px 10px;font-size:10px" data-i="afkc">COLETAR</button></div>
   <div class="tk" id="net" style="font-size:10px;opacity:.85"></div>
 </div>
 <div id="leaderboard" class="hud"><h3 data-i="lb">LEADERBOARD</h3><div id="leader-list"></div></div>
@@ -74,6 +75,7 @@ html,body{width:100%;height:100%;overflow:hidden;background:#05070a;font-family:
     <button class="btn" id="bot-btn">🤖 AUTO-BOT: OFF</button>
     <select data-lang-select aria-label="Language"></select>
     <button class="btn sec" id="shop-btn" data-i="shop">🛒 SHOP</button>
+    <button class="btn sec" id="snakes-btn" data-i="snk">🐍 COBRAS</button>
     <button class="btn sec" id="info-btn" data-i="info">📜 INFO</button>
     <button class="btn sec" id="quest-btn" data-i="qb">🎯 QUESTS</button><button class="btn sec" id="mute-btn">🔊</button><button class="btn sec" id="help-btn">?</button>
     <button class="btn sec" data-wallet-btn>🔗 Connect Phantom</button>
@@ -91,6 +93,16 @@ html,body{width:100%;height:100%;overflow:hidden;background:#05070a;font-family:
     <div class="item"><div style="font-size:28px">⚡</div><b data-i="bat">Battery 100%</b><span class="tk">200 tSLITHERI</span><button class="btn" id="recharge-btn" data-i="rech">Recharge</button></div>
     <div class="item"><div style="font-size:28px">🎨</div><b data-i="skins">Skins &amp; VIP</b><a class="btn" href="store.html" data-i="gostore">Open store</a></div>
   </div>
+</div></div>
+<div id="snakes-modal" class="overlay"><div class="modal">
+  <button class="close" data-close="snakes-modal">✕</button>
+  <h2 data-i="snkh">🐍 COBRAS &amp; FARM AFK</h2>
+  <p style="color:#aaa;font-size:13px" data-i="snkd">Cada cobra rende tokens sozinha com o tempo, mesmo com o jogo fechado — clique em "COLETAR" no topo da tela de vez em quando. Melhore uma cobra pra ela render mais.</p>
+  <div class="item" style="margin:14px 0;flex-direction:row;justify-content:space-between;text-align:left">
+    <div><b data-i="snkg">🧬 Girar cápsula</b><div style="font-size:12px;color:#aaa" data-i="snkgd">Sorteia uma cobra nova (comum a mítica)</div></div>
+    <button class="btn" id="gacha-btn">400 tSLITHERI</button>
+  </div>
+  <div id="snake-list" class="grid"></div>
 </div></div>
 <div id="info-modal" class="overlay"><div class="modal">
   <button class="close" data-close="info-modal">✕</button>
@@ -127,6 +139,7 @@ const player = {x: W/2, y: W/2, angle: 0, speed: 3.6, radius: 14, length: 120, s
 let rivals = [], mouseX = innerWidth/2, mouseY = innerHeight/2, botBattery = 100, totalBurned = 0, lastLB = 0;
 
 let MAGNET = Save.skin().magnet; let warned = 0;
+let mySnakes = [], snakeSpeedMult = 1, snakeMagnetBonus = 0;   // cobras do gacha: bonus da cobra ativa + farm AFK
 const FREE_ENERGY = 100, BOOST_COST = 0.1;   // FREE_ENERGY = 0 faz todo turbo custar tokens
 let energy = FREE_ENERGY, boostDebt = 0, dropAcc = 0, lastNoBoost = 0;
 function feed(msg) { const f = $('feed'), d = document.createElement('div'); d.textContent = msg; f.appendChild(d); while (f.children.length > 5) f.firstChild.remove(); setTimeout(() => d.remove(), 7000); }
@@ -291,7 +304,7 @@ function pushSeg(o) {
   }
 }
 function eat(o, isPlayer) {
-  const mg = isPlayer ? MAGNET : 0, R = o.radius + mg + 24, x0 = Math.max(0, ((o.x - R) / CELL) | 0), x1 = ((o.x + R) / CELL) | 0, y0 = Math.max(0, ((o.y - R) / CELL) | 0), y1 = ((o.y + R) / CELL) | 0;
+  const mg = isPlayer ? MAGNET + snakeMagnetBonus : 0, R = o.radius + mg + 24, x0 = Math.max(0, ((o.x - R) / CELL) | 0), x1 = ((o.x + R) / CELL) | 0, y0 = Math.max(0, ((o.y - R) / CELL) | 0), y1 = ((o.y + R) / CELL) | 0;
   for (let cx = x0; cx <= x1; cx++) for (let cy = y0; cy <= y1; cy++) {
     const c = grid.get(cx * 4096 + cy); if (!c) continue;
     for (let i = c.length - 1; i >= 0; i--) {
@@ -349,7 +362,7 @@ function update(k, now) {
   if (!player.autoBot) { prog.play += k / 60; if (player.boosting) prog.boost += k / 60; }
   prog.len = Math.max(prog.len, player.length);
   if (now - lastFlush > 2000) { lastFlush = now; flushProg(); }
-  let spd = player.speed;
+  let spd = player.speed * snakeSpeedMult;
   if (player.boosting) {
     spd *= 1.8;
     if (free) energy = Math.max(0, energy - 30 * k / 60);
@@ -480,6 +493,54 @@ function render(now) {
 // ---- UI ----
 $('shop-btn').onclick = () => $('shop-modal').style.display = 'flex';
 $('info-btn').onclick = () => $('info-modal').style.display = 'flex';
+
+// ---- Cobras: gacha, selecao, upgrade, farm AFK ----
+const RARITY_COLOR = {common: '#9aa3b8', rare: '#4dd2ff', epic: '#b44dff', legendary: '#f3ba2f', mythic: '#ff4d6d'};
+const RARITY_NAME = {common: 'Comum', rare: 'Raro', epic: 'Épico', legendary: 'Lendário', mythic: 'Mítico'};
+async function refreshSnakes() {
+  mySnakes = Save.online ? (await Api.call('/snakes')).list : Save.s.snakes;
+  applyActiveSnake(); renderSnakeList();
+}
+function applyActiveSnake() {
+  const id = Save.s.activeSnake, sn = mySnakes.find(x => x.id === id);
+  snakeSpeedMult = sn ? 1 + sn.speed / 100 : 1; snakeMagnetBonus = sn ? sn.magnet : 0;
+}
+function renderSnakeList() {
+  const activeId = Save.s.activeSnake;
+  $('snake-list').innerHTML = mySnakes.length ? mySnakes.map(sn => {
+    const price = Math.round(80 * Math.pow(1.5, sn.lvl)), active = sn.id === activeId;
+    return '<div class="item" style="border-color:' + RARITY_COLOR[sn.rarity] + '66">' +
+      '<div style="font-size:24px">🐍</div><b style="color:' + RARITY_COLOR[sn.rarity] + '">' + RARITY_NAME[sn.rarity] + ' · Nv ' + sn.lvl + '</b>' +
+      '<div style="font-size:12px;color:#aaa">Farm: ' + sn.afk + '/h · Vel +' + sn.speed + '% · Ímã +' + sn.magnet + '</div>' +
+      '<button class="btn' + (active ? ' on' : '') + '" data-select="' + sn.id + '">' + (active ? 'PILOTANDO' : 'PILOTAR') + '</button>' +
+      '<button class="btn sec" data-upgrade="' + sn.id + '">⬆ ' + price + ' tSLITHERI</button></div>';
+  }).join('') : '<p style="color:#888;grid-column:1/-1;text-align:center;padding:20px 0">Nenhuma cobra ainda — gire uma cápsula acima.</p>';
+}
+$('snakes-btn').onclick = async () => { $('snakes-modal').style.display = 'flex'; await refreshSnakes(); };
+$('gacha-btn').onclick = async () => {
+  const r = await act(() => Api.call('/gacha', {}), () => Save.gacha());
+  if (r === 'ok' || (r && r.ok)) { toast('🧬 Nova cobra!'); await refreshSnakes(); }
+  else toast(t('tpoor'));
+};
+$('snake-list').onclick = async e => {
+  const sel = e.target.closest('[data-select]'), upg = e.target.closest('[data-upgrade]');
+  if (sel) { await act(() => Api.call('/snake/select', {id: +sel.dataset.select}), () => Save.selectSnake(+sel.dataset.select)); applyActiveSnake(); renderSnakeList(); }
+  else if (upg) {
+    const r = await act(() => Api.call('/snake/upgrade', {id: +upg.dataset.upgrade}), () => Save.upgradeSnake(+upg.dataset.upgrade));
+    if (r === 'ok' || (r && r.ok)) { toast('⬆ Cobra melhorada!'); await refreshSnakes(); } else toast(t('tpoor'));
+  }
+};
+function afkPreview() { return Save.online ? (() => { const rate = mySnakes.reduce((a, x) => a + x.afk, 0), h = Math.min(24, Math.max(0, (Date.now() - (Save.s.afkAt || Date.now())) / 36e5)); return rate * h * Math.max(0, 1 - Save.s.today / Save.CAP); })() : Save.farmPreview(); }
+setInterval(() => setTxt($('afk-amt'), afkPreview().toFixed(2)), 3000);
+$('afk-claim-btn').onclick = async () => {
+  let claimed = 0;
+  if (Save.online) { try { const st = await Api.call('/farm/claim', {}); claimed = st.claimed || 0; Save.setOnline(st); } catch (e) { toast(t('tpoor')); return; } }
+  else claimed = Save.farmClaim().claimed || 0;
+  if (claimed) toast('🌾 +' + claimed.toFixed(2) + ' tSLITHERI'); else toast('Nada pra coletar ainda');
+  setTxt($('afk-amt'), '0.00');
+};
+addEventListener('apistate', refreshSnakes); addEventListener('savechange', () => { if (!Save.online) { mySnakes = Save.s.snakes; applyActiveSnake(); } });
+refreshSnakes();
 document.querySelectorAll('[data-close]').forEach(b => b.onclick = () => $(b.dataset.close).style.display = 'none');
 function spend(c){ if (!Save.spend(c)) { toast(t('tpoor')); return false; } return true; }
 document.querySelectorAll('[data-buy]').forEach(b => b.onclick = () => {
