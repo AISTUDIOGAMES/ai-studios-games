@@ -71,7 +71,7 @@ export const GAMES: Game[] = [
     status: "experiment",
     kind: "external",
     url: BOMBER_IDLE_URL,
-    cover: "bomberidle-cover.svg",
+    cover: "bomberidle-cover.webp",
     meta: ["◈ BROWSER GAME", "⌁ IDLE GRID FARMING", "◎ TEST BUILD // NO REAL VALUE"],
   },
 ];
