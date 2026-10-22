@@ -3,7 +3,7 @@
 (function () {
   const KEY = 'slitheri_save_v1', CAP = 300, FAUCET = 250, FAUCET_MS = 864e5, VIP_PRICE = 250;
   // Farm AFK + cobras (gacha): mesmas regras do worker.js, usadas aqui só no modo offline/demo (sem login).
-  const GACHA_PRICE = 400, AFK_CAP_HOURS = 24, UPG_BASE = 80, UPG_MULT = 1.5;
+  const GACHA_PRICE = 400, AFK_CAP_HOURS = 24, UPG_BASE = 80, UPG_MULT = 1.5, AFK_SHARE = 0.4, UPG_MAX_LVL = 10;   // iguais a CFG em worker.js (modo offline é só demonstração)
   const RARITIES = [
     {id: 'common', w: 55, speed: 0, magnet: 0, afk: 2}, {id: 'rare', w: 25, speed: 2, magnet: 10, afk: 4},
     {id: 'epic', w: 12, speed: 4, magnet: 25, afk: 8}, {id: 'legendary', w: 6, speed: 6, magnet: 45, afk: 16},
@@ -61,7 +61,7 @@
   S.skin = () => SKINS[S.s.skin];
   S.faucetWait = () => Math.max(0, S.s.faucetAt + FAUCET_MS - Date.now());
   // Ganho com retorno decrescente: quanto mais já ganhou hoje, menor o pagamento. Nunca passa de CAP.
-  S.earn = x => commit(s => { const rate = Math.max(0, 1 - s.today / CAP), paid = x * rate; s.today += paid; s.bal += paid; return {paid, rate}; });
+  S.earn = x => commit(s => { const rate = Math.max(0, 1 - s.today / CAP); let paid = x * rate; paid = Math.min(paid, Math.max(0, CAP - s.today)); s.today += paid; s.bal += paid; return {paid, rate}; });
   S.spend = c => commit(s => { if (s.bal < c) return false; s.bal -= c; s.burned += c * .5; return true; });
   S.burn = c => { if (S.online) { const b = Math.min(S.s.bal, c); S.pend.paidBoost += b / 0.1; recompute(); return b; } return commit(s => { const b = Math.min(s.bal, c); s.bal -= b; s.burned += b; return b; }); };
   S.buySkin = id => commit(s => {
@@ -77,18 +77,19 @@
   });
   S.selectSnake = id => commit(s => { if (!s.snakes.some(x => x.id === id)) return false; s.activeSnake = id; return true; });
   S.upgradeSnake = id => commit(s => {
-    const sn = s.snakes.find(x => x.id === id); if (!sn) return {err: 'snake'};
+    const sn = s.snakes.find(x => x.id === id); if (!sn) return {err: 'snake'}; if (sn.lvl >= UPG_MAX_LVL) return {err: 'max_level'};
     const price = Math.round(UPG_BASE * Math.pow(UPG_MULT, sn.lvl)); if (s.bal < price) return {err: 'poor'};
-    s.bal -= price; s.burned += price * .5; const step = Math.max(1, Math.round(sn.afk * .3)); sn.afk += step; sn.lvl++; return {ok: true, snake: sn};
+    s.bal -= price; s.burned += price * .5; const base = (RARITIES.find(r => r.id === sn.rarity) || RARITIES[0]).afk, step = Math.max(1, Math.round(base * .3)); sn.afk += step; sn.lvl++; return {ok: true, snake: sn};
   });
   // Mesma regra do worker.js: paga pelo tempo real decorrido (ate 24h), somado de todas as cobras, dentro do teto diario.
   S.farmClaim = () => commit(s => {
     const rate = s.snakes.reduce((a, x) => a + x.afk, 0), now = Date.now(), elapsedH = Math.min(AFK_CAP_HOURS, Math.max(0, (now - (s.afkAt || now)) / 36e5));
     if (!rate || elapsedH <= 0) { s.afkAt = now; return {claimed: 0}; }
-    const dayRate = Math.max(0, 1 - s.today / CAP), paid = rate * elapsedH * dayRate;
-    s.today += paid; s.bal += paid; s.afkAt = now; return {claimed: paid};
+    const dayRate = Math.max(0, 1 - s.today / CAP); s.afkToday = s.afkDay === s.day ? (s.afkToday || 0) : 0; s.afkDay = s.day;
+    let paid = rate * elapsedH * dayRate; paid = Math.max(0, Math.min(paid, CAP - s.today, CAP * AFK_SHARE - s.afkToday));   // teto rígido + cota AFK (igual ao servidor)
+    s.today += paid; s.afkToday += paid; s.bal += paid; s.afkAt = now; return {claimed: paid};
   });
-  S.farmPreview = () => { const s = S.s, rate = s.snakes.reduce((a, x) => a + x.afk, 0), elapsedH = Math.min(AFK_CAP_HOURS, Math.max(0, (Date.now() - (s.afkAt || Date.now())) / 36e5)); return rate * elapsedH; };
+  S.farmPreview = () => { const s = S.s, rate = s.snakes.reduce((a, x) => a + x.afk, 0), elapsedH = Math.min(AFK_CAP_HOURS, Math.max(0, (Date.now() - (s.afkAt || Date.now())) / 36e5)); return Math.max(0, Math.min(rate * elapsedH * Math.max(0, 1 - s.today / CAP), CAP - s.today, CAP * AFK_SHARE - (s.afkDay === s.day ? (s.afkToday || 0) : 0))); };
   S.claim = () => commit(s => { if (s.faucetAt + FAUCET_MS > Date.now()) return {ok: false}; s.bal += FAUCET; s.faucetAt = Date.now(); return {ok: true}; });
   addEventListener('storage', e => { if (e.key === KEY && !S.online) { S.s = load(); fire(); } });
 })();

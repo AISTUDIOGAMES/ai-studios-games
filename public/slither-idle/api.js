@@ -5,8 +5,18 @@
   try { const o = JSON.parse(localStorage.getItem(K) || 'null'); if (o && o.exp > Date.now()) { A.token = o.token; A.wallet = o.wallet; } } catch (e) {}
   const changed = () => window.dispatchEvent(new Event('apistate'));
   A.enabled = () => !!cfg().API_URL;
+  // Operações que movem saldo levam uma Idempotency-Key. A MESMA chave é reutilizada se a resposta se perdeu na rede
+  // (o servidor então devolve o resultado original em vez de executar de novo) e cliques duplicados em andamento são ignorados.
+  const VALUE = new Set(['/shop', '/gacha', '/snake/upgrade', '/farm/claim', '/faucet', '/withdraw']), keys = new Map(), busy = new Set();
+  const uuid = () => (crypto.randomUUID ? crypto.randomUUID() : String(Date.now()) + Math.random().toString(16).slice(2));
   A.call = async (path, body) => {
-    const r = await fetch(cfg().API_URL + path, {method: body === undefined ? 'GET' : 'POST', headers: {'Content-Type': 'application/json', ...(A.token ? {Authorization: 'Bearer ' + A.token} : {})}, body: body === undefined ? undefined : JSON.stringify(body)});
+    const value = VALUE.has(path), sig = value ? path + JSON.stringify(body || {}) : '';
+    if (value) { if (busy.has(sig)) throw Object.assign(new Error('busy'), {code: 'busy'}); busy.add(sig); }
+    let k = null; if (value) { const o = keys.get(sig); k = o && Date.now() - o.t < 6e4 ? o.k : uuid(); keys.set(sig, {k, t: Date.now()}); }
+    let r;
+    try { r = await fetch(cfg().API_URL + path, {method: body === undefined ? 'GET' : 'POST', headers: {'Content-Type': 'application/json', ...(A.token ? {Authorization: 'Bearer ' + A.token} : {}), ...(k ? {'Idempotency-Key': k} : {})}, body: body === undefined ? undefined : JSON.stringify(body)}); }
+    catch (e) { if (value) busy.delete(sig); throw e; }   // falha de rede: mantém a chave para a nova tentativa
+    if (value) { busy.delete(sig); keys.delete(sig); }   // o servidor respondeu (ok ou erro): a próxima ação é uma ação nova
     const j = await r.json().catch(() => ({}));
     if (r.status === 401 && !path.startsWith('/auth/')) A.logout();
     if (!r.ok) throw Object.assign(new Error(j.error || 'http ' + r.status), {status: r.status, code: j.error});
