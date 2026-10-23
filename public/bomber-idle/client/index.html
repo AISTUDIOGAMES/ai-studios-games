@@ -1,0 +1,144 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Bomber Idle</title>
+    <style>
+      :root { color-scheme: dark; --bg:#16280f; --wood:#3a2512; --wood2:#5a3a1c; --gold:#e0a82e; --ink:#2a1a0c; --card:#3a2512; --text:#f6ecc9; --muted:#b7c297; }
+      * { box-sizing: border-box; }
+      body { margin: 0; background: var(--bg); color: var(--text); font-family: system-ui, sans-serif; min-height: 100vh; }
+      header { display: flex; flex-wrap: wrap; gap: 10px 14px; align-items: center; padding: 10px 16px; background: linear-gradient(var(--wood2), var(--wood)); border-bottom: 4px solid var(--gold); box-shadow: 0 4px 0 #0008; }
+      .title { font-size: 1.25rem; font-weight: 800; margin-right: auto; letter-spacing: .5px; }
+      .tag { font-size: .72rem; color: var(--muted); font-weight: 500; margin-left: 8px; }
+      .stat { display: flex; align-items: center; gap: 8px; background: var(--ink); border: 2px solid var(--gold); border-radius: 8px; padding: 4px 12px; font-variant-numeric: tabular-nums; }
+      .stat b { color: #ffe27a; font-size: 1.05rem; min-width: 3ch; text-align: right; }
+      .stat svg { width: 22px; height: 22px; flex: none; }
+      button { background: linear-gradient(#f5a62b, #d9781a); color: #2a1503; border: 2px solid #7a3d0c; border-radius: 8px; padding: 7px 14px; font-weight: 800; cursor: pointer; box-shadow: 0 3px 0 #7a3d0c; }
+      button:active:not(:disabled) { transform: translateY(2px); box-shadow: 0 1px 0 #7a3d0c; }
+      button:focus-visible { outline: 3px solid #fff; outline-offset: 2px; }
+      button:disabled { opacity: .55; cursor: not-allowed; }
+      button.ghost { background: transparent; color: var(--text); border: 2px solid var(--gold); box-shadow: none; width: 100%; margin-top: 12px; }
+      .maps { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 16px; }
+      button.chip { padding: 4px 10px; font-size: .75rem; background: transparent; color: var(--text); border: 2px solid #5a3a1c; box-shadow: none; }
+      button.chip.on { border-color: var(--gold); color: #ffe27a; background: #3a2512; }
+      main { display: flex; flex-wrap: wrap; gap: 14px; padding: 14px; align-items: flex-start; justify-content: center; }
+      #game { flex: none; width: min(100%, calc((100vh - 110px) * 31 / 19)); aspect-ratio: 31 / 19; border: 4px solid var(--wood); border-radius: 8px; box-shadow: 0 0 0 3px var(--gold), 0 8px 24px #0009; overflow: hidden; background: #1b2a14; }
+      #game canvas { image-rendering: pixelated; }
+      aside { flex: 1 1 290px; max-width: 360px; max-height: calc(100vh - 110px); overflow: auto; background: var(--ink); border: 3px solid var(--gold); border-radius: 10px; padding: 14px; }
+      aside h2 { margin: 0 0 10px; font-size: 1.05rem; }
+      ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 10px; }
+      li { display: grid; grid-template-columns: 58px 1fr; gap: 10px; background: var(--card); border: 2px solid #5a3a1c; border-radius: 8px; padding: 8px; }
+      li img { width: 58px; height: 80px; object-fit: cover; object-position: top; border: 2px solid; border-radius: 6px; background: #05081a; }
+      .hero-top { display: flex; gap: 8px; align-items: baseline; }
+      .tier { margin-left: auto; font-size: .78rem; font-weight: 700; }
+      .bar { height: 8px; background: #0e1709; border: 1px solid #000; border-radius: 4px; margin: 6px 0 4px; overflow: hidden; }
+      .bar div { height: 100%; transition: width .3s; }
+      .muted { color: var(--muted); } .small { font-size: .78rem; line-height: 1.3; }
+      .note { margin: 12px 0 0; color: var(--muted); font-size: .8rem; line-height: 1.4; }
+      #toast { position: fixed; bottom: 16px; left: 50%; transform: translateX(-50%) translateY(20px); background: var(--ink); border: 2px solid var(--gold); padding: 10px 16px; border-radius: 8px; opacity: 0; pointer-events: none; transition: opacity .2s, transform .2s; }
+      #toast.show { opacity: 1; transform: translateX(-50%); }
+      @media (prefers-reduced-motion: reduce) { .bar div, #toast { transition: none; } }
+      .tabs { display: flex; gap: 6px; margin-bottom: 12px; }
+      button.tab { flex: 1; padding: 6px 8px; background: transparent; color: var(--text); border: 2px solid #5a3a1c; box-shadow: none; }
+      button.tab.on { border-color: var(--gold); color: #ffe27a; background: #3a2512; }
+      [hidden] { display: none !important; }
+      .lvl-row { display: flex; align-items: center; gap: 8px; margin-top: 4px; }
+      .lvl { font-size: .78rem; font-weight: 800; color: #ffe27a; min-width: 3.2ch; }
+      .bar.thin { flex: 1; height: 5px; margin: 0; }
+      .ups { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 6px; }
+      button.up { padding: 3px 7px; font-size: .68rem; border-radius: 6px; box-shadow: 0 2px 0 #7a3d0c; }
+      button.up.poor { filter: grayscale(.8); opacity: .75; }
+      .stats { color: var(--muted); margin-top: 2px; }
+      .eff { color: #9be8ff; margin-top: 3px; }
+      .abils { margin-top: 5px; }
+      .abil { display: flex; justify-content: space-between; gap: 8px; font-size: .74rem; margin-top: 2px; cursor: help; }
+      .abil .s { font-weight: 800; white-space: nowrap; }
+      .abil .s.ready { color: #7dff9b; } .abil .s.active { color: #39e6ff; } .abil .s.cooldown { color: #ffb830; } .abil .s.locked { color: #8a8a8a; } .abil .s.passive { color: #b9b9ff; }
+      details.more { font-size: .72rem; color: var(--muted); margin-top: 5px; }
+      details.more summary { cursor: pointer; }
+      details.more p { margin: 4px 0 0; line-height: 1.35; }
+      li.mission { grid-template-columns: 1fr auto; align-items: center; }
+      li.mission .bar { margin: 6px 0 4px; }
+
+      body { padding-bottom: 92px; }
+      #game { width: min(100%, calc((100vh - 190px) * 31 / 19)); }
+      aside { max-height: calc(100vh - 190px); }
+      #hub { position: fixed; left: 0; right: 0; bottom: 0; z-index: 20; display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; padding: 8px 10px 10px; background: linear-gradient(var(--wood2), var(--wood)); border-top: 4px solid var(--gold); box-shadow: 0 -4px 0 #0008; }
+      #hub button { display: flex; flex-direction: column; align-items: center; gap: 2px; min-width: 76px; padding: 6px 10px; background: var(--ink); color: var(--text); border: 2px solid #5a3a1c; box-shadow: 0 3px 0 #0008; font-size: .72rem; }
+      #hub button .ic { font-size: 1.35rem; line-height: 1; }
+      #hub button.on, #hub button:hover { border-color: var(--gold); color: #ffe27a; }
+      #hub button .soon { font-size: .56rem; color: var(--muted); font-weight: 600; }
+      #modal { position: fixed; inset: 0; z-index: 30; display: grid; place-items: center; padding: 16px 16px 100px; background: #000a; }
+      #modal .panel { width: min(640px, 100%); max-height: 100%; overflow: auto; background: var(--ink); border: 3px solid var(--gold); border-radius: 12px; padding: 16px; box-shadow: 0 10px 30px #000c; }
+      #modal .panel-head { display: flex; align-items: center; gap: 10px; margin-bottom: 12px; }
+      #modal h2 { margin: 0 auto 0 0; font-size: 1.15rem; color: #ffe27a; }
+      #modal .x { padding: 2px 10px; background: #8a2a1a; color: #fff; border-color: #4a1208; box-shadow: 0 2px 0 #4a1208; }
+      #modal p, #modal li { line-height: 1.45; }
+      #modal ol, #modal ul.plain { padding-left: 20px; margin: 8px 0; display: block; }
+      #modal .kv { display: flex; justify-content: space-between; gap: 12px; padding: 6px 0; border-bottom: 1px solid #5a3a1c; }
+      #modal .kv b { color: #ffe27a; }
+      #modal .big { font-size: 1.8rem; font-weight: 800; color: #ffe27a; margin: 4px 0 10px; }
+      #modal .badge { display: inline-block; padding: 2px 8px; border: 2px solid var(--gold); border-radius: 999px; font-size: .72rem; color: #ffe27a; margin-bottom: 8px; }
+      #modal button.danger { background: linear-gradient(#d9503a, #a02a1a); border-color: #4a1208; box-shadow: 0 3px 0 #4a1208; color: #fff; }
+    </style>
+  </head>
+  <body>
+    <header>
+      <span class="title">Bomber Idle<span class="tag">v1.7.1 · <span id="mapname"></span></span></span>
+      <span class="stat" title="$BOMBERSI pendentes (teste)">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="11" fill="#2a1a0c"/><circle cx="12" cy="12" r="9.5" fill="#f2b632"/><circle cx="12" cy="12" r="6.5" fill="none" stroke="#b47a10" stroke-width="2"/><path d="M8 7h3v2H8z" fill="#fff6c8"/></svg>
+        <b id="pending">0</b><small style="color:var(--muted);font-weight:700">$BOMBERSI</small>
+      </span>
+      <span class="stat" title="Baús abertos">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="2" y="6" width="20" height="15" rx="2" fill="#2a1a0c"/><rect x="3.5" y="7.5" width="17" height="12" fill="#9c6b3a"/><rect x="3.5" y="7.5" width="17" height="3" fill="#c4915a"/><rect x="10.5" y="11" width="3" height="5" fill="#ffd24a"/></svg>
+        <b id="chests">0</b>
+      </span>
+      <button id="connect">Conectar carteira</button>
+      <button id="claim" disabled>Cofre · Sacar</button>
+    </header>
+    <main>
+      <div id="game"></div>
+      <aside>
+        <nav class="tabs">
+          <button class="tab on" data-tab="heroes">Operadores</button>
+          <button class="tab" data-tab="missions">Missões</button>
+          <button class="tab" data-tab="maps">Mapas</button>
+        </nav>
+        <section id="tab-heroes">
+          <p id="hero-info" class="note" style="margin:0 0 8px"></p>
+          <div class="maps" style="margin-bottom:6px"><button id="work-all" class="chip">Enviar todos</button><button id="rest-all" class="chip">Recolher todos</button></div>
+          <div id="hero-filter" class="maps"></div>
+          <ul id="heroes"></ul>
+          <button id="refill" class="ghost">Recarregar stamina de todos (teste)</button>
+        </section>
+        <section id="tab-missions" hidden>
+          <ul id="missions"></ul>
+          <p class="note">As missões reiniciam todo dia. Melhorias de operador gastam os $BOMBERSI pendentes.</p>
+        </section>
+        <section id="tab-maps" hidden>
+          <div id="maps" class="maps"></div>
+        </section>
+        <p class="note">Os $BOMBERSI daqui são de teste e ficam salvos só neste navegador. O saque on-chain depende do servidor e do programa na devnet.</p>
+      </aside>
+    </main>
+    <nav id="hub" aria-label="Menu principal">
+      <button data-hub="heroes"><span class="ic">🧑‍🚀</span>Operadores</button>
+      <button data-hub="capsules"><span class="ic">📦</span>Cápsulas</button>
+      <button data-hub="lodging"><span class="ic">🏠</span>Alojamentos</button>
+      <button data-hub="exchange"><span class="ic">🪙</span>Bolsa<span class="soon">em breve</span></button>
+      <button data-hub="vault"><span class="ic">🗝️</span>Cofre</button>
+      <button data-hub="invites"><span class="ic">✉️</span>Convites<span class="soon">em breve</span></button>
+      <button data-hub="manual"><span class="ic">📖</span>Manual</button>
+      <button data-hub="settings"><span class="ic">⚙️</span>Config.</button>
+    </nav>
+    <div id="modal" hidden>
+      <div class="panel" role="dialog" aria-modal="true" aria-labelledby="modal-title">
+        <div class="panel-head"><h2 id="modal-title"></h2><button id="modal-close" class="x" aria-label="Fechar">✕</button></div>
+        <div id="modal-body"></div>
+      </div>
+    </div>
+    <div id="toast" role="status"></div>
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>
