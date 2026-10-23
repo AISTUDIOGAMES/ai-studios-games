@@ -7,7 +7,7 @@
   const TAU = Math.PI * 2, MAXP = 1024;
   // Níveis de qualidade. stride = amostragem da espinha (em segmentos); smooth = passes de suavização; demais = efeitos opcionais.
   const QUALITY = [
-    {level: 0, maxDpr: 1,   stride: 3, smooth: 0, shadow: false, glow: false, hi: false, tex: false, tongue: false, bands: false},
+    {level: 0, maxDpr: 1,   stride: 3, smooth: 1, shadow: false, glow: false, hi: true,  tex: false, tongue: false, bands: true},   // q0 mantém faixas de cor, suavização e realce: só perde sombra, brilho, escamas e língua
     {level: 1, maxDpr: 1.5, stride: 2, smooth: 1, shadow: true,  glow: false, hi: true,  tex: false, tongue: true,  bands: true},
     {level: 2, maxDpr: 2,   stride: 1, smooth: 2, shadow: true,  glow: true,  hi: true,  tex: true,  tongue: true,  bands: true},
   ];

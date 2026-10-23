@@ -572,11 +572,12 @@ function setQuality(l) {
 }
 function governor(now, dt, work) {   // mede o custo REAL do quadro; cai rápido quando sofre, sobe devagar quando sobra folga
   emaWork += (work - emaWork) * .05; emaDt += (Math.min(dt, 100) - emaDt) * .05;
-  if (qLock || document.hidden) return;
-  if (emaWork > 12 || emaDt > 26) { if (++badFrames > 90 && qLevel > 0) setQuality(qLevel - 1); } else badFrames = 0;
+  if (qLock || document.hidden || now < 6000) return;   // ignora os primeiros 6 s (carregamento de imagens/fontes causa quadros lentos que não são do desenho)
+  if (emaWork > 14 || emaDt > 34) { if (++badFrames > 90 && qLevel > 0) setQuality(qLevel - 1); } else badFrames = 0;
   if (emaWork < 5 && emaDt < 18.5 && qLevel < 2 && now > qCool) { if (++okFrames > 600) setQuality(qLevel + 1); } else okFrames = 0;
 }
 const dbg = DEBUG ? Object.assign(document.body.appendChild(document.createElement('div')), {style: 'position:fixed;left:8px;bottom:8px;z-index:9;font:12px monospace;color:#14f195;background:#0008;padding:4px 8px;border-radius:4px;pointer-events:none'}) : null;
+document.addEventListener('visibilitychange', () => { emaDt = 16.7; emaWork = 6; badFrames = okFrames = 0; last = performance.now(); acc = 0; });   // voltar de outra aba não conta como "quadro lento"
 function loop(now) {
   const dt = Math.min(now - last, 100); last = now; const t0 = performance.now();
   if (!paused) { acc += dt; let n = 0; while (acc >= STEP && n < 5) { update(1, now); acc -= STEP; n++; } if (n === 5) acc = 0; } else acc = 0;
