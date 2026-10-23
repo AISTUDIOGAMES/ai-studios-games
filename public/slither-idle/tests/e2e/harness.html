@@ -1,0 +1,21 @@
+<!doctype html><meta charset=utf8><body style="margin:0;background:#07090d"><canvas id=c></canvas>
+<script src="file:///REPO/skins.js"></script>
+<script src="file:///REPO/render.js"></script>
+<script>
+const ids=(new URLSearchParams(location.search).get('ids')||'0,1,5,12,30,40').split(','), lvl=+(new URLSearchParams(location.search).get('q')||2);
+const cols=2, cw=520, ch=300, rows=Math.ceil(ids.length/cols), dpr=devicePixelRatio;
+const cv=document.getElementById('c'); cv.width=cols*cw*dpr; cv.height=rows*ch*dpr; cv.style.width=cols*cw+'px'; cv.style.height=rows*ch+'px';
+const ctx=cv.getContext('2d'); ctx.setTransform(dpr,0,0,dpr,0,0);
+function snake(sk, kind, len, now){ const sg=[]; let x=0,y=0,a=0; // gera por trás: caminha do início(cauda) e inverte
+  const pts=[]; for(let i=0;i<len;i++){ const t=i/len; if(kind==='s'){ pts.push([60+t*400, 150+Math.sin(t*9)*70]); } else { const ang=t*5.2+0.4, rad=110-t*38; pts.push([260+Math.cos(ang)*rad,150+Math.sin(ang)*rad]); } }
+  // espaçar ~6px
+  const out=[pts[0]]; for(const p of pts){ const l=out[out.length-1]; if(Math.hypot(p[0]-l[0],p[1]-l[1])>=6) out.push(p); }
+  out.reverse(); out.forEach((p,i)=>sg.push({x:p[0],y:p[1],c:900-i}));
+  const h=sg[0], g=sg[3]; const ang=Math.atan2(h.y-g.y,h.x-g.x);
+  return {segments:sg,x:h.x,y:h.y,px:h.x,py:h.y,angle:ang,pa:ang,radius:13*(sk.thick||1),sk,seed:.37,eatT:now-300,turnV:.03,boosting:false,name:''}; }
+ids.forEach((id,k)=>{ const sk=SKINS[+id], cx=(k%cols)*cw, cy=Math.floor(k/cols)*ch; ctx.save(); ctx.translate(cx,cy); ctx.beginPath(); ctx.rect(0,0,cw,ch); ctx.clip();
+  ctx.fillStyle='#10131a'; ctx.fillRect(0,0,cw,ch);
+  const sn=snake(sk,k%2?'c':'s',300,1000); SnakeRender.draw(ctx,sn,{q:SnakeRender.QUALITY[lvl],now:1000,alpha:1,label:false});
+  ctx.fillStyle='#8d95a8'; ctx.font='12px sans-serif'; ctx.fillText(id+' '+sk.n[0]+' (tier '+sk.tier+')',8,16); ctx.restore(); });
+document.title='done';
+</script>
