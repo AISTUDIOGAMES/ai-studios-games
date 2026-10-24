@@ -120,13 +120,13 @@ html,body{width:100%;height:100%;overflow:hidden;background:#05070a;font-family:
   <ul class="tut"><li data-i="tu1">🖱️ Move: your snake follows the mouse (or your finger/joystick).</li><li data-i="tu2">🪙 Eat coins to grow and earn tSLITHERI (a daily cap applies).</li><li data-i="tu3">⚡ Hold left click / SPACE to boost. Short bursts are free; long boosts burn tokens.</li><li data-i="tu4">💀 Touch another snake's body or the red wall and you die. Make rivals hit your body to eliminate them.</li></ul>
   <button class="btn" id="tut-go" data-i="tub" style="margin-top:12px">START PLAYING</button>
 </div></div>
-<script src="i18n.js"></script>
-<script src="skins.js"></script>
-<script src="render.js"></script>
-<script src="save.js"></script>
-<script src="config.js"></script>
-<script src="wallet.js"></script>
-<script src="api.js"></script>
+<script src="i18n.js?v=3.2"></script>
+<script src="skins.js?v=3.2"></script>
+<script src="render.js?v=3.2"></script>
+<script src="save.js?v=3.2"></script>
+<script src="config.js?v=3.2"></script>
+<script src="wallet.js?v=3.2"></script>
+<script src="api.js?v=3.2"></script>
 <script>
 const CONFIG = {WORLD: 7000, FOODS: 3000, MAXF: 4500, RIVALS: 24, SEG: 6, API_URL: null, TOKEN_MINT: null};
 const $ = id => document.getElementById(id);
@@ -582,7 +582,7 @@ function loop(now) {
   const dt = Math.min(now - last, 100); last = now; const t0 = performance.now();
   if (!paused) { acc += dt; let n = 0; while (acc >= STEP && n < 5) { update(1, now); acc -= STEP; n++; } if (n === 5) acc = 0; } else acc = 0;
   render(now, paused ? 1 : acc / STEP, dt); const work = performance.now() - t0; governor(now, dt, work); frames++;
-  if (dbg && frames % 15 === 0) dbg.textContent = 'fps ' + (1000 / emaDt).toFixed(0) + ' | work ' + emaWork.toFixed(1) + 'ms | q' + qLevel + ' | dpr ' + DPR + ' | ' + canvas.width + 'x' + canvas.height + ' | snakes ' + (rivals.length + 1) + ' | parts ' + P.n;
+  if (dbg && frames % 15 === 0) dbg.textContent = 'render v' + SnakeRender.VERSION + ' | fps ' + (1000 / emaDt).toFixed(0) + ' | work ' + emaWork.toFixed(1) + 'ms | q' + qLevel + ' | dpr ' + DPR + ' | ' + canvas.width + 'x' + canvas.height + ' | snakes ' + (rivals.length + 1) + ' | parts ' + P.n;
   requestAnimationFrame(loop);
 }
 if (DEBUG) window.__game = {player, rivals, camera, cam, get Q() { return Q; }, get DPR() { return DPR; }, setQuality, stats: () => ({emaWork, emaDt, qLevel, DPR, frames, ghosts: ghosts.length, parts: P.n}), update, render};

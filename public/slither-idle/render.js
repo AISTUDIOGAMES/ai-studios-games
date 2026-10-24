@@ -192,6 +192,6 @@
     fake.sk = sk; fake.radius = r; fake.x = sg[0].x; fake.y = sg[0].y; fake.angle = Math.atan2(sg[0].y - sg[2].y, sg[0].x - sg[2].x); fake.px = fake.x; fake.py = fake.y; fake.pa = fake.angle; fake.eatT = -1e9;
     draw(c, fake, {q: QUALITY[2], now: now || 0, alpha: 1, wave: now ? 1 : 0});
   }
-  const api = {QUALITY, draw, preview, shade, _buildSpine: buildSpine, _edges: edges, _buf: {px, py, ss, hw, pc, E0}, MAXP};
+  const api = {VERSION: '3.2', QUALITY, draw, preview, shade, _buildSpine: buildSpine, _edges: edges, _buf: {px, py, ss, hw, pc, E0}, MAXP};
   if (typeof module !== 'undefined' && module.exports) module.exports = api; else { root.SnakeRender = api; if (root.Skins) root.Skins.preview = preview; }   // a loja usa o MESMO renderer do jogo
 })(typeof window !== 'undefined' ? window : globalThis);
