@@ -1,19 +1,16 @@
 {
-  "name": "ai-studios-games",
+  "name": "slither-idle-backend",
   "private": true,
-  "version": "0.1.0",
   "type": "module",
-  "scripts": {
-    "dev": "vite",
-    "build": "tsc && vite build",
-    "preview": "vite preview"
-  },
   "dependencies": {
-    "@wallet-standard/app": "^1.1.0",
-    "@wallet-standard/base": "^1.1.0"
+    "@solana/web3.js": "^1.95.0",
+    "@solana/spl-token": "^0.4.8"
   },
-  "devDependencies": {
-    "typescript": "^5.7.3",
-    "vite": "^6.0.7"
+  "scripts": {
+    "test": "node --test --no-warnings \"tests/*.test.mjs\"",
+    "check": "node --check worker.js && node --check payout.mjs && node --check save.js && node --check api.js"
+  },
+  "engines": {
+    "node": ">=22.13"
   }
 }
