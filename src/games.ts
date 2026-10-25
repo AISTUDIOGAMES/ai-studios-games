@@ -13,6 +13,8 @@ export interface Game {
   url: string;
   /** Cover image file inside public/images. When empty, the card shows a generated illustration. */
   cover?: string;
+  /** Optional CSS object-position for the cover (e.g. "68% 50%") to keep the focal point visible when cropped. */
+  coverPos?: string;
   meta: string[];
 }
 
@@ -47,7 +49,8 @@ export const GAMES: Game[] = [
     status: "experiment",
     kind: "external",
     url: SLITHER_IDLE_URL,
-    cover: "slither-cover.webp",
+    cover: "banner-slither.webp",
+    coverPos: "68% 50%",
     meta: ["◈ BROWSER GAME", "⌁ AUTO-BOT IDLE PLAY", "◎ TEST BUILD // NO REAL VALUE"],
   },
   {
@@ -59,7 +62,7 @@ export const GAMES: Game[] = [
     status: "prototype",
     kind: "external",
     url: "/rpg.html",
-    cover: "rpg-cover.webp",
+    cover: "banner-owl.webp",
     meta: ["⌁ TURN-BASED RPG", "◈ 8 OPERATORS", "◎ BROWSER PROTOTYPE"],
   },
   {
@@ -71,7 +74,7 @@ export const GAMES: Game[] = [
     status: "experiment",
     kind: "external",
     url: BOMBER_IDLE_URL,
-    cover: "bomberidle-banner-v2.svg",
+    cover: "banner-bomber.webp",
     meta: ["◈ BROWSER GAME", "⌁ IDLE GRID FARMING", "◎ TEST BUILD // NO REAL VALUE"],
   },
 ];

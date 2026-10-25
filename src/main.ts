@@ -32,7 +32,7 @@ function artFor(game: Game): string {
   if (game.cover) {
     return `
   <div class="game-art game-cover">
-    <img src="${img(game.cover)}" alt="${esc(game.title)} cover art" loading="lazy" decoding="async" />
+    <img src="${img(game.cover)}" alt="${esc(game.title)} cover art" loading="lazy" decoding="async"${game.coverPos ? ` style="object-position:${esc(game.coverPos)}"` : ""} />
     <div class="game-art-tag">${esc(STATUS_LABEL[game.status])} // TEST BUILD</div>
   </div>`;
   }
