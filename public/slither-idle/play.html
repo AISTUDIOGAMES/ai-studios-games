@@ -120,32 +120,23 @@ html,body{width:100%;height:100%;overflow:hidden;background:#05070a;font-family:
   <ul class="tut"><li data-i="tu1">🖱️ Move: your snake follows the mouse (or your finger/joystick).</li><li data-i="tu2">🪙 Eat coins to grow and earn tSLITHERI (a daily cap applies).</li><li data-i="tu3">⚡ Hold left click / SPACE to boost. Short bursts are free; long boosts burn tokens.</li><li data-i="tu4">💀 Touch another snake's body or the red wall and you die. Make rivals hit your body to eliminate them.</li></ul>
   <button class="btn" id="tut-go" data-i="tub" style="margin-top:12px">START PLAYING</button>
 </div></div>
-<script src="i18n.js?v=3.2"></script>
-<script src="skins.js?v=3.2"></script>
-<script src="render.js?v=3.2"></script>
-<script src="save.js?v=3.2"></script>
-<script src="config.js?v=3.2"></script>
-<script src="wallet.js?v=3.2"></script>
-<script src="api.js?v=3.2"></script>
+<script src="i18n.js"></script>
+<script src="skins.js"></script>
+<script src="save.js"></script>
+<script src="config.js"></script>
+<script src="wallet.js"></script>
+<script src="api.js"></script>
 <script>
 const CONFIG = {WORLD: 7000, FOODS: 3000, MAXF: 4500, RIVALS: 24, SEG: 6, API_URL: null, TOKEN_MINT: null};
 const $ = id => document.getElementById(id);
 const canvas = $('game-canvas'), ctx = canvas.getContext('2d', {alpha: false}), mini = $('minimap').getContext('2d');
 const W = CONFIG.WORLD, WR = CONFIG.WORLD / 2, rnd = (a, b) => a + Math.random() * (b - a);
-const camera = {x: 0, y: 0, z: 1, w: innerWidth, h: innerHeight}, cam = {cx: W / 2, cy: W / 2, snap: true};   // camera = janela visível (mundo); cam = centro suavizado
-let VW = innerWidth, VH = innerHeight, DPR = 1, vgr = null;   // VW/VH em pixels CSS; o canvas tem VW*DPR pixels reais (nítido em telas HD/Retina)
-// Qualidade adaptativa (render.js/QUALITY): sobe/desce sozinha conforme o custo real de cada quadro. ?q=0|1|2 força um nível.
-const REDUCED = matchMedia('(prefers-reduced-motion: reduce)').matches;
-const QP = new URLSearchParams(location.search), DEBUG = QP.has('debug');
-let qLevel = QP.has('q') ? +QP.get('q') : (matchMedia('(pointer:coarse)').matches || (navigator.hardwareConcurrency || 8) <= 4 || (navigator.deviceMemory || 8) <= 4) ? 1 : 2, qLock = QP.has('q');
-let Q = SnakeRender.QUALITY[qLevel];
-// Sensação de controle: a cobra gira no máx. `turn` rad por tick (60/s); cobras longas giram mais devagar. Sem isso o corpo dobrava em "quinas".
-const FEEL = {turnBase: .17, turnMin: .09, lenRef: 1600, boostTurn: .9};   // turnMin = giro das IAs: o jogador nunca fica mais lento que um rival
+const camera = {x: 0, y: 0, z: 1, w: innerWidth, h: innerHeight};
 const coinImage = new Image(); coinImage.src = 'coin.png'; // coloque coin.png na mesma pasta do index.html
 
 const player = {x: W/2, y: W/2, angle: 0, speed: 3.6, radius: 14, length: 120, score: 120, tokens: 0, segments: [], n: 0,
-  autoBot: false, invulnUntil: 0, get name() { return t('you'); }, sk: Save.skin(), px: W/2, py: W/2, pa: 0, seed: Math.random(), eatT: -1e9, turnV: 0, boosting: false};
-let rivals = [], mouseX = innerWidth/2, mouseY = innerHeight/2, usingKeys = false, botBattery = 100, totalBurned = 0, lastLB = 0;
+  autoBot: false, invulnUntil: 0, get name() { return t('you'); }, sk: Save.skin()};
+let rivals = [], mouseX = innerWidth/2, mouseY = innerHeight/2, botBattery = 100, totalBurned = 0, lastLB = 0;
 
 let MAGNET = Save.skin().magnet; let warned = 0;
 let mySnakes = [], snakeSpeedMult = 1, snakeMagnetBonus = 0;   // cobras do gacha: bonus da cobra ativa + farm AFK
@@ -181,30 +172,23 @@ const SFX = {
   quest: () => [784, 988, 1175].forEach((f, i) => setTimeout(() => tone(f, .14, 'triangle', .07), i * 90)),
   boost: () => tone(180, .18, 'sawtooth', .03, 420)
 };
-let shake = 0, streak = 0, wasBoost = false, lastFlush = 0;
+const parts = []; let shake = 0, streak = 0, wasBoost = false, lastFlush = 0;
 const prog = {coins: 0, kills: 0, boost: 0, play: 0, len: 0};
-const PMAX = 500, P = {n: 0, x: new Float32Array(PMAX), y: new Float32Array(PMAX), vx: new Float32Array(PMAX), vy: new Float32Array(PMAX), life: new Float32Array(PMAX), max: new Float32Array(PMAX), r: new Float32Array(PMAX), c: new Array(PMAX)};
-function puff(x, y, vx, vy, life, c, r) { if (P.n >= PMAX) return; const i = P.n++; P.x[i] = x; P.y[i] = y; P.vx[i] = vx; P.vy[i] = vy; P.life[i] = P.max[i] = life; P.c[i] = c; P.r[i] = r; }
-function spark(x, y, c) { if (Q.level === 0) return; for (let i = 0; i < 3; i++) puff(x, y, rnd(-1.5, 1.5), rnd(-1.5, 1.5), 18, c, rnd(1.5, 3)); }
-function burst(x, y, c, n) { for (let i = 0; i < n; i++) { const a = rnd(0, 6.28), sp = rnd(1, 6); puff(x, y, Math.cos(a) * sp, Math.sin(a) * sp, 40, c, rnd(2, 5)); } }
-function stepParts() { for (let i = P.n - 1; i >= 0; i--) { P.x[i] += P.vx[i]; P.y[i] += P.vy[i]; P.vx[i] *= .96; P.vy[i] *= .96;
-  if (--P.life[i] <= 0) { const l = --P.n; P.x[i] = P.x[l]; P.y[i] = P.y[l]; P.vx[i] = P.vx[l]; P.vy[i] = P.vy[l]; P.life[i] = P.life[l]; P.max[i] = P.max[l]; P.r[i] = P.r[l]; P.c[i] = P.c[l]; } } }
+function spark(x, y, c) { for (let i = 0; i < 3 && parts.length < 300; i++) parts.push({x, y, vx: rnd(-1.5, 1.5), vy: rnd(-1.5, 1.5), life: 18, max: 18, c, r: rnd(1.5, 3)}); }
+function burst(x, y, c, n) { for (let i = 0; i < n && parts.length < 300; i++) { const a = rnd(0, 6.28), s = rnd(1, 6); parts.push({x, y, vx: Math.cos(a) * s, vy: Math.sin(a) * s, life: 40, max: 40, c, r: rnd(2, 5)}); } }
 const E = {bal: $('balance-display'), burn: $('burn-display'), daily: $('daily-display'), dbar: $('daily-bar'), en: $('en-bar'), len: $('snake-length'), warn: $('warn')};
 function setTxt(el, v) { if (el._v !== v) { el._v = v; el.textContent = v; } }
 function setW(el, v) { v = Math.round(v); if (el._w !== v) { el._w = v; el.style.width = v + '%'; } }
-function resize() {
-  VW = innerWidth; VH = innerHeight; DPR = Math.min(devicePixelRatio || 1, Q.maxDpr); canvas.width = Math.round(VW * DPR); canvas.height = Math.round(VH * DPR);
-  const md = Math.min(2, devicePixelRatio || 1), mc = $('minimap'); mc.width = mc.height = Math.round(110 * md); mini.setTransform(md, 0, 0, md, 0, 0); vgr = null;
-}
+function resize(){ canvas.width = innerWidth; canvas.height = innerHeight; }
 addEventListener('resize', resize); resize();
 function toast(m){ const t = $('toast'); t.textContent = m; t.style.opacity = 1; clearTimeout(toast.id); toast.id = setTimeout(() => t.style.opacity = 0, 1800); }
 
 const ORB_COLORS = ['#ff4d4d','#ffd34d','#4dff88','#4dd2ff','#b44dff','#ff4dd2','#ffffff'];
 const ORBS = ORB_COLORS.map(c => {
-  const k = document.createElement('canvas'); k.width = k.height = 64; const g = k.getContext('2d');
-  const q = g.createRadialGradient(32, 32, 0, 32, 32, 32);
+  const k = document.createElement('canvas'); k.width = k.height = 32; const g = k.getContext('2d');
+  const q = g.createRadialGradient(16, 16, 0, 16, 16, 16);
   q.addColorStop(0, '#fff'); q.addColorStop(.25, c); q.addColorStop(.5, c + '66'); q.addColorStop(1, c + '00');
-  g.fillStyle = q; g.fillRect(0, 0, 64, 64); return k;
+  g.fillStyle = q; g.fillRect(0, 0, 32, 32); return k;
 });
 // Grade espacial: comer/buscar só olha células vizinhas (essencial para um mapa grande)
 const CELL = 220, grid = new Map(), drops = []; let foodCount = 0;
@@ -226,16 +210,13 @@ const NAMES = ['Whoa','abcd','Kq','Mxxa','Sm0k3d','jcgonmor'];
 function makeRival(i) {
   const [px, py] = rndPt(400);
   const rv = {ta: 0, nt: 0, hunt: false, aggr: Math.random() < .5, name: NAMES[i % 6] + (i >= 6 ? i : ''), x: px, y: py, angle: rnd(0, 6.28), speed: rnd(2.8, 3.4),
-    radius: 14, length: 100 + Math.floor(Math.random()*250), segments: [], n: 0, sk: SKINS[Math.floor(Math.random() * SKINS.length)], seed: Math.random(), eatT: -1e9, turnV: 0, boosting: false};
-  rv.px = rv.x; rv.py = rv.y; rv.pa = rv.angle; rv.score = rv.length; return rv;
+    radius: 14, length: 100 + Math.floor(Math.random()*250), segments: [], n: 0, sk: SKINS[Math.floor(Math.random() * SKINS.length)]};
+  rv.score = rv.length; return rv;
 }
 for (let i = 0; i < CONFIG.FOODS; i++) addFood(newFood());
 for (let i = 0; i < CONFIG.RIVALS; i++) rivals.push(makeRival(i));
 
-addEventListener('mousemove', e => { if (!player.autoBot) { mouseX = e.clientX; mouseY = e.clientY; usingKeys = false; } });
-const dirKeys = {};   // WASD / setas: direção por teclado (o mouse volta a mandar assim que se mexe)
-addEventListener('keydown', e => { if (/^(INPUT|TEXTAREA)$/.test(e.target.tagName)) return; if (/^(Arrow(Up|Down|Left|Right)|Key[WASD])$/.test(e.code)) { dirKeys[e.code] = true; usingKeys = true; e.preventDefault(); } });
-addEventListener('keyup', e => { delete dirKeys[e.code]; });
+addEventListener('mousemove', e => { if (!player.autoBot) { mouseX = e.clientX; mouseY = e.clientY; } });
 const COARSE = matchMedia('(pointer:coarse)').matches;
 addEventListener('touchmove', e => { if (!player.autoBot && !COARSE) { mouseX = e.touches[0].clientX; mouseY = e.touches[0].clientY; } }, {passive: true});
 const held = {mouse: false, key: false, btn: false};
@@ -249,7 +230,7 @@ const bb = $('boost-btn'); bb.addEventListener('pointerdown', e => { held.btn = 
 { // joystick virtual (aparece só em telas de toque)
   const base = $('joy'), knob = $('joy-k'); let pid = null;
   const set = e => { const r = base.getBoundingClientRect(); let dx = e.clientX - (r.left + r.width / 2), dy = e.clientY - (r.top + r.height / 2); const m = Math.hypot(dx, dy), lim = r.width / 2;
-    if (m > lim) { dx *= lim / m; dy *= lim / m; } knob.style.transform = 'translate(' + dx + 'px,' + dy + 'px)'; if (m > 8 && !player.autoBot) { mouseX = VW / 2 + dx * 20; mouseY = VH / 2 + dy * 20; usingKeys = false; } };
+    if (m > lim) { dx *= lim / m; dy *= lim / m; } knob.style.transform = 'translate(' + dx + 'px,' + dy + 'px)'; if (m > 8 && !player.autoBot) { mouseX = canvas.width / 2 + dx * 20; mouseY = canvas.height / 2 + dy * 20; } };
   base.addEventListener('pointerdown', e => { pid = e.pointerId; base.setPointerCapture(pid); set(e); });
   base.addEventListener('pointermove', e => { if (e.pointerId === pid) set(e); });
   ['pointerup', 'pointercancel'].forEach(ev => base.addEventListener(ev, () => { pid = null; knob.style.transform = 'none'; }));
@@ -257,8 +238,8 @@ const bb = $('boost-btn'); bb.addEventListener('pointerdown', e => { held.btn = 
 
 // ---- Fundo hexagonal: um tile pré-renderizado repetido (rápido, rola junto com a câmera) ----
 const R = 44, TW = 132, TH = 76, RY = TH / Math.sqrt(3);
-const tile = document.createElement('canvas'); tile.width = TW * 2; tile.height = TH * 2;   // tile em 2x: linhas nítidas em tela HD
-const tc = tile.getContext('2d'); tc.scale(2, 2); tc.fillStyle = '#07090d'; tc.fillRect(0, 0, TW, TH);
+const tile = document.createElement('canvas'); tile.width = TW; tile.height = TH;
+const tc = tile.getContext('2d'); tc.fillStyle = '#07090d'; tc.fillRect(0, 0, TW, TH);
 function hexPath(cx, cy, k) {
   tc.beginPath();
   for (let s = 0; s < 6; s++) { const a = s * Math.PI / 3; tc[s ? 'lineTo' : 'moveTo'](cx + R*k*Math.cos(a), cy + RY*k*Math.sin(a)); }
@@ -270,7 +251,7 @@ function hexPath(cx, cy, k) {
   hexPath(cx, cy, 1); tc.fillStyle = g; tc.fill(); tc.lineWidth = 5; tc.strokeStyle = '#07090d'; tc.stroke();
   hexPath(cx, cy, .9); tc.lineWidth = 1.5; tc.strokeStyle = '#2a3242'; tc.stroke();
 });
-const hexPattern = ctx.createPattern(tile, 'repeat'); try { hexPattern.setTransform(new DOMMatrix([.5, 0, 0, .5, 0, 0])); } catch (e) {}
+const hexPattern = ctx.createPattern(tile, 'repeat');
 
 // ---- Bateria / bot ----
 function setBattery(v){ botBattery = Math.max(0, Math.min(100, v)); $('battery-bar').style.width = botBattery + '%'; }
@@ -329,7 +310,7 @@ function eat(o, isPlayer) {
     for (let i = c.length - 1; i >= 0; i--) {
       const f = c[i], rr = o.radius + f.rad + 6 + mg;
       if ((f.x - o.x) ** 2 + (f.y - o.y) ** 2 < rr * rr) {
-        grow(o, f.val * 2); o.eatT = performance.now();
+        grow(o, f.val * 2);
         if (isPlayer) { if (!f.noPay) { gain(f.val * 0.1); if (!player.autoBot) prog.coins++; } SFX.coin(); spark(f.x, f.y, ORB_COLORS[f.col]); }
         c[i] = c[c.length - 1]; c.pop(); f.dead = true; foodCount--; addFood(newFood());
       }
@@ -340,13 +321,13 @@ function dropFood(o) {
   for (let i = 0; i < o.segments.length; i += 3) { const f = newFood(o.segments[i].x + rnd(-8,8), o.segments[i].y + rnd(-8,8), true); if (o === player) f.noPay = true; addDrop(f); }
 }
 function killPlayer(why) {
-  spawnGhost(player, performance.now()); burst(player.x, player.y, '#14f195', 40); shake = 12; SFX.die(); streak = 0; $('streak').textContent = 0;
+  burst(player.x, player.y, '#14f195', 40); shake = 12; SFX.die(); streak = 0; $('streak').textContent = 0;
   dropFood(player); player.length = player.score = 120; player.segments = [];
-  [player.x, player.y] = rndPt(600); player.px = player.x; player.py = player.y; player.pa = player.angle; player.turnV = 0; cam.snap = true; player.invulnUntil = performance.now() + 2500;
+  [player.x, player.y] = rndPt(600); player.invulnUntil = performance.now() + 2500;
   toast(why === 'wall' ? t('twall') : t('tdie'));
 }
 function killRival(i) {
-  const v = rivals[i]; spawnGhost(v, performance.now()); burst(v.x, v.y, v.sk.colors[0], 30); shake = Math.max(shake, 6); SFX.kill();
+  const v = rivals[i]; burst(v.x, v.y, v.sk.colors[0], 30); shake = Math.max(shake, 6); SFX.kill();
   dropFood(v); rivals[i] = makeRival(i); grow(player, 30);
   const g = gain(Math.min(1, v.length / 400), true); feed(t('fk') + ' ' + v.name + (g > .005 ? '  +' + g.toFixed(2) : ''));
   if (!player.autoBot) prog.kills++;
@@ -369,17 +350,9 @@ function think(r, now) {
   for (const f of nearFoods(r.x, r.y, 450)) { const d = (f.x-r.x)**2 + (f.y-r.y)**2; if (d < bd) { bd = d; bf = f; } }
   r.ta = bf ? Math.atan2(bf.y - r.y, bf.x - r.x) : r.angle + (Math.random() - .5) * 1.2;
 }
-const angDiff = (a, b) => Math.atan2(Math.sin(b - a), Math.cos(b - a));
-const maxTurn = o => (FEEL.turnBase - (FEEL.turnBase - FEEL.turnMin) * Math.min(1, Math.max(0, o.length - 120) / FEEL.lenRef)) * (o.boosting ? FEEL.boostTurn : 1);
-function update(k, now) {   // k = 1 tick fixo (1/60 s). Guarda o estado anterior para a interpolação do desenho.
-  player.px = player.x; player.py = player.y; player.pa = player.angle; for (const r of rivals) { r.px = r.x; r.py = r.y; r.pa = r.angle; }
+function update(k, now) {
   updateBot(k, now);
-  if (!player.autoBot) {
-    let tgt = null;
-    if (usingKeys) { const vx = (dirKeys.ArrowRight || dirKeys.KeyD ? 1 : 0) - (dirKeys.ArrowLeft || dirKeys.KeyA ? 1 : 0), vy = (dirKeys.ArrowDown || dirKeys.KeyS ? 1 : 0) - (dirKeys.ArrowUp || dirKeys.KeyW ? 1 : 0); if (vx || vy) tgt = Math.atan2(vy, vx); }
-    else tgt = Math.atan2(mouseY - (VH / 2 + (player.y - cam.cy) * camera.z), mouseX - (VW / 2 + (player.x - cam.cx) * camera.z));   // ângulo a partir da posição real da cabeça na tela
-    if (tgt !== null) { const mt = maxTurn(player) * k; player.angle += Math.max(-mt, Math.min(mt, angDiff(player.angle, tgt))); }
-  }
+  if (!player.autoBot) player.angle = Math.atan2(mouseY - canvas.height/2, mouseX - canvas.width/2);
   // Boost: rajada curta grátis (energia); depois paga em tokens, 100% queimados. Custa um pouco de tamanho e solta orbes sem recompensa.
   const want = (held.mouse || held.key || held.btn) && !player.autoBot && player.length > 80;
   const free = energy > 1, pay = !free && Save.s.bal > 0.05;
@@ -404,13 +377,15 @@ function update(k, now) {   // k = 1 tick fixo (1/60 s). Guarda o estado anterio
   const wo = Math.max(0, Math.min(1, (dc - (WR - 380)) / 340)); if (E.warn._o !== wo.toFixed(2)) { E.warn._o = wo.toFixed(2); E.warn.style.opacity = E._o = wo.toFixed(2); }   // brilho vermelho ao se aproximar
   if (dc >= WR - 14) { killPlayer('wall'); return; }
   pushSeg(player); eat(player, true);
+  const zt = Math.max(.5, 1 / (1 + (player.length - 120) / 1000)); camera.z += (zt - camera.z) * .04 * k;   // zoom out ao crescer
+  camera.w = canvas.width / camera.z; camera.h = canvas.height / camera.z; camera.x = player.x - camera.w / 2; camera.y = player.y - camera.h / 2;
 
   for (let ri = 0; ri < rivals.length; ri++) {
     const r = rivals[ri]; think(r, now);
     let d = r.ta - r.angle; d = Math.atan2(Math.sin(d), Math.cos(d)); r.angle += Math.max(-.09, Math.min(.09, d)) * k;
-    const sp = r.speed * (r.hunt ? 1.3 : 1); r.boosting = !!r.hunt;
+    const sp = r.speed * (r.hunt ? 1.3 : 1);
     r.x += Math.cos(r.angle) * sp * k; r.y += Math.sin(r.angle) * sp * k;
-    if (Math.hypot(r.x - W/2, r.y - W/2) > WR - 14) { spawnGhost(r, performance.now()); burst(r.x, r.y, r.sk.colors[0], 20); dropFood(r); rivals[ri] = makeRival(ri); continue; }   // rival que bate na parede morre
+    if (Math.hypot(r.x - W/2, r.y - W/2) > WR - 14) { burst(r.x, r.y, r.sk.colors[0], 20); dropFood(r); rivals[ri] = makeRival(ri); continue; }   // rival que bate na parede morre
     pushSeg(r); eat(r, false);
   }
   for (const sn of [player, ...rivals]) if (sn.sk.fx && sn.segments.length && Math.random() < .12 * k) {   // efeitos das skins (fogo, gelo, estrelas…)
@@ -429,8 +404,6 @@ function update(k, now) {   // k = 1 tick fixo (1/60 s). Guarda o estado anterio
       if ((g.x-r.x)**2 + (g.y-r.y)**2 < hit) { killRival(i); break; }
     }
   }
-  for (const sn of [player, ...rivals]) sn.turnV += (angDiff(sn.pa, sn.angle) - sn.turnV) * .25;   // curva recente (olhos/cabeça acompanham)
-  stepParts();
   setTxt(E.bal, Save.s.bal.toFixed(2)); setTxt(E.burn, Math.floor(Save.s.burned).toLocaleString(window.LANGLOC)); setTxt(E.daily, Math.floor(Save.s.today) + ' / ' + Save.CAP);
   setW(E.dbar, Math.min(100, Save.s.today / Save.CAP * 100)); setW(E.en, energy / (FREE_ENERGY || 1) * 100); bb.classList.toggle('on', !!player.boosting);
   setTxt(E.len, Math.floor(player.score));
@@ -445,26 +418,51 @@ function updateLeaderboard() {
 }
 
 // ---- Render ----
-// ---- Render: o desenho das cobras vive em render.js; aqui ficam câmera, mundo e efeitos ----
-const ghosts = [];   // cobras mortas se dissolvendo (reusam o array de segmentos antigo, sem copiar)
-function spawnGhost(sn, now) {
-  if (!sn.segments.length) return; if (ghosts.length >= 14) ghosts.shift();
-  ghosts.push({segments: sn.segments, x: sn.x, y: sn.y, px: sn.x, py: sn.y, angle: sn.angle, pa: sn.angle, radius: sn.radius, sk: sn.sk, seed: sn.seed, eatT: -1e9, turnV: 0, boosting: false, name: '', t0: now});
+const SPR = {};
+function shade(hex, a) {
+  const n = parseInt(hex.slice(1), 16), t = a < 0 ? 0 : 255, q = Math.abs(a);
+  return 'rgb(' + [n >> 16, (n >> 8) & 255, n & 255].map(v => Math.round((t - v) * q + v)) + ')';
 }
-function updateCamera(dt, a) {   // seguimento suave (constante de tempo ~80 ms) com antecipação; zoom progressivo por tamanho e turbo
-  const hx = player.px + (player.x - player.px) * a, hy = player.py + (player.y - player.py) * a, lead = player.boosting ? 70 : 32;
-  const tx = hx + Math.cos(player.angle) * lead, ty = hy + Math.sin(player.angle) * lead;
-  const vz = Math.max(.75, Math.min(1, Math.min(VW, VH) / 900)), zt = Math.max(.38, vz / (1 + (player.length - 120) / 1000) * (player.boosting ? .94 : 1));
-  if (cam.snap) { cam.cx = tx; cam.cy = ty; camera.z = zt; cam.snap = false; }
-  else { const kf = 1 - Math.exp(-dt / 80); cam.cx += (tx - cam.cx) * kf; cam.cy += (ty - cam.cy) * kf; camera.z += (zt - camera.z) * (1 - Math.exp(-dt / 420)); }
-  camera.w = VW / camera.z; camera.h = VH / camera.z; camera.x = cam.cx - camera.w / 2; camera.y = cam.cy - camera.h / 2;
+function sprites(color) {   // esfera sombreada suave, desenhada uma vez por cor
+  if (SPR[color]) return SPR[color];
+  const S = 32, c = document.createElement('canvas'); c.width = c.height = S; const b = c.getContext('2d'), g = b.createRadialGradient(S*.42, S*.38, 1, S/2, S/2, S/2);
+  g.addColorStop(0, shade(color, .28)); g.addColorStop(.62, color); g.addColorStop(1, shade(color, -.32));
+  b.fillStyle = g; b.beginPath(); b.arc(S/2, S/2, S/2, 0, 6.2832); b.fill();
+  return SPR[color] = c;
 }
-const DO = {q: Q, now: 0, alpha: 1, am: 1, isPlayer: false, shield: false, label: true, invZ: 1, cam: camera, dead: false, flash: 0, rs: 1};   // opções reutilizadas (nada alocado por quadro)
-function render(now, alpha, dt) {
-  ctx.setTransform(DPR, 0, 0, DPR, 0, 0); updateCamera(dt, alpha);
-  ctx.fillStyle = '#05070a'; ctx.fillRect(0, 0, VW, VH);
-  shake *= Math.exp(-dt / 110); if (shake < .05) shake = 0; const sh = REDUCED ? .25 : 1, sx = (Math.random() - .5) * shake * sh, sy = (Math.random() - .5) * shake * sh;
-  ctx.save(); ctx.translate(VW / 2 + sx, VH / 2 + sy); ctx.scale(camera.z, camera.z); ctx.translate(-cam.cx, -cam.cy);
+function drawSnake(sn, isPlayer, now) {
+  const sg = sn.segments, n = sg.length; if (!n) return;
+  const head = sg[0], r = sn.radius, sk = sn.sk, d = r * 2, m = r * 3;
+  if (Math.hypot(head.x - camera.x - camera.w / 2, head.y - camera.y - camera.h / 2) > Math.hypot(camera.w, camera.h) / 2 + sn.length + 150) return;   // fora da tela: não desenha
+  const vis = s => s.x > camera.x - m && s.x < camera.x + camera.w + m && s.y > camera.y - m && s.y < camera.y + camera.h + m;
+  const col = s => Skins.colorAt(sk, s.c, now);
+  const a0 = ctx.globalAlpha = (isPlayer && now < player.invulnUntil) ? .5 : 1;
+  ctx.lineCap = ctx.lineJoin = 'round';
+  const trace = (dx, dy, to) => { ctx.beginPath(); ctx.moveTo(sg[0].x + dx, sg[0].y + dy); for (let i = 2; i < to; i += 2) ctx.lineTo(sg[i].x + dx, sg[i].y + dy); };
+  if (n > 2) {
+    trace(4, 6, n); ctx.strokeStyle = 'rgba(0,0,0,.28)'; ctx.lineWidth = d + 3; ctx.stroke();                       // sombra no chão
+    ctx.globalAlpha = a0 * (isPlayer && player.boosting ? .3 : .13);
+    trace(0, 0, n); ctx.strokeStyle = col(sg[0]); ctx.lineWidth = d + 18; ctx.stroke(); ctx.globalAlpha = a0;         // brilho (1 traçado, sem blur)
+  }
+  if (sk.tail && n > 8) { const a = sg[n - 1], b = sg[n - 4]; ctx.save(); ctx.translate(a.x, a.y); ctx.rotate(Math.atan2(a.y - b.y, a.x - b.x)); Skins.drawTail(ctx, sk, r * .8, now); ctx.restore(); }
+  for (let i = n - 1; i >= 0; i--) {   // corpo: esferas, cauda afinando
+    const s = sg[i]; if (!vis(s)) continue;
+    const t = i / n, k = t > .65 ? 1 - (t - .65) / .35 * .55 : 1, rr = r * k * (i === 0 ? 1.1 : 1);
+    ctx.drawImage(sprites(col(s)), s.x - rr, s.y - rr, rr * 2, rr * 2);
+  }
+  if (sk.spikes) Skins.drawSpikes(ctx, sk, sg, r, vis);
+  if (n > 6) { trace(-r * .28, -r * .3, Math.floor(n * .65)); ctx.strokeStyle = 'rgba(255,255,255,.2)'; ctx.lineWidth = r * .55; ctx.stroke(); }   // brilho ao longo do corpo
+  ctx.save(); ctx.translate(head.x, head.y); ctx.rotate(sn.angle);
+  Skins.drawHead(ctx, sk, r, now); Skins.eyes(ctx, sk, r);
+  ctx.restore();
+  ctx.font = 'bold 12px Rajdhani, sans-serif'; ctx.textAlign = 'center'; ctx.fillStyle = 'rgba(255,255,255,.75)'; ctx.fillText(sn.name, head.x, head.y + r + 20);
+  ctx.globalAlpha = 1;
+}
+let vgr = null, vgW = 0, vgH = 0;
+function render(now) {
+  ctx.fillStyle = '#05070a'; ctx.fillRect(0, 0, canvas.width, canvas.height);
+  shake *= .9; if (shake < .05) shake = 0; const sx = (Math.random() - .5) * shake, sy = (Math.random() - .5) * shake;
+  ctx.save(); ctx.translate(canvas.width / 2 + sx, canvas.height / 2 + sy); ctx.scale(camera.z, camera.z); ctx.translate(-player.x, -player.y);
   ctx.beginPath(); ctx.arc(W/2, W/2, WR, 0, 6.28); ctx.fillStyle = hexPattern; ctx.fill();
   ctx.strokeStyle = 'rgba(255,40,70,.12)'; ctx.lineWidth = 70; ctx.stroke(); ctx.strokeStyle = 'rgba(255,40,70,.28)'; ctx.lineWidth = 28; ctx.stroke(); ctx.strokeStyle = '#ff4757'; ctx.lineWidth = 8; ctx.stroke();
   const ok = coinImage.complete && coinImage.naturalWidth > 0;
@@ -477,19 +475,16 @@ function render(now, alpha, dt) {
       if (f.val > 1 && !f.noPay && ok) { const q = f.rad * 2 * p; ctx.drawImage(coinImage, f.x - q/2, f.y - q/2, q, q); }
     }
   }
-  for (let i = 0; i < P.n; i++) { ctx.globalAlpha = P.life[i] / P.max[i]; ctx.fillStyle = P.c[i]; ctx.beginPath(); ctx.arc(P.x[i], P.y[i], P.r[i], 0, 6.28); ctx.fill(); }
-  ctx.globalAlpha = 1;
-  DO.q = Q; DO.now = now; DO.alpha = alpha; DO.invZ = 1 / camera.z;
-  for (let i = ghosts.length - 1; i >= 0; i--) {   // mortas: desbotam, encolhem e piscam em branco
-    const g = ghosts[i], t = (now - g.t0) / 700; if (t >= 1) { ghosts.splice(i, 1); continue; }
-    DO.am = 1 - t; DO.rs = 1 - .35 * t; DO.dead = true; DO.flash = Math.max(0, 1 - t * 5); DO.label = false; DO.shield = false; DO.alpha = 1; SnakeRender.draw(ctx, g, DO);
+  for (let i = parts.length - 1; i >= 0; i--) {   // partículas
+    const q = parts[i]; q.x += q.vx; q.y += q.vy; q.vx *= .96; q.vy *= .96;
+    if (--q.life <= 0) { parts.splice(i, 1); continue; }
+    ctx.globalAlpha = q.life / q.max; ctx.fillStyle = q.c; ctx.beginPath(); ctx.arc(q.x, q.y, q.r, 0, 6.28); ctx.fill();
   }
-  DO.dead = false; DO.flash = 0; DO.rs = 1; DO.alpha = alpha; DO.label = true; DO.am = 1; DO.shield = false;
-  for (let i = 0; i < rivals.length; i++) SnakeRender.draw(ctx, rivals[i], DO);
-  const inv = now < player.invulnUntil; DO.am = inv ? (((now / 130) | 0) & 1 ? .9 : .5) : 1; DO.shield = inv; DO.label = false; SnakeRender.draw(ctx, player, DO);
+  ctx.globalAlpha = 1;
+  rivals.forEach(r => drawSnake(r, false, now)); drawSnake(player, true, now);
   ctx.restore();
-  if (!vgr) { const cx = VW / 2, cy = VH / 2; vgr = ctx.createRadialGradient(cx, cy, Math.min(cx, cy) * .9, cx, cy, Math.max(cx, cy) * 1.5); vgr.addColorStop(0, 'rgba(0,0,0,0)'); vgr.addColorStop(1, 'rgba(0,0,0,.55)'); }
-  ctx.fillStyle = vgr; ctx.fillRect(0, 0, VW, VH);
+  if (!vgr || vgW !== canvas.width || vgH !== canvas.height) { vgW = canvas.width; vgH = canvas.height; const cx = vgW / 2, cy = vgH / 2; vgr = ctx.createRadialGradient(cx, cy, Math.min(cx, cy) * .9, cx, cy, Math.max(cx, cy) * 1.5); vgr.addColorStop(0, 'rgba(0,0,0,0)'); vgr.addColorStop(1, 'rgba(0,0,0,.55)'); }
+  ctx.fillStyle = vgr; ctx.fillRect(0, 0, canvas.width, canvas.height);
   const sc = 110 / W; mini.clearRect(0, 0, 110, 110);
   mini.fillStyle = '#ff4757'; rivals.forEach(r => { mini.beginPath(); mini.arc(r.x*sc, r.y*sc, 2, 0, 6.28); mini.fill(); });
   mini.fillStyle = '#14f195'; mini.beginPath(); mini.arc(player.x*sc, player.y*sc, 3.5, 0, 6.28); mini.fill();
@@ -563,29 +558,11 @@ $('recharge-btn').onclick = () => {
   if (spend(200)) { setBattery(100); toast(t('tb100')); }
 };
 
-// Loop: física em passo FIXO de 60 Hz (igual em 60/120/144 Hz) e desenho interpolado entre dois passos.
-const STEP = 1000 / 60; let last = performance.now(), acc = 0, emaWork = 6, emaDt = 16.7, okFrames = 0, badFrames = 0, qCool = 0, frames = 0;
-let backoff = 1, lastRaise = 0;   // se subir de nível piora de novo logo em seguida, espera cada vez mais antes de tentar (evita soluços periódicos)
-function setQuality(l) {
-  const now = performance.now(), up = l > qLevel; if (!up && now - lastRaise < 45000) backoff = Math.min(backoff * 3, 81); if (up) lastRaise = now;
-  qLevel = Math.max(0, Math.min(2, l)); Q = SnakeRender.QUALITY[qLevel]; resize(); qCool = now + 20000 * backoff; badFrames = okFrames = 0;
-}
-function governor(now, dt, work) {   // mede o custo REAL do quadro; cai rápido quando sofre, sobe devagar quando sobra folga
-  emaWork += (work - emaWork) * .05; emaDt += (Math.min(dt, 100) - emaDt) * .05;
-  if (qLock || document.hidden || now < 6000) return;   // ignora os primeiros 6 s (carregamento de imagens/fontes causa quadros lentos que não são do desenho)
-  if (emaWork > 14 || emaDt > 34) { if (++badFrames > 90 && qLevel > 0) setQuality(qLevel - 1); } else badFrames = 0;
-  if (emaWork < 5 && emaDt < 18.5 && qLevel < 2 && now > qCool) { if (++okFrames > 600) setQuality(qLevel + 1); } else okFrames = 0;
-}
-const dbg = DEBUG ? Object.assign(document.body.appendChild(document.createElement('div')), {style: 'position:fixed;left:8px;bottom:8px;z-index:9;font:12px monospace;color:#14f195;background:#0008;padding:4px 8px;border-radius:4px;pointer-events:none'}) : null;
-document.addEventListener('visibilitychange', () => { emaDt = 16.7; emaWork = 6; badFrames = okFrames = 0; last = performance.now(); acc = 0; });   // voltar de outra aba não conta como "quadro lento"
+let last = performance.now();
 function loop(now) {
-  const dt = Math.min(now - last, 100); last = now; const t0 = performance.now();
-  if (!paused) { acc += dt; let n = 0; while (acc >= STEP && n < 5) { update(1, now); acc -= STEP; n++; } if (n === 5) acc = 0; } else acc = 0;
-  render(now, paused ? 1 : acc / STEP, dt); const work = performance.now() - t0; governor(now, dt, work); frames++;
-  if (dbg && frames % 15 === 0) dbg.textContent = 'render v' + SnakeRender.VERSION + ' | fps ' + (1000 / emaDt).toFixed(0) + ' | work ' + emaWork.toFixed(1) + 'ms | q' + qLevel + ' | dpr ' + DPR + ' | ' + canvas.width + 'x' + canvas.height + ' | snakes ' + (rivals.length + 1) + ' | parts ' + P.n;
-  requestAnimationFrame(loop);
+  const k = Math.min((now - last) / 16.667, 3); last = now;
+  if (!paused) update(k, now); render(now); requestAnimationFrame(loop);
 }
-if (DEBUG) window.__game = {player, rivals, camera, cam, get Q() { return Q; }, get DPR() { return DPR; }, setQuality, stats: () => ({emaWork, emaDt, qLevel, DPR, frames, ghosts: ghosts.length, parts: P.n}), update, render};
 addEventListener('langchange', () => { setBot(player.autoBot); updateLeaderboard(); renderQuests(); renderSnakeList(); });
 addEventListener('savechange', () => { const k = Save.skin(); if (player.sk !== k) { player.sk = k; MAGNET = k.magnet; } });   // skin comprada/sincronizada vale na hora
 document.querySelectorAll('[data-soc="dc"]').forEach(a => { const u = SITE.SOCIAL.dc; if (u) { a.href = u; a.target = '_blank'; } else a.style.display = 'none'; });
