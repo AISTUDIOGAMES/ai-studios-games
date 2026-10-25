@@ -282,7 +282,7 @@ ${joinSection}
 ${faqSection}
     </main>
     <p class="legal-note">AI STUDIOS GAMES MAKES BROWSER GAMES. NOTHING ON THIS SITE IS FINANCIAL ADVICE OR A PROMISE OF VALUE. DIGITAL ITEMS CAN LOSE ALL VALUE. NFT CARDS ARE PREVIEWS AND MINTING IS NOT LIVE. NEVER SHARE YOUR SEED PHRASE.</p>
-    <footer><a class="brand footer-brand" href="#top">${logo}<span class="brand-type">AI STUDIOS <b>GAMES</b><small>PLAY BEYOND THE GRID</small></span></a><span>INDEPENDENT WORLDS. INFINITE CONTINUES.</span><span>© 2026 AI STUDIOS GAMES</span></footer>
+    <footer><a class="brand footer-brand" href="#top">${logo}<span class="brand-type">AI STUDIOS <b>GAMES</b><small>PLAY BEYOND THE GRID</small></span></a><span>INDEPENDENT WORLDS. INFINITE CONTINUES.</span>${liveSocials.length ? `<nav class="footer-socials" aria-label="Community links">${liveSocials.map((s) => `<a href="${esc(safeUrl(s.url)!)}" target="_blank" rel="noopener noreferrer" data-social="${esc(s.id)}">${esc(s.label)} ↗</a>`).join("")}</nav>` : ""}<span>© 2026 AI STUDIOS GAMES</span></footer>
     <div class="toast" id="toast" role="status" aria-live="polite"></div>
   </div>
 `;

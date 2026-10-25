@@ -285,3 +285,5 @@ img.brand-mark{border-radius:50%;object-fit:cover;background:#141a2b;filter:none
   .button,.button span,.button::before,.button::after,.wallet-btn,.nav-links a::after{transition:none!important}
   .wallet-dot{animation:none!important}
 }
+
+.footer-socials{display:flex;gap:20px;flex-wrap:wrap}.footer-socials a{font-size:8px;letter-spacing:.9px;color:#a4a8b4;transition:color .2s}.footer-socials a:hover{color:var(--green)}@media(max-width:700px){.footer-socials{order:5;width:100%;gap:16px}}

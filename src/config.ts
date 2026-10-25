@@ -8,9 +8,9 @@ export const SITE_URL = "https://aistudiosgames.vercel.app";
 
 /** Community links. Fill in the ones you own (https only). Empty ones are not shown. */
 export const SOCIALS: { id: string; label: string; url: string }[] = [
-  { id: "x", label: "X / TWITTER", url: "" },
+  { id: "x", label: "X / TWITTER", url: "https://x.com/AiStudioGameOwl" },
   { id: "telegram", label: "TELEGRAM", url: "" },
-  { id: "discord", label: "DISCORD", url: "" },
+  { id: "discord", label: "DISCORD", url: "https://discord.gg/bdCFfhBqq" },
   { id: "github", label: "GITHUB", url: "" },
 ];
 
