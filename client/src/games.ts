@@ -28,7 +28,10 @@ export const STATUS_LABEL: Record<GameStatus, string> = {
  * for example "https://slitheridle.example.com".
  * While it is empty, the card shows "LINK COMING SOON" instead of a play button.
  */
-export const SLITHER_IDLE_URL = "https://mburns2026.github.io/solana-slither-idle/index.html";
+export const SLITHER_IDLE_URL = "/slither-idle/";
+
+/** Bomber Idle, hosted on this same site (files live in public/bomber-idle/). */
+export const BOMBER_IDLE_URL = "/bomber-idle/";
 
 /**
  * Every game on the platform is one entry in this list.
@@ -40,7 +43,7 @@ export const GAMES: Game[] = [
     kicker: "01 / SNAKE + IDLE",
     title: "SLITHER.IDLE",
     summary:
-      "A snake game with an idle twist. Collect coins to grow, take down rivals, or let the Auto-Bot play while you are away. It runs on its own site and opens in a new tab.",
+      "A snake game with an idle twist. Collect coins to grow, take down rivals, or let the Auto-Bot play while you are away. Opens in a new tab.",
     status: "experiment",
     kind: "external",
     url: SLITHER_IDLE_URL,
@@ -58,6 +61,18 @@ export const GAMES: Game[] = [
     url: "/rpg.html",
     cover: "rpg-cover.webp",
     meta: ["⌁ TURN-BASED RPG", "◈ 8 OPERATORS", "◎ BROWSER PROTOTYPE"],
+  },
+  {
+    id: "bomber-idle",
+    kicker: "03 / GRID BOMBER + IDLE",
+    title: "BOMBER.IDLE",
+    summary:
+      "An idle grid bomber. Send your Operators into the field to plant bombs, blow open chests and farm $BOMBERSI while you are away. Manage stamina, speed and luck, and level up legends like Jax and Orion. Opens in a new tab.",
+    status: "experiment",
+    kind: "external",
+    url: BOMBER_IDLE_URL,
+    cover: "bomberidle-banner-v2.svg",
+    meta: ["◈ BROWSER GAME", "⌁ IDLE GRID FARMING", "◎ TEST BUILD // NO REAL VALUE"],
   },
 ];
 
