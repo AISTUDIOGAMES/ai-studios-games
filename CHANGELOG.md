@@ -5,6 +5,10 @@ Formato baseado em [Keep a Changelog](https://keepachangelog.com/) e versionamen
 ## [Não lançado] - Bombers Overhaul 2.0
 Cada operador agora é uma classe de combate com habilidades, IA e visual próprios, e o elenco passa de 6 para **8 BOMBERS**. Detalhes, parâmetros e limites em [docs/BOMBERS-2.0.md](docs/BOMBERS-2.0.md).
 ### Adicionado
+- **Explosões em etapas (BomberIdle Premium, fase D)**: clarão, bola de fogo e anel de choque; o fogo corre pelo corredor (32 ms por célula); fumaça, marca de queimado e fagulhas; halo de calor no nível alto. Só visual: dano, alcance e colisão seguem em `blastCells`/`explode`. Planejador testável em `client/src/game/bomberExplosion.ts`.
+- Bomba: "pop" ao plantar e aviso de explosão (aquece e pisca) nos últimos 500 ms. Inimigo atingido mostra o dano e uma faísca; baú aberto "estoura" com anel na cor da raridade; bloco danificado solta poeira.
+- **Configurações > Efeitos visuais** (Baixo, Médio, Alto), guardado fora do save em `bomber-idle:fx`. Respeita `prefers-reduced-motion` (padrão Baixo). Os efeitos de enfeite são cortados sozinhos quando há muitos na tela.
+- Testes: `client/test/explosion.test.ts`.
 - **Dois novos BOMBERS**: **Kai** (Techno-Stalker, **Incomum**, caçador de inimigos) e **Aeon** (Grid Architect, **Ancestral**, o topo dos BOMBERS), com cartas NFT em `client/public/nft/` e sprites próprios. A ordem de raridade passa a ser Comum, Incomum, Raro, Épico, Mítico, Lendário, Super lendário, Ancestral.
 - **Cápsula**: Comum 41,9%, Incomum 13%, Ancestral 0,1%. Raro a Super lendário **não mudaram** (os 55% do Comum foram repartidos). Valores em `CAPSULE_ODDS`, ajustáveis.
 - **Habilidades por classe** (1 passiva + 1 ativa automática, com duração, recarga e custo de stamina): Lyra (Eficiência Bio-mecânica, Pulso de Reparo), Kai (Rastreador Urbano, Marca de Caça), Titan (Quebra-Blindagem, Impacto Sísmico), Vex (Scanner de Tesouros, Varredura Profunda), Kira (Passo Furtivo, Impulso), Jax (Mestre da Lâmina, Tempestade de Lâminas), Orion (Presença Suprema, Ascensão), Aeon (Arquiteto da Grade, Reescrita da Grade). A ativa libera no nível 3 (Ascensão no 8, Reescrita da Grade no 10).
