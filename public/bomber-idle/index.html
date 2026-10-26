@@ -72,40 +72,6 @@
       #modal .big { font-size: 1.8rem; font-weight: 800; color: #ffe27a; margin: 4px 0 10px; }
       #modal .badge { display: inline-block; padding: 2px 8px; border: 2px solid var(--gold); border-radius: 999px; font-size: .72rem; color: #ffe27a; margin-bottom: 8px; }
       #modal button.danger { background: linear-gradient(#d9503a, #a02a1a); border-color: #4a1208; box-shadow: 0 3px 0 #4a1208; color: #fff; }
-
-      /* Premium pass: obsidiana, ouro escovado e acentos ciano */
-      :root { color-scheme: dark; --bg:#080d18; --wood:#111b2d; --wood2:#1b2a43; --gold:#d7b66d; --ink:#0c1423; --card:#111d30; --text:#edf4ff; --muted:#9eb0c9; }
-      body { background: radial-gradient(ellipse at 18% 0%, #1c3150 0%, #0a1221 45%, #060a12 100%); background-attachment: fixed; font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; letter-spacing: .01em; }
-      header { position:relative; background:linear-gradient(115deg,rgba(25,39,62,.98),rgba(10,17,30,.98)); border-bottom:1px solid #d7b66d88; box-shadow:0 12px 34px #0008; padding:14px 18px; }
-      .title { font-size:clamp(1.15rem,2vw,1.55rem); letter-spacing:.06em; text-transform:uppercase; color:#f5e4b5; text-shadow:0 0 22px #d7b66d22; }
-      .tag { letter-spacing:.02em; }
-      .stat { background:linear-gradient(135deg,#111d30,#0b1220); border:1px solid #d7b66d99; border-radius:12px; padding:7px 12px; box-shadow:inset 0 1px #ffffff0c,0 5px 18px #0004; }
-      button { background:linear-gradient(135deg,#f1d99a,#b68b42); color:#171b25; border:1px solid #f3dfa8; border-radius:9px; box-shadow:0 4px 14px #0004,inset 0 1px #fff8; transition:filter .16s ease,transform .16s ease,box-shadow .16s ease; }
-      button:hover:not(:disabled) { filter:brightness(1.08); box-shadow:0 6px 20px #d7b66d22,inset 0 1px #fff9; }
-      button.chip,button.tab { background:#101c2e; color:#c6d5e9; border:1px solid #31445f; border-radius:9px; }
-      button.chip.on,button.tab.on { border-color:#d7b66d; color:#f6df9f; background:linear-gradient(135deg,#27334a,#111b2d); box-shadow:inset 0 0 0 1px #d7b66d22,0 0 18px #d7b66d0d; }
-      main { gap:20px; padding:clamp(12px,2vw,24px); }
-      #game { border:1px solid #d7b66d; border-radius:13px; box-shadow:0 0 0 5px #111b2d,0 18px 50px #0009,0 0 30px #4bd9ff0a; }
-      #game canvas { image-rendering:pixelated; display:block; }
-      aside { background:linear-gradient(155deg,#111d30f5,#0a1220f8); border:1px solid #d7b66d88; border-radius:14px; box-shadow:0 15px 40px #0005,inset 0 1px #ffffff0a; padding:16px; }
-      aside h2 { color:#f2dba0; letter-spacing:.04em; }
-      li { background:linear-gradient(130deg,#16243a,#0e192a); border:1px solid #2b3e59; border-radius:11px; padding:10px; box-shadow:inset 0 1px #ffffff08; }
-      li img { border-radius:8px; }
-      .bar { background:#070c15; border:1px solid #34435b; border-radius:999px; }
-      .bar div { border-radius:inherit; }
-      #hub { background:linear-gradient(100deg,#111b2cfa,#080e19fa); border-top:1px solid #d7b66d99; box-shadow:0 -12px 32px #0007; backdrop-filter:blur(18px); padding:10px 12px max(10px,env(safe-area-inset-bottom)); }
-      #hub button { background:linear-gradient(145deg,#15233a,#0c1422); border:1px solid #31445f; border-radius:10px; box-shadow:0 3px 12px #0005; }
-      #hub button.on,#hub button:hover { border-color:#d7b66d; color:#f5df9f; }
-      #modal { background:#030711d9; backdrop-filter:blur(9px); }
-      #modal .panel { background:linear-gradient(145deg,#152238,#0a1220); border:1px solid #d7b66d; border-radius:16px; box-shadow:0 24px 80px #000b,inset 0 1px #ffffff0c; }
-      #modal h2 { color:#f2dba0; }
-      #toast { background:#101d30; border:1px solid #d7b66d; border-radius:12px; box-shadow:0 10px 32px #0008; }
-      .sound-toggle { background:linear-gradient(135deg,#1b3045,#101c2d); color:#d9e8fb; border-color:#5b7795; box-shadow:0 4px 14px #0005; }
-      .sound-toggle.sound-on { color:#a8f4db; border-color:#58d9b0; box-shadow:0 0 18px #58d9b022; }
-      .audio-settings { display:flex; align-items:center; justify-content:space-between; gap:16px; margin:14px 0; padding:14px; background:linear-gradient(135deg,#172840,#0c1524); border:1px solid #3b506d; border-radius:12px; }
-      .audio-settings p { margin:5px 0 0; max-width:360px; }
-      @media(max-width:720px) { header{padding:10px;gap:8px}.title{width:100%}.stat{padding:5px 8px}#game{width:100%}aside{max-height:none;width:100%;max-width:none}#hub{gap:5px}#hub button{min-width:64px;padding:6px 7px}.audio-settings{align-items:flex-start;flex-direction:column} }
-      @media(prefers-reduced-motion:reduce) { button{transition:none} }
     </style>
     <script type="module" crossorigin src="/bomber-idle/assets/index-Dw6F5V8s.js"></script>
   </head>
@@ -120,7 +86,6 @@
         <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="2" y="6" width="20" height="15" rx="2" fill="#2a1a0c"/><rect x="3.5" y="7.5" width="17" height="12" fill="#9c6b3a"/><rect x="3.5" y="7.5" width="17" height="3" fill="#c4915a"/><rect x="10.5" y="11" width="3" height="5" fill="#ffd24a"/></svg>
         <b id="chests">0</b>
       </span>
-      <button id="sound-toggle" class="sound-toggle" aria-pressed="false">♫ Ativar som</button>
       <button id="connect">Conectar carteira</button>
       <button id="claim" disabled>Cofre · Sacar</button>
     </header>
@@ -166,23 +131,5 @@
       </div>
     </div>
     <div id="toast" role="status"></div>
-<script id="bomber-audio-fallback">
-  (()=>{
-    // Fallback da versão compilada já publicada. Se o módulo TypeScript estiver presente, ele assume o áudio.
-    let ctx=null, enabled=false, timer=null, step=0, master=null, music=null, sfx=null;
-    const button=document.getElementById('sound-toggle');
-    const paint=()=>{if(!button)return;button.textContent=enabled?'♫ Som: ligado':'♫ Ativar som';button.classList.toggle('sound-on',enabled);button.setAttribute('aria-pressed',String(enabled));};
-    const ensure=async()=>{if(!ctx){const C=window.AudioContext||window.webkitAudioContext;if(!C)return false;ctx=new C();master=ctx.createGain();master.gain.value=.7;master.connect(ctx.destination);music=ctx.createGain();music.gain.value=.2;music.connect(master);sfx=ctx.createGain();sfx.gain.value=.8;sfx.connect(master)}if(ctx.state==='suspended')await ctx.resume();return true};
-    const tone=(f,d,type,v,delay=0,end)=>{if(!enabled||!ctx)return;const o=ctx.createOscillator(),g=ctx.createGain(),t=ctx.currentTime+delay;o.type=type;o.frequency.setValueAtTime(f,t);if(end)o.frequency.exponentialRampToValueAtTime(Math.max(20,end),t+d);g.gain.setValueAtTime(.0001,t);g.gain.exponentialRampToValueAtTime(v,t+.02);g.gain.exponentialRampToValueAtTime(.0001,t+d);o.connect(g);g.connect(sfx);o.start(t);o.stop(t+d+.03)};
-    const noise=(d,v,cut)=>{if(!enabled||!ctx)return;const b=ctx.createBuffer(1,Math.floor(ctx.sampleRate*d),ctx.sampleRate),a=b.getChannelData(0);for(let i=0;i<a.length;i++)a[i]=(Math.random()*2-1)*(1-i/a.length)**1.7;const src=ctx.createBufferSource(),f=ctx.createBiquadFilter(),g=ctx.createGain();src.buffer=b;f.type='lowpass';f.frequency.value=cut;g.gain.value=v;src.connect(f);f.connect(g);g.connect(sfx);src.start()};
-    const musicStep=()=>{if(!enabled||!ctx)return;const n=[110,164.81,196,146.83,98,146.83,174.61,130.81][step++%8],o=ctx.createOscillator(),g=ctx.createGain(),f=ctx.createBiquadFilter(),t=ctx.currentTime;o.type='triangle';o.frequency.value=n;f.type='lowpass';f.frequency.value=520;g.gain.setValueAtTime(.0001,t);g.gain.linearRampToValueAtTime(.1,t+.16);g.gain.exponentialRampToValueAtTime(.0001,t+.68);o.connect(f);f.connect(g);g.connect(music);o.start(t);o.stop(t+.72);if(step%2===0)tone(n*2,.38,'sine',.012)};
-    const set=async value=>{if(window.__BOMBER_AUDIO_READY__)return;enabled=value;try{localStorage.setItem('bomber-idle:audio',enabled?'on':'off')}catch(_){}if(enabled){if(!await ensure()){enabled=false;paint();return}music.gain.setTargetAtTime(.2,ctx.currentTime,.15);musicStep();timer=window.setInterval(musicStep,720)}else{if(timer)clearInterval(timer);timer=null;if(ctx&&music)music.gain.setTargetAtTime(0,ctx.currentTime,.08)}paint()};
-    button?.addEventListener('click',()=>{if(window.__BOMBER_AUDIO_READY__)return;set(!enabled)});
-    window.addEventListener('bomber-idle:explosion',e=>{if(!enabled)return;noise(e.detail && e.detail.splash ? .48 : .34, e.detail && e.detail.splash ? .34 : .25, e.detail && e.detail.splash ? 1050 : 780);tone(e.detail && e.detail.splash ? 105 : 78,.34,'sine',.3,0,28);tone(155,.12,'triangle',.08,.02,55)});
-    window.addEventListener('bomber-idle:bomb',()=>{tone(180,.12,'sine',.09,0,95);tone(620,.045,'square',.025,.01,280)});
-    window.addEventListener('bomber-idle:chest',()=>{tone(660,.16,'sine',.08,0,880);tone(990,.22,'sine',.055,.1,1320)});
-    paint();
-  })();
-  </script>
   </body>
 </html>
