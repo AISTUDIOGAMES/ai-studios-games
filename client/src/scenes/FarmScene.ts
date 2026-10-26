@@ -8,6 +8,8 @@ import { activate, auraOf, bomberClass, clearTransient, consumeArmed, decideAbil
 import { blastCells, bombDamageVs, bombSnapshot, createRng, gainStamina, isResistantBlock, meleeDamage, newCombo, registerHit, rollCrit, spendStamina, type BombSnapshot, type ComboState } from "../game/bomberCombat";
 import { blacklist, bfsField, buildCandidates, chooseTarget, escapeSteps, hasEscape, newAIState, pathTo, recordAction, recordMove, reportProgress, resetAI, unstickStep, type AIState } from "../game/bomberAI";
 import { FxPool } from "../game/bomberFx";
+import { planExplosion } from "../game/bomberExplosion";
+import { SPARK_MULT, getFxLevel } from "../game/fxSettings";
 
 const T = 32;
 const HERO_SCALE = 1.5; // tamanho dos operadores em campo
@@ -298,6 +300,7 @@ export class FarmScene extends Phaser.Scene {
       bumpStat(owner, "enemies");
       const [cx, cy] = [e.sprite.x, e.sprite.y];
       this.burst(cx, cy, e.mvp ? 0xffd24a : 0xd03a3a, e.mvp ? 16 : 8);
+      this.fx.image({ texture: "fx_ring", x: cx, y: cy, tint: e.mvp ? 0xffd24a : 0xff6a5a, scale: 0.3, toScale: e.mvp ? 1.8 : 1.2, alpha: 0.9, duration: 320, depth: 6, add: true });
       this.fx.text({ x: cx, y: cy, text: `+${e.reward}`, color: "#ffe27a", size: 14, rise: 26, duration: 900 });
       this.destroyEnemy(e);
       this.enemies.splice(this.enemies.indexOf(e), 1);
@@ -309,6 +312,8 @@ export class FarmScene extends Phaser.Scene {
     e.barFg.width = 26 * (e.hp / e.maxHp);
     e.sprite.setScale(e.mvp ? 1.15 : 1);
     this.tweens.add({ targets: e.sprite, scale: (e.mvp ? 1.15 : 1) * 1.15, duration: 70, yoyo: true });
+    this.fx.image({ texture: "fx_star", x: e.sprite.x, y: e.sprite.y, tint: 0xffffff, scale: 0.3, toScale: 0.9, duration: 180, depth: 6, add: true, prio: 1 });
+    this.fx.text({ x: e.sprite.x, y: e.sprite.y - 12, text: `-${Math.max(1, Math.round(dmg))}`, color: "#ff8a8a", size: 11, rise: 16, duration: 600 });
   }
 
   private addRuntime(data: HeroData) {
@@ -678,6 +683,8 @@ export class FarmScene extends Phaser.Scene {
     this.destroyChest(chest);
     this.viewCache = null;
     this.burst(x * T + T / 2, y * T + T / 2, 0xffe27a, 10);
+    this.fx.image({ texture: `chest_${chest.rarity}`, x: x * T + T / 2, y: y * T + T / 2, tint: 0xfff1b8, scale: 1, toScale: 1.6, alpha: 0.9, duration: 260, depth: 5, add: true });
+    this.fx.image({ texture: "fx_ring", x: x * T + T / 2, y: y * T + T / 2, tint: RARITIES[chest.rarity].color, scale: 0.3, toScale: 1.7, alpha: 0.9, duration: 380, depth: 5, add: true });
     this.fx.image({ texture: "fx_star", x: x * T + T / 2, y: y * T + T / 2, tint: 0xffe27a, scale: 0.3, toScale: 0.8, duration: 450, depth: 6, add: true });
     this.fx.text({ x: x * T + T / 2, y: y * T, text: `+${value}`, color: "#ffe27a", size: 14, rise: 26, duration: 900 });
   }
@@ -695,22 +702,33 @@ export class FarmScene extends Phaser.Scene {
     if (!spendStamina(d, BALANCE.bombCost * m.staminaCostMult)) { h.sleeping = true; return; }
     consumeArmed(h.ab); // Impacto Sismico vale para esta bomba
     track.bomb();
-    const sprite = this.add.image(h.gx * T + T / 2, h.gy * T + T / 2, "bomb").setDepth(3);
+    const sprite = this.add.image(h.gx * T + T / 2, h.gy * T + T / 2, "bomb").setDepth(3).setScale(0.2);
     if (snap.splash > 0) sprite.setTint(0xffb15a);
-    this.tweens.add({ targets: sprite, scale: 1.15, duration: 280, yoyo: true, repeat: -1 });
+    // "pop" ao plantar e so entao o pulso do pavio (explode() mata todos os tweens da bomba)
+    this.tweens.add({ targets: sprite, scale: 1, duration: 140, ease: "Back.Out", onComplete: () => {
+      if (sprite.active) this.tweens.add({ targets: sprite, scale: 1.15, duration: 280, yoyo: true, repeat: -1 });
+    } });
+    this.fx.image({ texture: "fx_ring", x: sprite.x, y: sprite.y + 8, tint: 0xb8c0d4, scale: 0.3, toScale: 0.9, alpha: 0.5, duration: 220, depth: 2.5, prio: 1 });
     const bomb: Bomb = { gx: h.gx, gy: h.gy, snap, luck: d.luck + m.luckBonus, owner: d, sprite };
     this.bombs.set(k, bomb);
+    // aviso de explosao: nos ultimos 500 ms a bomba esquenta e pisca mais rapido (leitura do perigo sem depender so da cor)
+    this.time.delayedCall(Math.max(0, BALANCE.bombFuseMs - 500), () => {
+      if (this.bombs.get(k) !== bomb || !bomb.sprite.active) return;
+      bomb.sprite.setTint(0xff5a3a);
+      this.tweens.add({ targets: bomb.sprite, alpha: 0.55, duration: 70, yoyo: true, repeat: -1 });
+    });
     this.viewCache = null;
     this.pose(h, POSE_BOMB, 220);
     this.time.delayedCall(BALANCE.bombFuseMs, () => this.explode(bomb));
   }
 
-  private burst(x: number, y: number, tint: number, n: number) {
-    const p = this.add.particles(x, y, "spark", {
-      speed: { min: 40, max: 130 }, lifespan: 450, scale: { start: 1.2, end: 0 }, tint, quantity: n, emitting: false,
-    }).setDepth(6);
-    p.explode(n);
-    this.time.delayedCall(600, () => p.destroy());
+  /** Fagulhas/estilhacos: imagens do pool (sem emissor de particulas novo a cada efeito). `glow` = brilho aditivo; false para entulho escuro. */
+  private burst(x: number, y: number, tint: number, n: number, glow = true) {
+    const count = Math.max(1, Math.round(n * SPARK_MULT[getFxLevel()]));
+    for (let i = 0; i < count; i++) {
+      const a = Math.random() * Math.PI * 2, r = 16 + Math.random() * 34;
+      this.fx.image({ texture: "spark", x, y, tint, scale: 1.2, toScale: 0.1, duration: 380 + Math.random() * 160, dx: Math.cos(a) * r, dy: Math.sin(a) * r, depth: 6, add: glow, prio: 1 });
+    }
   }
 
   private rollRarity(luck: number): Rarity {
@@ -731,7 +749,7 @@ export class FarmScene extends Phaser.Scene {
     this.viewCache = null;
     track.block();
     if (owner) bumpStat(owner, "blocks");
-    this.burst(cx, cy, this.map.crate, 8);
+    this.burst(cx, cy, this.map.crate, 8, false);
     if (Math.random() < this.dropChance) {
       const rarity = this.rollRarity(luck);
       const sprite = this.add.image(cx, cy, `chest_${rarity}`).setDepth(2).setScale(0);
@@ -757,6 +775,7 @@ export class FarmScene extends Phaser.Scene {
     }
     const sprite = this.blockSprites[y][x];
     if (sprite) { sprite.setScale(1); this.tweens.add({ targets: sprite, scale: 1.1, duration: 70, yoyo: true }); }
+    this.burst(x * T + T / 2, y * T + T / 2, this.map.crate, 3, false);
   }
 
   private explode(bomb: Bomb) {
@@ -772,13 +791,11 @@ export class FarmScene extends Phaser.Scene {
     this.viewCache = null;
     this.tweens.killTweensOf(bomb.sprite);
     bomb.sprite.destroy();
-    this.cameras.main.shake(bomb.snap.splash > 0 ? 140 : 90, bomb.snap.splash > 0 ? 0.004 : 0.002);
-    const bx = bomb.gx * T + T / 2, by = bomb.gy * T + T / 2;
-    this.fx.image({ texture: "fx_ring", x: bx, y: by, tint: bomb.snap.splash > 0 ? 0xffb15a : 0xffc04a, scale: 0.4, toScale: 0.8 + bomb.snap.range * 0.45, alpha: 0.8, duration: 320, depth: 4.5, add: true });
+    // so visual: o fogo corre pelas celulas ja calculadas acima (nao decide dano nem colisao)
+    const plan = planExplosion({ cells, gx: bomb.gx, gy: bomb.gy, range: bomb.snap.range, splash: bomb.snap.splash, tile: T, level: getFxLevel(), rng: Math.random });
+    this.cameras.main.shake(plan.shake.duration, plan.shake.intensity);
+    for (const st of plan.steps) this.fx.image(st);
     for (const [x, y] of cells) {
-      const cx = x * T + T / 2, cy = y * T + T / 2;
-      this.fx.image({ texture: "flame", x: cx, y: cy, scale: 0.6, toScale: 1.5, duration: 420, depth: 5 });
-      this.burst(cx, cy, 0xffc04a, 5);
       const bh = this.blocksHp.get(key(x, y));
       this.hitBlock(x, y, bombDamageVs(bomb.snap, "block", bh ? isResistantBlock(bh.maxHp) : false), bomb.luck, bomb.owner);
     }

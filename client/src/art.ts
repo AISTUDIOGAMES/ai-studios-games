@@ -181,6 +181,10 @@ export function makeTextures(s: Phaser.Scene) {
   mk("flame", (g) => { g.fillStyle(0xff7a1a, 0.9).fillCircle(16, 16, 14); g.fillStyle(0xffd24a).fillCircle(16, 16, 9); g.fillStyle(0xfff3b0).fillCircle(16, 16, 4); });
   mk("glow", (g) => { g.fillStyle(0xffffff, 0.1).fillCircle(16, 16, 16); g.fillStyle(0xffffff, 0.15).fillCircle(16, 16, 11); g.fillStyle(0xffffff, 0.25).fillCircle(16, 16, 6); });
   mk("spark", (g) => R(g, 0xffffff, 0, 0, 6, 6), 6, 6);
+  // explosao em etapas: clarao, fumaca e marca de queimado (brancas/neutras; a cor vem do tint em tempo de uso)
+  mk("fx_flash", (g) => { [[16, 0.1], [13, 0.16], [10, 0.26], [6.5, 0.45], [3.5, 0.8]].forEach(([r, a]) => g.fillStyle(0xffffff, a).fillCircle(16, 16, r)); });
+  mk("fx_smoke", (g) => { [[16, 16, 13, 0.14], [12, 18, 9, 0.18], [20, 14, 8, 0.18], [16, 15, 7, 0.22]].forEach(([x, y, r, a]) => g.fillStyle(0xffffff, a).fillCircle(x, y, r)); });
+  mk("fx_scorch", (g) => { [[15, 0.07], [12, 0.12], [9, 0.18], [6, 0.26]].forEach(([r, a]) => g.fillStyle(0x000000, a).fillEllipse(16, 16, r * 2, r * 1.6)); });
 
   // texturas dos efeitos reutilizaveis (brancas: a cor vem do tint em tempo de uso)
   mk("fx_ring", (g) => { g.lineStyle(3, 0xffffff, 1).strokeCircle(16, 16, 13); g.lineStyle(1, 0xffffff, 0.5).strokeCircle(16, 16, 9); });

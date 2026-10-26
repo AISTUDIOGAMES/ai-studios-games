@@ -10,6 +10,7 @@ import { abilitiesOf, abilityStatus, bomberClass, peekRuntime } from "./game/bom
 import { CLASS_INFO, NEUTRAL_MODS } from "./game/bomberConfig";
 import type { Modifiers } from "./game/bomberTypes";
 import { connect, requestClaim } from "./wallet";
+import { FX_LABELS, getFxLevel, setFxLevel } from "./game/fxSettings";
 
 new Phaser.Game({
   type: Phaser.AUTO,
@@ -541,6 +542,20 @@ const HUB: Record<string, () => void> = {
       kv("Moeda do jogo", "$BOMBERSI"),
       kv("Token do estúdio", "$ASG"),
     );
+    // intensidade dos efeitos (fumaça, fagulhas, tremor de tela): preferência do aparelho, fora do save do jogo
+    const fxRow = el("div", "kv");
+    const seg = el("div", "maps");
+    seg.style.margin = "0";
+    const fxBtns = FX_LABELS.map((label, i) => {
+      const b = el("button", "chip", label);
+      b.onclick = () => { setFxLevel(i); paint(); };
+      seg.append(b);
+      return b;
+    });
+    const paint = () => fxBtns.forEach((b, i) => { b.classList.toggle("on", i === getFxLevel()); b.setAttribute("aria-pressed", String(i === getFxLevel())); });
+    paint();
+    fxRow.append(el("span", "muted", "Efeitos visuais"), seg);
+    body.append(fxRow, el("p", "note", "Baixo reduz fumaça, fagulhas e o tremor de tela nas explosões. Vale para este aparelho."));
     const reset = el("button", "danger", "Apagar progresso deste navegador");
     reset.style.marginTop = "14px";
     reset.onclick = () => {

@@ -5,6 +5,10 @@ import Phaser from "phaser";
 export interface FxImage {
   texture: string; x: number; y: number; tint?: number; scale?: number; toScale?: number; alpha?: number;
   duration: number; depth?: number; angle?: number; dx?: number; dy?: number; add?: boolean; flipX?: boolean;
+  /** Espera antes de aparecer (ms): a imagem fica invisivel ate la. Serve para o fogo correr pelas celulas. */
+  delay?: number;
+  /** 0 = essencial (sempre); 1 = enfeite: e cortado quando o pool ja esta muito ocupado. */
+  prio?: 0 | 1;
 }
 export interface FxText { x: number; y: number; text: string; color?: string; size?: number; rise?: number; duration?: number }
 
@@ -14,12 +18,20 @@ export class FxPool {
   private freeTxt: Phaser.GameObjects.Text[] = [];
   private allTxt: Phaser.GameObjects.Text[] = [];
 
-  constructor(private scene: Phaser.Scene, private maxImages = 140, private maxTexts = 40) {}
+  /** Acima desta fracao do pool em uso, os enfeites (prio 1) sao pulados e so o essencial continua. */
+  static readonly EXTRA_LIMIT = 0.6;
 
-  image(o: FxImage) {
+  constructor(private scene: Phaser.Scene, private maxImages = 260, private maxTexts = 40) {}
+
+  /** Imagens em uso agora (visiveis ou aguardando o atraso). */
+  busy() { return this.allImg.length - this.freeImg.length; }
+
+  /** Devolve false quando o efeito foi pulado (so enfeite; nunca bloqueia o jogo). */
+  image(o: FxImage): boolean {
+    if ((o.prio ?? 0) === 1 && this.busy() >= this.maxImages * FxPool.EXTRA_LIMIT) return false;
     let img: Phaser.GameObjects.Image | undefined = this.freeImg.pop();
     if (!img) {
-      if (this.allImg.length >= this.maxImages) return;
+      if (this.allImg.length >= this.maxImages) return false;
       const made: Phaser.GameObjects.Image = this.scene.add.image(0, 0, o.texture);
       this.allImg.push(made);
       img = made;
@@ -27,12 +39,14 @@ export class FxPool {
     const s = o.scale ?? 1;
     img.setTexture(o.texture).setPosition(o.x, o.y).setTint(o.tint ?? 0xffffff).setScale(s).setAlpha(o.alpha ?? 1)
       .setAngle(o.angle ?? 0).setDepth(o.depth ?? 5).setFlipX(o.flipX ?? false)
-      .setBlendMode(o.add ? Phaser.BlendModes.ADD : Phaser.BlendModes.NORMAL).setVisible(true).setActive(true);
+      .setBlendMode(o.add ? Phaser.BlendModes.ADD : Phaser.BlendModes.NORMAL).setVisible(!o.delay).setActive(true);
     const me: Phaser.GameObjects.Image = img;
     this.scene.tweens.add({
-      targets: me, scale: o.toScale ?? s, alpha: 0, x: o.x + (o.dx ?? 0), y: o.y + (o.dy ?? 0), duration: o.duration,
+      targets: me, scale: o.toScale ?? s, alpha: 0, x: o.x + (o.dx ?? 0), y: o.y + (o.dy ?? 0), duration: o.duration, delay: o.delay ?? 0,
+      onStart: () => { me.setVisible(true); },
       onComplete: () => { me.setVisible(false).setActive(false); this.freeImg.push(me); },
     });
+    return true;
   }
 
   text(o: FxText) {
