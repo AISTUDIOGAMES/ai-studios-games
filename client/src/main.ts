@@ -16,7 +16,7 @@ new Phaser.Game({
   parent: "game",
   width: GAME_W,
   height: GAME_H,
-  backgroundColor: "#1b2a14",
+  backgroundColor: "#070b14",
   pixelArt: true,
   scale: { mode: Phaser.Scale.FIT, autoCenter: Phaser.Scale.CENTER_BOTH },
   scene: [FarmScene],
@@ -32,6 +32,18 @@ function toast(msg: string) {
   t.textContent = msg;
   t.classList.add("show");
   setTimeout(() => t.classList.remove("show"), 3500);
+}
+// Atualiza um contador do HUD e dá um brilho curto no painel quando o valor sobe (recompensa recebida).
+const lastShown = new Map<string, number>();
+function pulseOnGain(valueId: string, panelId: string, value: number) {
+  const prev = lastShown.get(valueId);
+  lastShown.set(valueId, value);
+  $(valueId).textContent = valueId === "pending" ? fmt(value) : String(value);
+  if (prev === undefined || value <= prev) return;
+  const panel = $(panelId);
+  panel.classList.remove("gain");
+  void panel.offsetWidth; // reinicia a animação se vier outro ganho em seguida
+  panel.classList.add("gain");
 }
 const el = <K extends keyof HTMLElementTagNameMap>(tag: K, cls?: string, text?: string) => {
   const e = document.createElement(tag);
@@ -94,6 +106,7 @@ function buildHeroes() {
   for (const h of shown) {
     const r = RARITIES[h.rarity];
     const li = el("li");
+    li.style.setProperty("--rc", r.css);
     const img = el("img");
     img.src = import.meta.env.BASE_URL + h.portrait;
     img.alt = `Carta NFT do operador ${h.name}`;
@@ -217,8 +230,8 @@ function buildMaps() {
 buildMaps();
 
 function render() {
-  $("pending").textContent = fmt(store.pending);
-  $("chests").textContent = String(store.chests);
+  pulseOnGain("pending", "stat-pending", store.pending);
+  pulseOnGain("chests", "stat-chests", store.chests);
   $("mapname").textContent = `${MAPS[mapState.index].name} · Instância ${mapState.instance}/${INSTANCES_PER_MAP}`;
   const target = mapState.request ?? mapState.index;
   mapBtns.forEach((b, i) => b.classList.toggle("on", i === 0 ? mapState.auto : !mapState.auto && target === i - 1));
@@ -324,6 +337,7 @@ function openModal(title: string, build: (body: HTMLElement) => void, live?: () 
   build(modalBody);
   liveUpdate = live ?? null;
   modal.hidden = false;
+  $("modal-close").focus();
   liveUpdate?.(); // evita o modal abrir com valores vazios por 400 ms
 }
 $("modal-close").onclick = closeModal;
@@ -410,7 +424,7 @@ function openLodging() {
     (["casulo", "modulo", "torre"] as LodgeKind[]).forEach((kind) => {
       const L = LODGING[kind];
       const card = el("div");
-      card.style.cssText = "border:2px solid #5a3a1c;border-radius:8px;padding:10px;background:var(--card)";
+      card.style.cssText = "border:1px solid var(--line2);border-radius:10px;padding:10px;background:var(--card)";
       const own = el("b"), occ = el("b");
       const buy = el("button", "", L.price === null ? "Em breve · $ASG" : `Comprar · ${fmt(L.price)} $BOMBERSI`);
       buy.disabled = L.price === null;
