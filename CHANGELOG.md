@@ -1,5 +1,13 @@
 # Changelog
 
+## Bomber Idle 2.0: ajustes de revisão
+- Botão "Recarregar stamina de todos (teste)" agora fica oculto; só aparece em desenvolvimento ou com `?debug` na URL.
+- Rótulo de versão atualizado para v2.0.
+- Regeneração de stamina em campo passa a ser por segundo real (`BALANCE.fieldRegenPerSec`, padrão 2 x regen), sem depender da velocidade do operador.
+- Custo das melhorias cresce 1,4x por nível (`UPGRADE_GROWTH`, antes 1,5x): maximizar os 3 atributos de um operador cai de ~3,4 mi para ~2,1 mi.
+- Novo teste de custo das melhorias (72 testes passando).
+- Para publicar: `npm run publish:bomber` (a pasta public/bomber-idle/assets ainda tem a build antiga).
+
 Formato baseado em [Keep a Changelog](https://keepachangelog.com/) e versionamento [SemVer](https://semver.org/lang/pt-BR/).
 
 ## [Não lançado] - Bombers Overhaul 2.0
