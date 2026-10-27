@@ -280,6 +280,11 @@ function render() {
     ref.btn.disabled = done || p < m.goal;
   }
   liveUpdate?.();
+  // indicadores do menu inferior: avisam sem poluir a tela (bolinha discreta, não número)
+  const capDot = document.querySelector<HTMLElement>('[data-hub="capsules"] .dot');
+  if (capDot) capDot.classList.toggle("on", store.pending >= CAPSULE_PRICE && store.collection.length < MAX_COLLECTION);
+  const vaultDot = document.querySelector<HTMLElement>('[data-hub="vault"] .dot');
+  if (vaultDot) vaultDot.classList.toggle("on", store.pending > 0);
 }
 render();
 setInterval(render, 400);
@@ -332,8 +337,18 @@ $("claim").onclick = async () => {
 const modal = $("modal");
 const modalBody = $("modal-body");
 function closeModal() { modal.hidden = true; liveUpdate = null; hubBtns.forEach((b) => b.classList.remove("on")); }
-function openModal(title: string, build: (body: HTMLElement) => void, live?: () => void) {
+// theme dá a cada seção do hub sua própria cor de destaque (ver data-theme no CSS); icon repete o emblema do botão do hub.
+function openModal(title: string, build: (body: HTMLElement) => void, live?: () => void, theme = "", icon = "") {
+  modal.dataset.theme = theme;
   $("modal-title").textContent = title;
+  const head = modal.querySelector(".panel-head")!;
+  let picn = head.querySelector(".picn");
+  if (icon) {
+    if (!picn) { picn = el("span", "picn"); head.insertBefore(picn, head.firstChild); }
+    picn.textContent = icon;
+  } else {
+    picn?.remove();
+  }
   modalBody.replaceChildren();
   build(modalBody);
   liveUpdate = live ?? null;
@@ -413,7 +428,7 @@ function openCapsules() {
     bal.textContent = `${fmt(store.pending)} $BOMBERSI`;
     b1.disabled = store.pending < CAPSULE_PRICE;
     b5.disabled = store.pending < CAPSULE_PRICE * 5;
-  });
+  }, "capsules", "📦");
 }
 
 function openLodging() {
@@ -467,7 +482,7 @@ function openLodging() {
       bbtn.disabled = !store.butler.owned && store.pending < BUTLER_PRICE;
     });
     body.append(el("p", "muted small", `Limite de ${MAX_LODGINGS} alojamentos por carteira. A Torre será vendida em $ASG.`));
-  }, () => upd.forEach((f) => f()));
+  }, () => upd.forEach((f) => f()), "lodging", "🏠");
 }
 
 const HUB: Record<string, () => void> = {
@@ -481,11 +496,11 @@ const HUB: Record<string, () => void> = {
   exchange: () => openModal("Bolsa", soon("", "Compre e venda operadores raros e alojamentos com outros jogadores.", [
     "Somente raridades altas e alojamentos.",
     "Uma taxa por venda alimenta o sumidouro da economia.",
-  ])),
+  ]), undefined, "soon", "🪙"),
   invites: () => openModal("Convites", soon("", "Convide amigos com seu link e ganhe operadores de resgate quando eles jogarem.", [
     "Link e código pessoais.",
     "Resgate dos operadores ganhos pela aba Resgates.",
-  ])),
+  ]), undefined, "soon", "✉️"),
   vault: () => openModal("Cofre de Recompensas", (body) => {
     const big = el("div", "big");
     big.id = "vault-balance";
@@ -499,7 +514,7 @@ const HUB: Record<string, () => void> = {
     if (b) b.textContent = `${fmt(store.pending)} $BOMBERSI`;
     const row = modalBody.querySelector(".kv b");
     if (row) row.textContent = String(store.chests);
-  }),
+  }, "vault", "🗝️"),
   manual: () => openModal("Manual", (body) => {
     const sec = (t: string, items: string[]) => {
       body.append(el("strong", "", t));
@@ -534,7 +549,7 @@ const HUB: Record<string, () => void> = {
       "Dica: sem Alojamento, quem está na reserva recupera só 6 stamina por minuto. Compre um Casulo antes do Droide Zelador.",
       "Dica: ter mais de 15 operadores só compensa com Zelador e Alojamentos, para revezar quem está cansado.",
     ]);
-  }),
+  }, undefined, "manual", "📖"),
   settings: () => openModal("Configurações", (body) => {
     body.append(
       kv("Carteira", wallet ? `${wallet.slice(0, 4)}…${wallet.slice(-4)}` : "não conectada"),
@@ -565,7 +580,7 @@ const HUB: Record<string, () => void> = {
       }
     };
     body.append(reset);
-  }),
+  }, undefined, "settings", "⚙️"),
 };
 const hubBtns = Array.from(document.querySelectorAll<HTMLButtonElement>("#hub button"));
 hubBtns.forEach((b) => {
