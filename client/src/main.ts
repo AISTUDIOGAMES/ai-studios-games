@@ -302,7 +302,9 @@ try {
   }
 } catch { /* sem storage: ignora */ }
 
-$("refill").onclick = () => { refillAll(); toast("Stamina recarregada (modo teste)"); };
+// Botão de teste (stamina infinita): só aparece em desenvolvimento ou com ?debug na URL. Nunca para jogadores comuns.
+if (import.meta.env.DEV || new URLSearchParams(location.search).has("debug")) $("refill").hidden = false;
+$("refill").onclick = () => { if ($("refill").hidden) return; refillAll(); toast("Stamina recarregada (modo teste)"); };
 
 $("connect").onclick = async () => {
   try {

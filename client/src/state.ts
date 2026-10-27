@@ -350,7 +350,8 @@ export function economyTick() {
 }
 
 // ---------- melhorias (sumidouro de $BOMBERSI) ----------
-export const upgradeCost = (h: HeroData, k: UpKey) => Math.round(100 * REWARD_SCALE * Math.pow(1.5, h.up[k]));
+export const UPGRADE_GROWTH = 1.4; // crescimento do custo por nivel (era 1,5: maximizar 3 atributos de um operador ia de ~3,4 mi para ~2,1 mi)
+export const upgradeCost = (h: HeroData, k: UpKey) => Math.round(100 * REWARD_SCALE * Math.pow(UPGRADE_GROWTH, h.up[k]));
 export function upgrade(h: HeroData, k: UpKey): boolean {
   const c = upgradeCost(h, k);
   if (h.up[k] >= UP_MAX || store.pending < c) return false;

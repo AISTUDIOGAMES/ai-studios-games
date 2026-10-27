@@ -33,7 +33,7 @@ interface Runtime {
   sprite: Phaser.GameObjects.Sprite; glow: Phaser.GameObjects.Image;
   barBg: Phaser.GameObjects.Rectangle; barFg: Phaser.GameObjects.Rectangle; zzz: Phaser.GameObjects.Text;
   pips: Phaser.GameObjects.Image[];
-  sleeping: boolean; lastMove: number; nextAt: number;
+  sleeping: boolean; lastMove: number; nextAt: number; regenAt: number;
   cls: BomberClass; ab: AbilityRuntime; ai: AIState; combo: ComboState;
   poseUntil: number; posed: boolean; lastLevel: number; auraFxAt: number; trailAt: number;
 }
@@ -331,7 +331,7 @@ export class FarmScene extends Phaser.Scene {
     // evolucao discreta: um losango dourado por marco de nivel (10, 20, 30)
     const pips = [0, 1, 2].map(() => this.add.image(0, 0, "spark").setTint(0xffd24a).setDepth(7).setVisible(false));
     const rt: Runtime = {
-      data, gx, gy, sprite, glow, barBg, barFg, zzz, pips, sleeping: false, lastMove: 0, nextAt: 0,
+      data, gx, gy, sprite, glow, barBg, barFg, zzz, pips, sleeping: false, lastMove: 0, nextAt: 0, regenAt: 0,
       cls: bomberClass(data.rarity), ab, ai: newAIState(), combo: newCombo(), poseUntil: 0, posed: false, lastLevel: data.level, auraFxAt: 0, trailAt: 0,
     };
     this.heroes.push(rt);
@@ -439,8 +439,11 @@ export class FarmScene extends Phaser.Scene {
     const say = (s: string) => (store.status[d.id] = s);
 
     if (h.sleeping) {
-      gainStamina(d, d.regen * m.regenMult); // nunca passa do maximo
-      if (d.stamina >= d.maxStamina * 0.5) h.sleeping = false;
+      // regenera por segundo real (nao por tick): a velocidade do operador nao muda mais o descanso. dt limitado p/ aba escondida.
+      const dt = h.regenAt ? Math.min(2, (now - h.regenAt) / 1000) : 0;
+      h.regenAt = now;
+      gainStamina(d, d.regen * BALANCE.fieldRegenPerSec * m.regenMult * dt); // nunca passa do maximo
+      if (d.stamina >= d.maxStamina * 0.5) { h.sleeping = false; h.regenAt = 0; }
       this.useAbilities(h, this.baseCtx(h));
       say("Descansando");
       return;

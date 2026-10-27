@@ -112,3 +112,15 @@ test("mapas: 50 ids unicos x 33 instancias", async () => {
   assert.equal(new Set(m.MAPS.map((x) => x.id)).size, 50);
   assert.equal(m.INSTANCES_PER_MAP, 33);
 });
+
+test("melhorias: custo cresce 1,4x por nivel e maximizar 3 atributos fica abaixo de 2,2 mi", async () => {
+  mem.clear();
+  const s = await load();
+  const h = s.store.collection[0];
+  assert.equal(s.upgradeCost(h, "speed"), 10000);
+  h.up.speed = 6;
+  assert.equal(s.upgradeCost(h, "speed"), Math.round(10000 * Math.pow(1.4, 6)));
+  let total = 0;
+  for (let lv = 0; lv < s.UP_MAX; lv++) { h.up.luck = lv; total += s.upgradeCost(h, "luck"); }
+  assert.ok(total * 3 < 2.2e6 && total * 3 > 1.9e6, `total p/ 3 atributos: ${total * 3}`);
+});

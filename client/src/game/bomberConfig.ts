@@ -32,6 +32,7 @@ export const BALANCE = {
   bombFuseMs: 1400,        // pavio da bomba (igual a 1.7.1)
   resistantBlockHp: 20,    // bloco com HP maximo >= isto conta como "resistente"
   actionMinStamina: 1,     // gate de 1.7.1: abaixo disso o operador dorme
+  fieldRegenPerSec: 2,     // regen. em campo por SEGUNDO = regen do operador x isto (antes era por tick e dependia da velocidade)
   bombCost: 1,
   meleeHitCost: 0.3,       // igual a 1.7.1
   meleeDmgFactor: 0.4,     // igual a 1.7.1
