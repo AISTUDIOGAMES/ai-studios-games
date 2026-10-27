@@ -12,7 +12,7 @@ import { planExplosion } from "../game/bomberExplosion";
 import { SPARK_MULT, getFxLevel } from "../game/fxSettings";
 
 const T = 32;
-const HERO_SCALE = 1.5; // tamanho dos operadores em campo
+const HERO_SCALE = 1.7; // tamanho dos operadores em campo (era 1.5 — aumentado p/ dar mais presenca sem estourar o tile de 32px)
 const HERO_DY = -13 * (HERO_SCALE - 1); // mantem os pes na mesma posicao do tile
 const BAR_W = 28;
 export const MAP_W = COLS * T;
