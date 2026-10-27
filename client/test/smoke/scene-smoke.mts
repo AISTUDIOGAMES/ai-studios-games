@@ -30,7 +30,7 @@ sc.anims = { create() {} };
 sc.renderer = { type: 0 };
 sc.events = { once() {} };
 sc.cameras = { main: P.__go({ postFX: P.__go() }) };
-sc.tweens = { add(cfg: any) { P.__stats.tweens++; if (cfg.onComplete && !cfg.repeat) timers.push({ at: nowMs + (cfg.duration ?? 0), cb: cfg.onComplete }); }, killTweensOf() {} };
+sc.tweens = { add(cfg: any) { P.__stats.tweens++; if (cfg.onStart) timers.push({ at: nowMs + (cfg.delay ?? 0), cb: cfg.onStart }); if (cfg.onComplete && !cfg.repeat) timers.push({ at: nowMs + (cfg.delay ?? 0) + (cfg.duration ?? 0), cb: cfg.onComplete }); }, killTweensOf() {} };
 sc.time = { get now() { return nowMs; }, delayedCall(ms: number, cb: () => void) { timers.push({ at: nowMs + ms, cb }); }, addEvent(c: any) { loops.push({ every: c.delay, next: c.delay, cb: c.callback }); } };
 
 sc.create();
