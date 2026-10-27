@@ -1,19 +1,231 @@
 <!doctype html>
-<html lang="en">
+<html lang="pt-BR">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta name="theme-color" content="#090b10" />
-    <meta name="description" content="OWL Studios Game — enter the universe of the Grid. Browser games, neon worlds and Solana-ready ideas." />
-    <link rel="icon" type="image/png" href="/images/favicon.png" />
-    <meta property="og:title" content="OWL Studios Game — Play Beyond the Grid" />
-    <meta property="og:description" content="Browser games, neon worlds and Solana-ready ideas." />
-    <meta property="og:image" content="/images/og-banner.jpg" />
-    <meta name="twitter:card" content="summary_large_image" />
-    <title>OWL STUDIOS GAME — Play Beyond the Grid</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="theme-color" content="#070b14" />
+    <title>Bomber Idle</title>
+    <style>
+      /* ===== BomberIdle Premium: tokens =====
+         Preto e azul-marinho com profundidade, dourado metálico, energia azul e âmbar.
+         Os nomes antigos (--gold, --ink, --card, --text, --muted) continuam existindo porque o main.ts os usa. */
+      :root {
+        color-scheme: dark;
+        --bg: #05070d; --navy: #0a1224; --navy2: #0f1b35; --ink: #08101f; --card: #0d1730;
+        --line: #26365a; --line2: #3a4d78;
+        --gold: #d4a537; --gold-hi: #f3d98b; --gold-lo: #8a6416;
+        --blue: #39b6ff; --amber: #ffb23d;
+        --text: #e8eef9; --muted: #93a4c2;
+        --metal: repeating-linear-gradient(90deg, rgba(255,255,255,.022) 0 1px, transparent 1px 3px), linear-gradient(180deg, #17233f 0%, #0b1428 100%);
+        --gold-metal: linear-gradient(180deg, #f7e2a1 0%, #d9ac3c 48%, #9a7019 100%);
+        --safe-b: env(safe-area-inset-bottom, 0px);
+        --hub-h: 84px;
+      }
+      * { box-sizing: border-box; }
+      html { scrollbar-color: var(--line2) var(--navy); }
+      body { margin: 0; color: var(--text); font-family: "Segoe UI", system-ui, -apple-system, Roboto, sans-serif; min-height: 100vh; padding-bottom: calc(var(--hub-h) + var(--safe-b));
+        background: radial-gradient(1200px 600px at 50% -10%, #12234a 0%, transparent 60%), radial-gradient(800px 500px at 100% 100%, #1a1206 0%, transparent 55%), var(--bg); }
+      [hidden] { display: none !important; }
+
+      /* ===== cabeçalho / HUD de recursos ===== */
+      header { position: relative; display: flex; flex-wrap: wrap; gap: 10px 12px; align-items: center; padding: 10px 16px; background: var(--metal); border-bottom: 1px solid var(--gold-lo); box-shadow: 0 6px 22px #000a; }
+      header::after { content: ""; position: absolute; left: 0; right: 0; bottom: -1px; height: 2px; background: linear-gradient(90deg, transparent, var(--gold) 20%, var(--gold-hi) 50%, var(--gold) 80%, transparent); opacity: .9; }
+      .brand { display: flex; align-items: center; gap: 10px; margin-right: auto; min-width: 0; }
+      .emblem { width: 38px; height: 38px; flex: none; filter: drop-shadow(0 0 6px #ffb23d55); }
+      .brandtext { display: flex; flex-direction: column; min-width: 0; }
+      .title { font-size: 1.15rem; font-weight: 800; letter-spacing: .16em; text-transform: uppercase; color: var(--gold-hi); background: var(--gold-metal); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; line-height: 1.1; }
+      .tag { font-size: .72rem; color: var(--muted); font-weight: 500; letter-spacing: .02em; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+      .stat { display: flex; align-items: center; gap: 8px; padding: 5px 14px 5px 10px; font-variant-numeric: tabular-nums; border-radius: 10px;
+        background: linear-gradient(180deg, #060b17, #0b1428); border: 1px solid var(--line2); box-shadow: inset 0 2px 6px #000c, 0 1px 0 #ffffff10; }
+      .stat b { color: var(--gold-hi); font-size: 1.05rem; min-width: 3ch; text-align: right; text-shadow: 0 0 10px #ffb23d55; }
+      .stat .unit { color: var(--muted); font-weight: 700; font-size: .72rem; letter-spacing: .06em; }
+      .stat svg { width: 24px; height: 24px; flex: none; }
+      .stat.gain { animation: gain .7s ease-out; }
+      @keyframes gain { 0% { box-shadow: inset 0 2px 6px #000c, 0 0 0 0 #ffb23d00; border-color: var(--line2); } 25% { box-shadow: inset 0 2px 6px #000c, 0 0 14px 2px #ffb23d88; border-color: var(--amber); } 100% { box-shadow: inset 0 2px 6px #000c, 0 0 0 0 #ffb23d00; border-color: var(--line2); } }
+
+      /* ===== botões ===== */
+      button { font: inherit; font-weight: 800; letter-spacing: .01em; cursor: pointer; border-radius: 9px; padding: 8px 14px; color: #1a1204; border: 1px solid #5d430c;
+        background: var(--gold-metal); box-shadow: inset 0 1px 0 #fff6, 0 3px 0 #5d430c, 0 6px 12px #0008; transition: filter .15s, transform .08s, box-shadow .08s; }
+      button:hover:not(:disabled) { filter: brightness(1.08); }
+      button:active:not(:disabled) { transform: translateY(2px); box-shadow: inset 0 1px 0 #fff4, 0 1px 0 #5d430c; }
+      button:focus-visible { outline: 3px solid #7dd3ff; outline-offset: 2px; }
+      button:disabled { opacity: .5; cursor: not-allowed; filter: saturate(.5); }
+      #connect { background: linear-gradient(180deg, #12304f, #0b1d33); color: #bfe6ff; border-color: var(--blue); box-shadow: inset 0 1px 0 #7dd3ff33, 0 0 12px #39b6ff33; }
+      button.ghost { background: transparent; color: var(--text); border: 1px solid var(--line2); box-shadow: none; width: 100%; margin-top: 12px; }
+      button.ghost:hover:not(:disabled) { border-color: var(--gold); color: var(--gold-hi); }
+      .maps { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 16px; }
+      button.chip { padding: 4px 10px; font-size: .75rem; background: #0b1428; color: var(--text); border: 1px solid var(--line); box-shadow: none; }
+      button.chip.on { border-color: var(--gold); color: var(--gold-hi); background: #17233f; box-shadow: inset 0 -2px 0 var(--gold); }
+
+      /* ===== área de jogo ===== */
+      main { display: flex; flex-wrap: wrap; gap: 16px; padding: 16px; align-items: flex-start; justify-content: center; }
+      #game { position: relative; flex: none; width: min(100%, calc((100vh - 200px) * 31 / 19)); aspect-ratio: 31 / 19; border-radius: 10px; overflow: hidden; background: #070b14;
+        box-shadow: 0 0 0 1px var(--gold-lo), 0 0 0 5px #0a1224, 0 0 0 6px var(--line2), 0 18px 44px #000b, 0 0 60px #39b6ff12; }
+      #game::after { content: ""; position: absolute; inset: 0; pointer-events: none; box-shadow: inset 0 0 46px #000a; border-radius: 10px; }
+      #game canvas { image-rendering: pixelated; }
+
+      /* ===== painel lateral ===== */
+      aside { flex: 1 1 290px; max-width: 360px; max-height: calc(100vh - 200px); overflow: auto; background: var(--metal); border: 1px solid var(--line2); border-top: 2px solid var(--gold); border-radius: 12px; padding: 14px; box-shadow: 0 10px 30px #0009; }
+      aside h2 { margin: 0 0 10px; font-size: 1.05rem; }
+      .tabs { display: flex; gap: 6px; margin-bottom: 12px; padding: 4px; background: #060b17; border-radius: 10px; border: 1px solid var(--line); }
+      button.tab { flex: 1; padding: 7px 8px; font-size: .82rem; background: transparent; color: var(--muted); border: 1px solid transparent; box-shadow: none; }
+      button.tab.on { color: var(--gold-hi); background: #17233f; border-color: var(--gold-lo); box-shadow: inset 0 -2px 0 var(--gold); }
+      ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 10px; }
+      li { display: grid; grid-template-columns: 58px 1fr; gap: 10px; background: linear-gradient(180deg, #101c38, #0b1428); border: 1px solid var(--line); border-left: 3px solid var(--rc, var(--line2)); border-radius: 10px; padding: 8px; box-shadow: 0 2px 8px #0006; }
+      li img { width: 58px; height: 80px; object-fit: cover; object-position: top; border: 2px solid; border-radius: 6px; background: #05081a; }
+      .hero-top { display: flex; gap: 8px; align-items: baseline; }
+      .tier { margin-left: auto; font-size: .78rem; font-weight: 700; letter-spacing: .03em; }
+      .bar { height: 8px; background: #040810; border: 1px solid #000; border-radius: 4px; margin: 6px 0 4px; overflow: hidden; box-shadow: inset 0 1px 3px #000c; }
+      .bar div { height: 100%; transition: width .3s; box-shadow: inset 0 1px 0 #ffffff55; }
+      .muted { color: var(--muted); } .small { font-size: .78rem; line-height: 1.3; }
+      .note { margin: 12px 0 0; color: var(--muted); font-size: .8rem; line-height: 1.4; }
+      .lvl-row { display: flex; align-items: center; gap: 8px; margin-top: 4px; }
+      .lvl { font-size: .78rem; font-weight: 800; color: var(--gold-hi); min-width: 3.2ch; }
+      .bar.thin { flex: 1; height: 5px; margin: 0; }
+      .ups { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 6px; }
+      button.up { padding: 4px 8px; font-size: .7rem; border-radius: 7px; box-shadow: inset 0 1px 0 #fff6, 0 2px 0 #5d430c; }
+      button.up.poor { background: #101a30; color: #9fb0cc; border: 1px dashed var(--line2); box-shadow: none; filter: none; opacity: .85; }
+      .stats { color: var(--muted); margin-top: 2px; }
+      .eff { color: #8fdcff; margin-top: 3px; }
+      .abils { margin-top: 5px; }
+      .abil { display: flex; justify-content: space-between; gap: 8px; font-size: .74rem; margin-top: 2px; cursor: help; }
+      .abil .s { font-weight: 800; white-space: nowrap; }
+      .abil .s.ready { color: #7dff9b; } .abil .s.active { color: #39e6ff; } .abil .s.cooldown { color: #ffb830; } .abil .s.locked { color: #8d9bb4; } .abil .s.passive { color: #b9b9ff; }
+      details.more { font-size: .72rem; color: var(--muted); margin-top: 5px; }
+      details.more summary { cursor: pointer; }
+      details.more p { margin: 4px 0 0; line-height: 1.35; }
+      li.mission { grid-template-columns: 1fr auto; align-items: center; }
+      li.mission .bar { margin: 6px 0 4px; }
+
+      /* ===== notificações ===== */
+      #toast { position: fixed; z-index: 50; left: 50%; bottom: calc(var(--hub-h) + var(--safe-b) + 12px); transform: translateX(-50%) translateY(20px); max-width: min(92vw, 520px); text-align: center;
+        background: linear-gradient(180deg, #14213f, #0a1224); border: 1px solid var(--gold); padding: 10px 18px; border-radius: 10px; box-shadow: 0 10px 28px #000c, 0 0 18px #d4a53733;
+        opacity: 0; pointer-events: none; transition: opacity .2s, transform .2s; }
+      #toast.show { opacity: 1; transform: translateX(-50%); }
+
+      /* ===== menu inferior (hub) ===== */
+      #hub { position: fixed; left: 0; right: 0; bottom: 0; z-index: 20; display: flex; gap: 8px; justify-content: center; padding: 8px 10px calc(10px + var(--safe-b)); background: var(--metal); border-top: 1px solid var(--gold-lo); box-shadow: 0 -8px 24px #000a; }
+      #hub::before { content: ""; position: absolute; left: 0; right: 0; top: -1px; height: 2px; background: linear-gradient(90deg, transparent, var(--gold) 20%, var(--gold-hi) 50%, var(--gold) 80%, transparent); opacity: .85; }
+      #hub button { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; min-width: 76px; min-height: 56px; padding: 6px 10px; background: linear-gradient(180deg, #0f1a33, #08101f); color: var(--text); border: 1px solid var(--line); box-shadow: 0 3px 0 #000a; font-size: .72rem; font-weight: 700; flex: none; }
+      #hub button .ic { font-size: 1.35rem; line-height: 1; }
+      #hub button.on, #hub button:hover { border-color: var(--gold); color: var(--gold-hi); box-shadow: 0 3px 0 #000a, inset 0 -2px 0 var(--gold); }
+      #hub button .soon { font-size: .56rem; color: var(--muted); font-weight: 600; }
+
+      /* ===== janelas (modal) ===== */
+      #modal { position: fixed; inset: 0; z-index: 30; display: grid; place-items: center; padding: 16px 16px calc(var(--hub-h) + var(--safe-b) + 16px); background: radial-gradient(circle at 50% 40%, #0a1224cc, #000d); backdrop-filter: blur(2px); }
+      #modal .panel { width: min(640px, 100%); max-height: 100%; overflow: auto; background: var(--metal); border: 1px solid var(--line2); border-top: 2px solid var(--gold); border-radius: 14px; padding: 16px; box-shadow: 0 16px 44px #000d, 0 0 40px #39b6ff10; animation: pop .18s ease-out; }
+      @keyframes pop { from { opacity: 0; transform: translateY(8px) scale(.985); } to { opacity: 1; transform: none; } }
+      #modal .panel-head { display: flex; align-items: center; gap: 10px; margin-bottom: 12px; }
+      #modal h2 { margin: 0 auto 0 0; font-size: 1.15rem; color: var(--gold-hi); letter-spacing: .03em; }
+      #modal .x { padding: 2px 12px; min-height: 34px; background: #2a0f18; color: #ffd6dc; border: 1px solid #8a2a3a; box-shadow: 0 2px 0 #12060a; }
+      #modal p, #modal li { line-height: 1.45; }
+      #modal ol, #modal ul.plain { padding-left: 20px; margin: 8px 0; display: block; }
+      #modal .kv { display: flex; justify-content: space-between; gap: 12px; padding: 6px 0; border-bottom: 1px solid var(--line); }
+      #modal .kv b { color: var(--gold-hi); }
+      #modal .big { font-size: 1.8rem; font-weight: 800; color: var(--gold-hi); margin: 4px 0 10px; text-shadow: 0 0 14px #ffb23d44; }
+      #modal .badge { display: inline-block; padding: 2px 10px; border: 1px solid var(--gold); border-radius: 999px; font-size: .72rem; color: var(--gold-hi); margin-bottom: 8px; letter-spacing: .06em; text-transform: uppercase; }
+      #modal button.danger { background: linear-gradient(180deg, #d9503a, #8f2214); border-color: #4a1208; box-shadow: 0 3px 0 #4a1208; color: #fff; }
+
+      /* ===== telas pequenas e toque ===== */
+      @media (min-width: 1100px) {
+        /* telas largas: jogo e painel lado a lado, sem rolar a página para achar os operadores */
+        main { flex-wrap: nowrap; align-items: flex-start; }
+        #game { flex: 0 1 auto; width: min(calc(100vw - 32px - 16px - 340px), calc((100vh - 200px) * 31 / 19)); }
+        aside { flex: 0 0 340px; max-width: 340px; max-height: calc(100vh - 200px); }
+      }
+      @media (max-width: 900px) {
+        #hub { justify-content: flex-start; overflow-x: auto; scrollbar-width: thin; }
+        #hub button { min-width: 72px; }
+      }
+      @media (max-width: 760px) {
+        header { padding: 8px 12px; gap: 8px; }
+        .brand { flex: 1 1 100%; }
+        main { padding: 10px; gap: 12px; }
+        #game { width: 100%; }
+        aside { max-width: none; max-height: none; flex-basis: 100%; }
+      }
+      @media (pointer: coarse) {
+        button { min-height: 44px; }
+        button.up { min-height: 40px; padding: 6px 10px; font-size: .78rem; }
+        button.chip { min-height: 40px; padding: 6px 12px; font-size: .82rem; }
+        #hub button { min-height: 60px; }
+      }
+      @media (prefers-reduced-motion: reduce) {
+        .bar div, #toast, button { transition: none; }
+        .stat.gain, #modal .panel { animation: none; }
+      }
+    </style>
   </head>
   <body>
-    <div id="app"></div>
+    <header>
+      <div class="brand">
+        <svg class="emblem" viewBox="0 0 48 48" aria-hidden="true">
+          <defs>
+            <linearGradient id="eg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#f7e2a1"/><stop offset=".5" stop-color="#d9ac3c"/><stop offset="1" stop-color="#8a6416"/></linearGradient>
+            <radialGradient id="eb" cx=".35" cy=".3" r=".8"><stop offset="0" stop-color="#2a3d6b"/><stop offset="1" stop-color="#060b17"/></radialGradient>
+          </defs>
+          <circle cx="22" cy="28" r="15" fill="url(#eb)" stroke="url(#eg)" stroke-width="2.5"/>
+          <circle cx="22" cy="28" r="8.5" fill="none" stroke="#39b6ff" stroke-width="1.6" opacity=".85"/>
+          <path d="M16 23a8 8 0 0 1 5-3" stroke="#9fd9ff" stroke-width="1.8" stroke-linecap="round" fill="none" opacity=".7"/>
+          <rect x="19.5" y="9" width="6" height="6" rx="1.5" fill="url(#eg)"/>
+          <path d="M25 11c4 0 6-2 7-5" stroke="#d9ac3c" stroke-width="2" stroke-linecap="round" fill="none"/>
+          <circle cx="33" cy="5.5" r="3" fill="#ffb23d"/><circle cx="33" cy="5.5" r="1.4" fill="#fff6c8"/>
+        </svg>
+        <div class="brandtext"><span class="title">Bomber Idle</span><span class="tag">v1.7.1 · <span id="mapname"></span></span></div>
+      </div>
+      <span class="stat" id="stat-pending" title="$BOMBERSI pendentes (teste)">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="11" fill="#5d430c"/><circle cx="12" cy="12" r="9.5" fill="#f2c24a"/><circle cx="12" cy="12" r="6.5" fill="none" stroke="#9a7019" stroke-width="2"/><path d="M8 7h3v2H8z" fill="#fff6c8"/></svg>
+        <b id="pending">0</b><span class="unit">$BOMBERSI</span>
+      </span>
+      <span class="stat" id="stat-chests" title="Baús abertos">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="2" y="6" width="20" height="15" rx="2" fill="#060b17" stroke="#d4a537" stroke-width="1.2"/><rect x="3.5" y="7.5" width="17" height="12" fill="#1c2c52"/><rect x="3.5" y="7.5" width="17" height="3.2" fill="#2f4880"/><rect x="10.5" y="11" width="3" height="5" rx=".6" fill="#f2c24a"/></svg>
+        <b id="chests">0</b>
+      </span>
+      <button id="connect">Conectar carteira</button>
+      <button id="claim" disabled>Cofre · Sacar</button>
+    </header>
+    <main>
+      <div id="game"></div>
+      <aside>
+        <nav class="tabs">
+          <button class="tab on" data-tab="heroes">Operadores</button>
+          <button class="tab" data-tab="missions">Missões</button>
+          <button class="tab" data-tab="maps">Mapas</button>
+        </nav>
+        <section id="tab-heroes">
+          <p id="hero-info" class="note" style="margin:0 0 8px"></p>
+          <div class="maps" style="margin-bottom:6px"><button id="work-all" class="chip">Enviar todos</button><button id="rest-all" class="chip">Recolher todos</button></div>
+          <div id="hero-filter" class="maps"></div>
+          <ul id="heroes"></ul>
+          <button id="refill" class="ghost">Recarregar stamina de todos (teste)</button>
+        </section>
+        <section id="tab-missions" hidden>
+          <ul id="missions"></ul>
+          <p class="note">As missões reiniciam todo dia. Melhorias de operador gastam os $BOMBERSI pendentes.</p>
+        </section>
+        <section id="tab-maps" hidden>
+          <div id="maps" class="maps"></div>
+        </section>
+        <p class="note">Os $BOMBERSI daqui são de teste e ficam salvos só neste navegador. O saque on-chain depende do servidor e do programa na devnet.</p>
+      </aside>
+    </main>
+    <nav id="hub" aria-label="Menu principal">
+      <button data-hub="heroes"><span class="ic">🧑‍🚀</span>Operadores</button>
+      <button data-hub="capsules"><span class="ic">📦</span>Cápsulas</button>
+      <button data-hub="lodging"><span class="ic">🏠</span>Alojamentos</button>
+      <button data-hub="exchange"><span class="ic">🪙</span>Bolsa<span class="soon">em breve</span></button>
+      <button data-hub="vault"><span class="ic">🗝️</span>Cofre</button>
+      <button data-hub="invites"><span class="ic">✉️</span>Convites<span class="soon">em breve</span></button>
+      <button data-hub="manual"><span class="ic">📖</span>Manual</button>
+      <button data-hub="settings"><span class="ic">⚙️</span>Config.</button>
+    </nav>
+    <div id="modal" hidden>
+      <div class="panel" role="dialog" aria-modal="true" aria-labelledby="modal-title">
+        <div class="panel-head"><h2 id="modal-title"></h2><button id="modal-close" class="x" aria-label="Fechar">✕</button></div>
+        <div id="modal-body"></div>
+      </div>
+    </div>
+    <div id="toast" role="status"></div>
     <script type="module" src="/src/main.ts"></script>
   </body>
 </html>
