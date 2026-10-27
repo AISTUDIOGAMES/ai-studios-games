@@ -24,25 +24,36 @@ function drawBot(g: G, P: Bot, f: number) {
   const lift = [[0, 0], [-2, 0], [0, 0], [0, -2], [0, 0], [0, 0]][f], bob = [0, -1, 0, -1, -1, 1][f], sw = [0, 1, 0, -1, 0, 2][f], wd = P.wide ?? 0;
   const rs = f === 5 ? sw : -sw, squint = f === 3 || f === 4;
   P.back?.(g, f);
-  shadow(g, 20 + wd * 2);
-  [[10, lift[0]], [17, lift[1]]].forEach(([x, dy]) => { R(g, OUT, x, 27 + dy, 5, 4); R(g, P.trim, x + 1, 27 + dy, 3, 2); R(g, shade(P.body, 0.6), x + 1, 29 + dy, 3, 1); });
+  // sombra de contato em duas camadas (mais suave, mais sensacao de peso/presenca no chao)
+  g.fillStyle(0x000000, 0.22).fillEllipse(16, 30, 24 + wd * 2, 7);
+  g.fillStyle(0x000000, 0.42).fillEllipse(16, 29, 17 + wd * 2, 5);
+  [[10, lift[0]], [17, lift[1]]].forEach(([x, dy]) => {
+    R(g, OUT, x, 27 + dy, 5, 4); R(g, P.trim, x + 1, 27 + dy, 3, 2); R(g, shade(P.trim, 1.35), x + 1, 27 + dy, 3, 1); R(g, shade(P.body, 0.6), x + 1, 29 + dy, 3, 1);
+  });
   g.translateCanvas(0, bob);
-  // corpo
+  // corpo: gradiente em 3 tons (luz-meio-sombra) + sombreamento lateral p/ dar sensacao de cilindro/volume
   R(g, OUT, 10 - wd, 18, 12 + wd * 2, 9); R(g, P.body, 11 - wd, 19, 10 + wd * 2, 7);
-  R(g, shade(P.body, 1.4), 11 - wd, 19, 10 + wd * 2, 2); R(g, shade(P.body, 0.65), 11 - wd, 24, 10 + wd * 2, 2);
-  // moeda no peito (tema crypto) com anel de nucleo de energia na cor da classe
-  g.fillStyle(OUT).fillCircle(16, 22, 4); g.fillStyle(P.core ?? 0xffd24a).fillCircle(16, 22, 3.3); g.fillStyle(0xffd24a).fillCircle(16, 22, 2.4); R(g, 0xfff3b0, 15, 21, 1, 1); R(g, 0xb47a10, 16, 23, 1, 1);
-  // bracos
-  R(g, OUT, 7 - wd, 19 + sw, 3, 6); R(g, P.trim, 8 - wd, 20 + sw, 1, 4);
+  R(g, shade(P.body, 1.5), 11 - wd, 19, 10 + wd * 2, 2);
+  R(g, shade(P.body, 1.1), 11 - wd, 21, 10 + wd * 2, 1);
+  R(g, shade(P.body, 0.6), 11 - wd, 24, 10 + wd * 2, 2);
+  R(g, shade(P.body, 0.7), 19 + wd, 19, 2, 7, 0.55); // sombra lateral direita (luz vindo da esquerda)
+  // nucleo de energia com halo externo suave, alem do brilho central ja existente
+  g.fillStyle(P.core ?? 0xffd24a, 0.22).fillCircle(16, 22, 6.5);
+  g.fillStyle(OUT).fillCircle(16, 22, 4); g.fillStyle(P.core ?? 0xffd24a).fillCircle(16, 22, 3.3); g.fillStyle(0xffd24a).fillCircle(16, 22, 2.4);
+  R(g, 0xfff3b0, 15, 21, 1, 1); R(g, 0xb47a10, 16, 23, 1, 1);
+  // bracos com realce e sombra de contato no punho (mais volume, menos "bastao" chapado)
+  R(g, OUT, 7 - wd, 19 + sw, 3, 6); R(g, P.trim, 8 - wd, 20 + sw, 1, 4); R(g, shade(P.trim, 0.6), 8 - wd, 24 + sw, 1, 1);
   if (f === 4) { R(g, OUT, 22 + wd, 12, 3, 9); R(g, P.trim, 23 + wd, 13, 1, 7); R(g, 0xffffff, 22 + wd, 10, 3, 2, 0.9); } // golpe: braco para cima
-  else { R(g, OUT, 22 + wd, 19 + rs, 3, 6); R(g, P.trim, 23 + wd, 20 + rs, 1, 4); }
-  // cabecao com visor
+  else { R(g, OUT, 22 + wd, 19 + rs, 3, 6); R(g, P.trim, 23 + wd, 20 + rs, 1, 4); R(g, shade(P.trim, 0.6), 23 + wd, 24 + rs, 1, 1); }
+  // cabecao com calota em gradiente (3 tons) + sombra de queixo, pra parecer esferico e nao chapado
   g.fillStyle(OUT).fillRoundedRect(6, 2, 20, 17, 6);
   g.fillStyle(P.helm).fillRoundedRect(7, 3, 18, 15, 5);
-  R(g, shade(P.helm, 1.45), 10, 4, 9, 2); R(g, shade(P.helm, 0.7), 8, 16, 16, 2);
+  R(g, shade(P.helm, 1.55), 9, 4, 11, 2); R(g, shade(P.helm, 1.15), 9, 6, 11, 1);
+  R(g, shade(P.helm, 0.65), 8, 16, 16, 2); R(g, shade(P.helm, 0.55), 8, 14, 3, 3, 0.55); // sombra lateral esquerda do queixo/mandibula
   g.fillStyle(P.visor).fillRoundedRect(9, 8, 14, 8, 3);
+  R(g, shade(P.visor, 1.7), 9, 8, 14, 1, 0.55); // reflexo de vidro no topo do visor
   R(g, P.eye, 11, 11, 3, squint ? 1 : 3); R(g, P.eye2 ?? P.eye, 18, 11, 3, squint ? 1 : 3);
-  R(g, 0xffffff, 12, 11, 1, 1, 0.8); R(g, 0xffffff, 19, 11, 1, 1, 0.8);
+  R(g, 0xffffff, 12, 11, 1, 1, 0.9); R(g, 0xffffff, 19, 11, 1, 1, 0.9);
   P.top?.(g);
   P.front?.(g, f);
 }
