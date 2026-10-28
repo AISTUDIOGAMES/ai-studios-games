@@ -137,9 +137,11 @@ const featuredHref = featured ? safeUrl(featured.url) : null;
 
 const heroActions = featured && featuredHref
   ? `<a class="button button-primary" href="${esc(featuredHref)}" target="_blank" rel="noopener noreferrer" data-play="${esc(featured.id)}">PLAY ${esc(featured.title)} <span>↗</span></a>
-            <a class="button button-ghost" href="#games"><span class="play-icon">▶</span> EXPLORE GAMES</a>`
+            <a class="button button-ghost" href="#games"><span class="play-icon">▶</span> EXPLORE GAMES</a>
+            <a class="button button-ghost" href="/trailer/" target="_blank" rel="noopener noreferrer"><span class="play-icon">▶</span> WATCH TRAILER</a>`
   : `<a class="button button-primary" href="#games">EXPLORE GAMES <span>↗</span></a>
-            <a class="button button-ghost" href="#about"><span class="play-icon">▶</span> MEET THE STUDIO</a>`;
+            <a class="button button-ghost" href="#about"><span class="play-icon">▶</span> MEET THE STUDIO</a>
+            <a class="button button-ghost" href="/trailer/" target="_blank" rel="noopener noreferrer"><span class="play-icon">▶</span> WATCH TRAILER</a>`;
 
 const announceLink = featured && featuredHref
   ? `<span class="announcement-divider">/</span> <a class="announce-link" href="${esc(featuredHref)}" target="_blank" rel="noopener noreferrer" data-play="${esc(featured.id)}">NEW: PLAY ${esc(featured.title)} ↗</a>`
