@@ -73,8 +73,39 @@ export class FarmScene extends Phaser.Scene {
 
   constructor() { super("farm"); }
 
+  preload() {
+    // Carrega os 6 quadros do Kai antes de criar as texturas dos operadores.
+    // O arquivo fica em client/public/sprites/ e e publicado em /bomber-idle/sprites/.
+    this.load.spritesheet("kai_custom", `${import.meta.env.BASE_URL}sprites/kai_uncommon_sheet.png`, {
+      frameWidth: T,
+      frameHeight: T,
+    });
+  }
+
+  private applyKaiSpritesheet() {
+    // Se o arquivo nao carregar, mantemos os sprites procedurais originais como fallback.
+    if (!this.textures.exists("kai_custom")) {
+      console.warn("[BomberIdle] Spritesheet personalizado do Kai nao carregou; usando arte padrao.");
+      return;
+    }
+
+    const source = this.textures.get("kai_custom").getSourceImage() as CanvasImageSource;
+    for (let i = 0; i < 6; i++) {
+      const textureKey = `hero_uncommon_${i}`;
+      if (this.textures.exists(textureKey)) this.textures.remove(textureKey);
+
+      const texture = this.textures.createCanvas(textureKey, T, T);
+      const ctx = texture.getContext();
+      ctx.clearRect(0, 0, T, T);
+      ctx.imageSmoothingEnabled = false;
+      ctx.drawImage(source, i * T, 0, T, T, 0, 0, T, T);
+      texture.refresh();
+    }
+  }
+
   create() {
     makeTextures(this);
+    this.applyKaiSpritesheet();
     this.makeEnemyTextures();
     this.fx = new FxPool(this);
     this.rng = createRng((Math.random() * 4294967296) >>> 0); // semente aleatoria; os testes usam sementes fixas
