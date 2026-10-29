@@ -182,7 +182,14 @@ export class FarmScene extends Phaser.Scene {
         const free = keep.has(key(x, y));
         const pillar = !free && m.pillar(x, y);
         const dx = Math.min(x, COLS - 1 - x), dy = Math.min(y, ROWS - 1 - y);
-        const block = !pillar && !free && dx + dy > 2 && Math.random() < m.density;
+        // densidade espacial: area aberta no centro (tipo arena), gargalo nas 2 faixas verticais
+        // entre centro e bordas, densidade normal no resto — mesma media global de m.density,
+        // so redistribuida, entao dificuldade/economia (blocksLeft, drop de bau) nao muda.
+        const cx = Math.abs(x - (COLS - 1) / 2), cy = Math.abs(y - (ROWS - 1) / 2);
+        const isOpenCore = cx < 3.5 && cy < 2.5; // arena central livre
+        const isChoke = !isOpenCore && cx > 4 && cx < 7.5; // 2 faixas de gargalo (mais denso)
+        const localDensity = isOpenCore ? m.density * 0.25 : isChoke ? Math.min(0.9, m.density * 1.45) : m.density;
+        const block = !pillar && !free && dx + dy > 2 && Math.random() < localDensity;
         this.grid[y][x] = pillar ? 1 : block ? 2 : 0;
         this.blockSprites[y][x] = null;
         if (pillar) this.mapObjs.push(this.add.image(px, py, `${m.id}_pillar${(x * 5 + y * 2) % 3}`).setDepth(1));
