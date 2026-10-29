@@ -25,6 +25,8 @@ const DIRS: [number, number][] = [[1, 0], [-1, 0], [0, 1], [0, -1]];
 const SPAWNS: [number, number][] = [[0, 0], [COLS - 1, 0], [0, ROWS - 1], [COLS - 1, ROWS - 1], [14, 0], [14, ROWS - 1]];
 const RARITY_INDEX = Object.fromEntries(RARITY_ORDER.map((r, i) => [r, i])) as Record<Rarity, number>;
 const key = (x: number, y: number) => `${x},${y}`;
+/** Variante de ARTE (so visual) escolhida por hash deterministico da celula: nao altera grade, colisao nem dano. */
+const variantOf = (x: number, y: number, n: number, salt: number) => ((Math.imul(x + 1, 73856093) ^ Math.imul(y + 1, 19349663) ^ Math.imul(salt, 83492791)) >>> 0) % n;
 const inBounds = (x: number, y: number) => x >= 0 && y >= 0 && x < COLS && y < ROWS;
 const CLASS_COLOR: Record<BomberClass, number> = { lyra: 0x55ffb0, kai: 0xffa94d, titan: 0xff9a3c, vex: 0x39e6ff, kira: 0xdfe8ff, jax: 0xff3fd0, orion: 0xfff1b8, aeon: 0x7dffe9 };
 const CLASS_CSS: Record<BomberClass, string> = { lyra: "#55ffb0", kai: "#ffc27a", titan: "#ffb15a", vex: "#7df0ff", kira: "#dfe8ff", jax: "#ff9af0", orion: "#fff1b8", aeon: "#9ffff0" };
@@ -163,8 +165,8 @@ export class FarmScene extends Phaser.Scene {
       for (let x = -1; x <= COLS; x++) {
         const inside = x >= 0 && x < COLS && y >= 0 && y < ROWS;
         const px = x * T + T / 2, py = y * T + T / 2;
-        this.mapObjs.push(this.add.image(px, py, `${m.id}_floor${inside ? (x * 7 + y * 3) % 3 : 0}`).setDepth(0));
-        if (!inside) this.mapObjs.push(this.add.image(px, py, `${m.id}_${(x + y) % 2 === 0 ? "pylon" : "wall"}`).setDepth(1));
+        this.mapObjs.push(this.add.image(px, py, `${m.id}_floor${inside ? variantOf(x, y, 4, 1) : 0}`).setDepth(0));
+        if (!inside) this.mapObjs.push(this.add.image(px, py, `${m.id}_${(x + y) % 2 === 0 ? `pylon${variantOf(x, y, 2, 2)}` : "wall"}`).setDepth(1));
       }
 
     const keep = new Set<string>();
@@ -185,9 +187,9 @@ export class FarmScene extends Phaser.Scene {
         const block = !pillar && !free && dx + dy > 2 && Math.random() < m.density;
         this.grid[y][x] = pillar ? 1 : block ? 2 : 0;
         this.blockSprites[y][x] = null;
-        if (pillar) this.mapObjs.push(this.add.image(px, py, `${m.id}_pillar`).setDepth(1));
+        if (pillar) this.mapObjs.push(this.add.image(px, py, `${m.id}_pillar${variantOf(x, y, 3, 3)}`).setDepth(1));
         if (block) {
-          const s = this.add.image(px, py, `${m.id}_block`).setDepth(1);
+          const s = this.add.image(px, py, `${m.id}_block${variantOf(x, y, 2, 4)}`).setDepth(1);
           this.blockSprites[y][x] = s;
           this.mapObjs.push(s);
           this.blocksLeft++;

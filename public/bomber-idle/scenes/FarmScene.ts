@@ -12,7 +12,7 @@ import { planExplosion } from "../game/bomberExplosion";
 import { SPARK_MULT, getFxLevel } from "../game/fxSettings";
 
 const T = 32;
-const HERO_SCALE = 1.7; // tamanho dos operadores em campo (era 1.5 — aumentado p/ dar mais presenca sem estourar o tile de 32px)
+const HERO_SCALE = 1.5; // tamanho dos operadores em campo
 const HERO_DY = -13 * (HERO_SCALE - 1); // mantem os pes na mesma posicao do tile
 const BAR_W = 28;
 export const MAP_W = COLS * T;
@@ -159,12 +159,8 @@ export class FarmScene extends Phaser.Scene {
       for (let x = -1; x <= COLS; x++) {
         const inside = x >= 0 && x < COLS && y >= 0 && y < ROWS;
         const px = x * T + T / 2, py = y * T + T / 2;
-        this.mapObjs.push(this.add.image(px, py, `${m.id}_floor${inside ? (x * 7 + y * 3) % 4 : 0}`).setDepth(0));
-        if (!inside) {
-          // borda: alterna pylon/wall como antes, e entre pylons alterna 2 variantes (arvore/rocha diferentes) p/ quebrar a repeticao
-          const tex = (x + y) % 2 === 0 ? `${m.id}_pylon${(x + y * 3) % 2}` : `${m.id}_wall`;
-          this.mapObjs.push(this.add.image(px, py, tex).setDepth(1));
-        }
+        this.mapObjs.push(this.add.image(px, py, `${m.id}_floor${inside ? (x * 7 + y * 3) % 3 : 0}`).setDepth(0));
+        if (!inside) this.mapObjs.push(this.add.image(px, py, `${m.id}_${(x + y) % 2 === 0 ? "pylon" : "wall"}`).setDepth(1));
       }
 
     const keep = new Set<string>();
@@ -182,19 +178,12 @@ export class FarmScene extends Phaser.Scene {
         const free = keep.has(key(x, y));
         const pillar = !free && m.pillar(x, y);
         const dx = Math.min(x, COLS - 1 - x), dy = Math.min(y, ROWS - 1 - y);
-        // densidade espacial: area aberta no centro (tipo arena), gargalo nas 2 faixas verticais
-        // entre centro e bordas, densidade normal no resto — mesma media global de m.density,
-        // so redistribuida, entao dificuldade/economia (blocksLeft, drop de bau) nao muda.
-        const cx = Math.abs(x - (COLS - 1) / 2), cy = Math.abs(y - (ROWS - 1) / 2);
-        const isOpenCore = cx < 3.5 && cy < 2.5; // arena central livre
-        const isChoke = !isOpenCore && cx > 4 && cx < 7.5; // 2 faixas de gargalo (mais denso)
-        const localDensity = isOpenCore ? m.density * 0.25 : isChoke ? Math.min(0.9, m.density * 1.45) : m.density;
-        const block = !pillar && !free && dx + dy > 2 && Math.random() < localDensity;
+        const block = !pillar && !free && dx + dy > 2 && Math.random() < m.density;
         this.grid[y][x] = pillar ? 1 : block ? 2 : 0;
         this.blockSprites[y][x] = null;
-        if (pillar) this.mapObjs.push(this.add.image(px, py, `${m.id}_pillar${(x * 5 + y * 2) % 3}`).setDepth(1));
+        if (pillar) this.mapObjs.push(this.add.image(px, py, `${m.id}_pillar`).setDepth(1));
         if (block) {
-          const s = this.add.image(px, py, `${m.id}_block${(x * 3 + y) % 2}`).setDepth(1);
+          const s = this.add.image(px, py, `${m.id}_block`).setDepth(1);
           this.blockSprites[y][x] = s;
           this.mapObjs.push(s);
           this.blocksLeft++;
