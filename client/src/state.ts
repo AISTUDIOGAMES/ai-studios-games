@@ -395,3 +395,11 @@ export function addEnemyReward(value: number, h: HeroData) {
   while (h.level < MAX_LEVEL && h.xp >= xpNeed(h.level)) { h.xp -= xpNeed(h.level); h.level++; applyStats(h); }
   persist();
 }
+
+// ---- atalhos de teste: so existem no `npm run dev` (o Vite remove isto do build de producao) ----
+if ((import.meta as any).env?.DEV) {
+  (window as any).dev = {
+    addCoins: (n: number) => { store.pending = r2(store.pending + n); persist(); },
+    setCoins: (n: number) => { store.pending = r2(n); persist(); },
+  };
+}
