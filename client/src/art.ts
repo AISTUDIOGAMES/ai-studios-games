@@ -117,7 +117,7 @@ function mapTextures(mk: MK, m: MapDef) {
   };
   const spots: [number, number][][] = [[[5, 7], [22, 20], [13, 26]], [[18, 6], [7, 22], [26, 27]], [[10, 12], [24, 14], [4, 28]], [[8, 9], [20, 25], [27, 5]]];
   spots.forEach((pts, i) => mk(`${id}_floor${i}`, (g) => {
-    R(g, m.floor[i], 0, 0, T, T);
+    R(g, m.floor[i % m.floor.length], 0, 0, T, T); // 4 variantes, mas o mapa so define 3 cores de chao
     pts.forEach(([x, y]) => { R(g, m.tuft, x, y, 1, 3); R(g, m.tuft, x + 2, y + 1, 1, 2); R(g, m.tuft2, x + 1, y - 1, 1, 2); });
     if (i === 2 && (id === "meadow" || id === "jungle")) { R(g, 0xffffff, 20, 24, 2, 2); R(g, 0xffd24a, 21, 25, 1, 1); }
     if (i === 2 && id === "snow") { R(g, 0xffffff, 20, 24, 2, 1); R(g, 0xffffff, 8, 8, 1, 1); }
