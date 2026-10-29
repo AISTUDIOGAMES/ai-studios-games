@@ -1,5 +1,5 @@
 import Phaser from "phaser";
-import { RARITIES, Rarity, HeroData, store, addReward, addEnemyReward, mapState, track, levelMult, REWARD_SCALE, bombDamage, bumpStat } from "../state";
+import { RARITIES, RARITY_ORDER, Rarity, HeroData, store, addReward, addEnemyReward, mapState, track, levelMult, REWARD_SCALE, bombDamage, bumpStat } from "../state";
 import { makeTextures } from "../art";
 import { MAPS, COLS, ROWS, MapDef, INSTANCES_PER_MAP, chestDropChance, blockHp, chestHpMult, enemyHp, mvpHp, hasMvp, mapProgress } from "../maps";
 import type { AbilityContext, AbilityDef, AbilityRuntime, BomberClass, CellTarget, WorldView } from "../game/bomberTypes";
@@ -10,6 +10,7 @@ import { blacklist, bfsField, buildCandidates, chooseTarget, escapeSteps, hasEsc
 import { FxPool } from "../game/bomberFx";
 import { planExplosion } from "../game/bomberExplosion";
 import { SPARK_MULT, getFxLevel } from "../game/fxSettings";
+import { audio } from "../audio/audioEngine";
 
 const T = 32;
 const HERO_SCALE = 1.5; // tamanho dos operadores em campo
@@ -22,11 +23,16 @@ export const GAME_H = MAP_H + 2 * T;
 
 const DIRS: [number, number][] = [[1, 0], [-1, 0], [0, 1], [0, -1]];
 const SPAWNS: [number, number][] = [[0, 0], [COLS - 1, 0], [0, ROWS - 1], [COLS - 1, ROWS - 1], [14, 0], [14, ROWS - 1]];
+const RARITY_INDEX = Object.fromEntries(RARITY_ORDER.map((r, i) => [r, i])) as Record<Rarity, number>;
 const key = (x: number, y: number) => `${x},${y}`;
+/** Variante de ARTE (so visual) escolhida por hash deterministico da celula: nao altera grade, colisao nem dano. */
+const variantOf = (x: number, y: number, n: number, salt: number) => ((Math.imul(x + 1, 73856093) ^ Math.imul(y + 1, 19349663) ^ Math.imul(salt, 83492791)) >>> 0) % n;
 const inBounds = (x: number, y: number) => x >= 0 && y >= 0 && x < COLS && y < ROWS;
 const CLASS_COLOR: Record<BomberClass, number> = { lyra: 0x55ffb0, kai: 0xffa94d, titan: 0xff9a3c, vex: 0x39e6ff, kira: 0xdfe8ff, jax: 0xff3fd0, orion: 0xfff1b8, aeon: 0x7dffe9 };
 const CLASS_CSS: Record<BomberClass, string> = { lyra: "#55ffb0", kai: "#ffc27a", titan: "#ffb15a", vex: "#7df0ff", kira: "#dfe8ff", jax: "#ff9af0", orion: "#fff1b8", aeon: "#9ffff0" };
 const POSE_ATTACK = 4, POSE_BOMB = 5;
+// Altura do som da habilidade por classe (so identidade sonora; nao afeta a jogabilidade).
+const CLASS_PITCH: Record<BomberClass, number> = { lyra: 1.25, kai: 1, titan: 0.7, vex: 1.5, kira: 1.4, jax: 1.1, orion: 0.9, aeon: 1.2 };
 
 interface Runtime {
   data: HeroData; gx: number; gy: number;
@@ -159,8 +165,8 @@ export class FarmScene extends Phaser.Scene {
       for (let x = -1; x <= COLS; x++) {
         const inside = x >= 0 && x < COLS && y >= 0 && y < ROWS;
         const px = x * T + T / 2, py = y * T + T / 2;
-        this.mapObjs.push(this.add.image(px, py, `${m.id}_floor${inside ? (x * 7 + y * 3) % 3 : 0}`).setDepth(0));
-        if (!inside) this.mapObjs.push(this.add.image(px, py, `${m.id}_${(x + y) % 2 === 0 ? "pylon" : "wall"}`).setDepth(1));
+        this.mapObjs.push(this.add.image(px, py, `${m.id}_floor${inside ? variantOf(x, y, 4, 1) : 0}`).setDepth(0));
+        if (!inside) this.mapObjs.push(this.add.image(px, py, `${m.id}_${(x + y) % 2 === 0 ? `pylon${variantOf(x, y, 2, 2)}` : "wall"}`).setDepth(1));
       }
 
     const keep = new Set<string>();
@@ -181,9 +187,9 @@ export class FarmScene extends Phaser.Scene {
         const block = !pillar && !free && dx + dy > 2 && Math.random() < m.density;
         this.grid[y][x] = pillar ? 1 : block ? 2 : 0;
         this.blockSprites[y][x] = null;
-        if (pillar) this.mapObjs.push(this.add.image(px, py, `${m.id}_pillar`).setDepth(1));
+        if (pillar) this.mapObjs.push(this.add.image(px, py, `${m.id}_pillar${variantOf(x, y, 3, 3)}`).setDepth(1));
         if (block) {
-          const s = this.add.image(px, py, `${m.id}_block`).setDepth(1);
+          const s = this.add.image(px, py, `${m.id}_block${variantOf(x, y, 2, 4)}`).setDepth(1);
           this.blockSprites[y][x] = s;
           this.mapObjs.push(s);
           this.blocksLeft++;
@@ -296,6 +302,8 @@ export class FarmScene extends Phaser.Scene {
     if (!this.enemies.includes(e)) return;
     e.hp -= dmg;
     if (e.hp <= 0) {
+      audio.play("enemyDeath", { level: e.mvp ? 1 : 0 });
+      audio.play("coin");
       addEnemyReward(e.reward, owner);
       bumpStat(owner, "enemies");
       const [cx, cy] = [e.sprite.x, e.sprite.y];
@@ -307,6 +315,7 @@ export class FarmScene extends Phaser.Scene {
       this.viewCache = null;
       return;
     }
+    audio.play("enemyHit");
     e.barBg.setVisible(true);
     e.barFg.setVisible(true);
     e.barFg.width = 26 * (e.hp / e.maxHp);
@@ -373,6 +382,7 @@ export class FarmScene extends Phaser.Scene {
     const stuck = this.idle >= 40 && this.bombs.size === 0;
     const cleared = this.blocksLeft === 0 && this.chests.size === 0 && this.bombs.size === 0 && this.enemies.length === 0;
     if (cleared || stuck) {
+      if (cleared) audio.play("mapClear"); // so quando o mapa foi limpo de verdade (nao no "destravar")
       this.idle = 0;
       if (mapState.auto) {
         if (mapState.instance < INSTANCES_PER_MAP) mapState.instance++; // sobe de instancia no mesmo mapa
@@ -558,6 +568,7 @@ export class FarmScene extends Phaser.Scene {
 
   private abilityFx(h: Runtime, def: AbilityDef) {
     const x = h.sprite.x, y = h.sprite.y;
+    audio.play("ability", { pitch: CLASS_PITCH[h.cls] });
     this.fx.image({ texture: "fx_ring", x, y: y + 8, tint: CLASS_COLOR[h.cls], scale: 0.5, toScale: 1.7, alpha: 0.9, duration: 450, depth: 3.6, add: true });
     this.fx.text({ x, y: y - 13 * HERO_SCALE - 16, text: def.name, color: CLASS_CSS[h.cls], size: 10, rise: 14, duration: 900 });
   }
@@ -598,6 +609,7 @@ export class FarmScene extends Phaser.Scene {
 
   private levelUpFx(h: Runtime) {
     this.updatePips(h);
+    audio.play("levelUp");
     const x = h.sprite.x, y = h.sprite.y;
     this.fx.image({ texture: "fx_ring", x, y: y + 6, tint: 0xffd24a, scale: 0.4, toScale: 1.9, duration: 700, depth: 3.6, add: true });
     this.fx.image({ texture: "fx_star", x, y: y - 10, tint: 0xfff3b0, scale: 0.3, toScale: 0.8, duration: 700, dy: -12, depth: 6, add: true });
@@ -651,6 +663,7 @@ export class FarmScene extends Phaser.Scene {
     h.sprite.setFlipX(c.tx < h.gx);
     this.fx.image({ texture: "fx_slash", x: cx, y: cy, tint: hit.finisher ? 0xffd24a : crit ? 0xffffff : 0xff7af0, scale: crit ? 0.8 : 0.55, toScale: crit ? 1.3 : 1, alpha: 0.95, duration: 220, angle: ang - 45, depth: 5, add: true });
     if (crit) {
+      audio.play("crit");
       bumpStat(d, "crits");
       this.fx.image({ texture: "fx_star", x: cx, y: cy - 6, tint: 0xfff3b0, scale: 0.4, toScale: 0.9, duration: 350, depth: 6, add: true });
       this.fx.text({ x: cx, y: cy - 10, text: "CRÍTICO", color: "#fff3b0", size: 11, rise: 18 });
@@ -666,6 +679,7 @@ export class FarmScene extends Phaser.Scene {
     if (this.chests.get(key(x, y)) !== chest) return;
     chest.hp -= dmg;
     if (chest.hp <= 0) { this.openChest(owner, x, y, chest); return; }
+    audio.play("chestHit");
     chest.barBg.setVisible(true);
     chest.barFg.setVisible(true);
     chest.barFg.width = 26 * (chest.hp / chest.maxHp);
@@ -677,6 +691,7 @@ export class FarmScene extends Phaser.Scene {
   private openChest(owner: HeroData, x: number, y: number, chest: Chest) {
     const base = RARITIES[chest.rarity].chest;
     const value = Math.round(base * RARITIES[owner.rarity].mult * owner.chestMult * levelMult(owner) * (1 + owner.power * 0.05) * REWARD_SCALE);
+    audio.play("chestOpen", { rarity: RARITY_INDEX[chest.rarity] });
     addReward(value, owner, base);
     bumpStat(owner, "chests");
     this.chests.delete(key(x, y));
@@ -702,6 +717,7 @@ export class FarmScene extends Phaser.Scene {
     if (!spendStamina(d, BALANCE.bombCost * m.staminaCostMult)) { h.sleeping = true; return; }
     consumeArmed(h.ab); // Impacto Sismico vale para esta bomba
     track.bomb();
+    audio.play("bombPlant");
     const sprite = this.add.image(h.gx * T + T / 2, h.gy * T + T / 2, "bomb").setDepth(3).setScale(0.2);
     if (snap.splash > 0) sprite.setTint(0xffb15a);
     // "pop" ao plantar e so entao o pulso do pavio (explode() mata todos os tweens da bomba)
@@ -715,6 +731,7 @@ export class FarmScene extends Phaser.Scene {
     this.time.delayedCall(Math.max(0, BALANCE.bombFuseMs - 500), () => {
       if (this.bombs.get(k) !== bomb || !bomb.sprite.active) return;
       bomb.sprite.setTint(0xff5a3a);
+      audio.play("fuse");
       this.tweens.add({ targets: bomb.sprite, alpha: 0.55, duration: 70, yoyo: true, repeat: -1 });
     });
     this.viewCache = null;
@@ -747,6 +764,7 @@ export class FarmScene extends Phaser.Scene {
     if (bh) { bh.barBg?.destroy(); bh.barFg?.destroy(); this.blocksHp.delete(key(x, y)); }
     this.blocksLeft--;
     this.viewCache = null;
+    audio.play("blockBreak");
     track.block();
     if (owner) bumpStat(owner, "blocks");
     this.burst(cx, cy, this.map.crate, 8, false);
@@ -773,6 +791,7 @@ export class FarmScene extends Phaser.Scene {
       b.barFg.setVisible(true);
       b.barFg.width = 22 * (b.hp / b.maxHp);
     }
+    audio.play("blockHit");
     const sprite = this.blockSprites[y][x];
     if (sprite) { sprite.setScale(1); this.tweens.add({ targets: sprite, scale: 1.1, duration: 70, yoyo: true }); }
     this.burst(x * T + T / 2, y * T + T / 2, this.map.crate, 3, false);
@@ -794,6 +813,7 @@ export class FarmScene extends Phaser.Scene {
     // so visual: o fogo corre pelas celulas ja calculadas acima (nao decide dano nem colisao)
     const plan = planExplosion({ cells, gx: bomb.gx, gy: bomb.gy, range: bomb.snap.range, splash: bomb.snap.splash, tile: T, level: getFxLevel(), rng: Math.random });
     this.cameras.main.shake(plan.shake.duration, plan.shake.intensity);
+    audio.play("explosion", { level: Math.min(1, (bomb.snap.range + bomb.snap.splash) / 6) }); // so som: dano/alcance ja foram decididos acima
     for (const st of plan.steps) this.fx.image(st);
     for (const [x, y] of cells) {
       const bh = this.blocksHp.get(key(x, y));
