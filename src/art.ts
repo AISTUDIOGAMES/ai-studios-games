@@ -24,25 +24,36 @@ function drawBot(g: G, P: Bot, f: number) {
   const lift = [[0, 0], [-2, 0], [0, 0], [0, -2], [0, 0], [0, 0]][f], bob = [0, -1, 0, -1, -1, 1][f], sw = [0, 1, 0, -1, 0, 2][f], wd = P.wide ?? 0;
   const rs = f === 5 ? sw : -sw, squint = f === 3 || f === 4;
   P.back?.(g, f);
-  shadow(g, 20 + wd * 2);
-  [[10, lift[0]], [17, lift[1]]].forEach(([x, dy]) => { R(g, OUT, x, 27 + dy, 5, 4); R(g, P.trim, x + 1, 27 + dy, 3, 2); R(g, shade(P.body, 0.6), x + 1, 29 + dy, 3, 1); });
+  // sombra de contato em duas camadas (mais suave, mais sensacao de peso/presenca no chao)
+  g.fillStyle(0x000000, 0.22).fillEllipse(16, 30, 24 + wd * 2, 7);
+  g.fillStyle(0x000000, 0.42).fillEllipse(16, 29, 17 + wd * 2, 5);
+  [[10, lift[0]], [17, lift[1]]].forEach(([x, dy]) => {
+    R(g, OUT, x, 27 + dy, 5, 4); R(g, P.trim, x + 1, 27 + dy, 3, 2); R(g, shade(P.trim, 1.35), x + 1, 27 + dy, 3, 1); R(g, shade(P.body, 0.6), x + 1, 29 + dy, 3, 1);
+  });
   g.translateCanvas(0, bob);
-  // corpo
+  // corpo: gradiente em 3 tons (luz-meio-sombra) + sombreamento lateral p/ dar sensacao de cilindro/volume
   R(g, OUT, 10 - wd, 18, 12 + wd * 2, 9); R(g, P.body, 11 - wd, 19, 10 + wd * 2, 7);
-  R(g, shade(P.body, 1.4), 11 - wd, 19, 10 + wd * 2, 2); R(g, shade(P.body, 0.65), 11 - wd, 24, 10 + wd * 2, 2);
-  // moeda no peito (tema crypto) com anel de nucleo de energia na cor da classe
-  g.fillStyle(OUT).fillCircle(16, 22, 4); g.fillStyle(P.core ?? 0xffd24a).fillCircle(16, 22, 3.3); g.fillStyle(0xffd24a).fillCircle(16, 22, 2.4); R(g, 0xfff3b0, 15, 21, 1, 1); R(g, 0xb47a10, 16, 23, 1, 1);
-  // bracos
-  R(g, OUT, 7 - wd, 19 + sw, 3, 6); R(g, P.trim, 8 - wd, 20 + sw, 1, 4);
+  R(g, shade(P.body, 1.5), 11 - wd, 19, 10 + wd * 2, 2);
+  R(g, shade(P.body, 1.1), 11 - wd, 21, 10 + wd * 2, 1);
+  R(g, shade(P.body, 0.6), 11 - wd, 24, 10 + wd * 2, 2);
+  R(g, shade(P.body, 0.7), 19 + wd, 19, 2, 7, 0.55); // sombra lateral direita (luz vindo da esquerda)
+  // nucleo de energia com halo externo suave, alem do brilho central ja existente
+  g.fillStyle(P.core ?? 0xffd24a, 0.22).fillCircle(16, 22, 6.5);
+  g.fillStyle(OUT).fillCircle(16, 22, 4); g.fillStyle(P.core ?? 0xffd24a).fillCircle(16, 22, 3.3); g.fillStyle(0xffd24a).fillCircle(16, 22, 2.4);
+  R(g, 0xfff3b0, 15, 21, 1, 1); R(g, 0xb47a10, 16, 23, 1, 1);
+  // bracos com realce e sombra de contato no punho (mais volume, menos "bastao" chapado)
+  R(g, OUT, 7 - wd, 19 + sw, 3, 6); R(g, P.trim, 8 - wd, 20 + sw, 1, 4); R(g, shade(P.trim, 0.6), 8 - wd, 24 + sw, 1, 1);
   if (f === 4) { R(g, OUT, 22 + wd, 12, 3, 9); R(g, P.trim, 23 + wd, 13, 1, 7); R(g, 0xffffff, 22 + wd, 10, 3, 2, 0.9); } // golpe: braco para cima
-  else { R(g, OUT, 22 + wd, 19 + rs, 3, 6); R(g, P.trim, 23 + wd, 20 + rs, 1, 4); }
-  // cabecao com visor
+  else { R(g, OUT, 22 + wd, 19 + rs, 3, 6); R(g, P.trim, 23 + wd, 20 + rs, 1, 4); R(g, shade(P.trim, 0.6), 23 + wd, 24 + rs, 1, 1); }
+  // cabecao com calota em gradiente (3 tons) + sombra de queixo, pra parecer esferico e nao chapado
   g.fillStyle(OUT).fillRoundedRect(6, 2, 20, 17, 6);
   g.fillStyle(P.helm).fillRoundedRect(7, 3, 18, 15, 5);
-  R(g, shade(P.helm, 1.45), 10, 4, 9, 2); R(g, shade(P.helm, 0.7), 8, 16, 16, 2);
+  R(g, shade(P.helm, 1.55), 9, 4, 11, 2); R(g, shade(P.helm, 1.15), 9, 6, 11, 1);
+  R(g, shade(P.helm, 0.65), 8, 16, 16, 2); R(g, shade(P.helm, 0.55), 8, 14, 3, 3, 0.55); // sombra lateral esquerda do queixo/mandibula
   g.fillStyle(P.visor).fillRoundedRect(9, 8, 14, 8, 3);
+  R(g, shade(P.visor, 1.7), 9, 8, 14, 1, 0.55); // reflexo de vidro no topo do visor
   R(g, P.eye, 11, 11, 3, squint ? 1 : 3); R(g, P.eye2 ?? P.eye, 18, 11, 3, squint ? 1 : 3);
-  R(g, 0xffffff, 12, 11, 1, 1, 0.8); R(g, 0xffffff, 19, 11, 1, 1, 0.8);
+  R(g, 0xffffff, 12, 11, 1, 1, 0.9); R(g, 0xffffff, 19, 11, 1, 1, 0.9);
   P.top?.(g);
   P.front?.(g, f);
 }
@@ -100,7 +111,11 @@ BOTS.ancestral.front = (g) => { R(g, 0xe6c070, 28, 9, 2, 21); R(g, OUT, 26, 3, 6
 // ---------- mapas: cada bioma gera o proprio conjunto de texturas (arte original) ----------
 function mapTextures(mk: MK, m: MapDef) {
   const id = m.id;
-  const spots: [number, number][][] = [[[5, 7], [22, 20], [13, 26]], [[18, 6], [7, 22], [26, 27]], [[10, 12], [24, 14], [4, 28]]];
+  // gera N variantes (`nome0`, `nome1`, ...) — o FarmScene escolhe a variante por tile via variantOf()
+  const variants = (name: string, n: number, draw: (g: G, v: number) => void) => {
+    for (let v = 0; v < n; v++) mk(`${name}${v}`, (g) => draw(g, v));
+  };
+  const spots: [number, number][][] = [[[5, 7], [22, 20], [13, 26]], [[18, 6], [7, 22], [26, 27]], [[10, 12], [24, 14], [4, 28]], [[8, 9], [20, 25], [27, 5]]];
   spots.forEach((pts, i) => mk(`${id}_floor${i}`, (g) => {
     R(g, m.floor[i], 0, 0, T, T);
     pts.forEach(([x, y]) => { R(g, m.tuft, x, y, 1, 3); R(g, m.tuft, x + 2, y + 1, 1, 2); R(g, m.tuft2, x + 1, y - 1, 1, 2); });
@@ -108,26 +123,29 @@ function mapTextures(mk: MK, m: MapDef) {
     if (i === 2 && id === "snow") { R(g, 0xffffff, 20, 24, 2, 1); R(g, 0xffffff, 8, 8, 1, 1); }
   }));
 
-  mk(`${id}_pillar`, (g) => { // casinha do bioma
+  variants(`${id}_pillar`, 3, (g, v) => { // casinha do bioma
     shadow(g, 27);
     R(g, OUT, 3, 12, 26, 17); R(g, m.wall, 4, 14, 24, 14); R(g, shade(m.wall, 0.8), 4, 24, 24, 4);
     R(g, OUT, 2, 3, 28, 12); R(g, m.roof, 3, 4, 26, 10); R(g, shade(m.roof, 1.25), 3, 4, 26, 3);
     [7, 13, 19, 25].forEach((x) => R(g, shade(m.roof, 0.78), x - 1, 6, 2, 8));
     if (id === "snow") { R(g, 0xffffff, 3, 4, 26, 4); R(g, 0xdcebf7, 3, 7, 26, 1); }
     R(g, OUT, 12, 19, 8, 10); R(g, m.trim, 13, 20, 6, 9); R(g, 0xffd24a, 17, 24, 1, 2);
+    if (v === 1) R(g, shade(m.roof, 0.6), 7, 5, 2, 9); // detalhe extra no telhado
+    if (v === 2) R(g, shade(m.wall, 1.2), 4, 14, 24, 2); // faixa clara na parede
     const win = id === "volcano" ? 0xff8a2b : 0x8fd0ff;
     R(g, OUT, 5, 17, 5, 5); R(g, win, 6, 18, 3, 3); R(g, OUT, 22, 17, 5, 5); R(g, win, 23, 18, 3, 3);
   });
 
-  mk(`${id}_block`, (g) => { // bloco destrutivel
+  variants(`${id}_block`, 2, (g, v) => { // bloco destrutivel
     shadow(g, 27);
     R(g, OUT, 2, 3, 28, 26); R(g, m.crate, 3, 4, 26, 24); R(g, shade(m.crate, 1.25), 3, 4, 26, 3); R(g, shade(m.crate, 1.25), 3, 4, 3, 24);
     R(g, m.crateDark, 3, 25, 26, 3); R(g, m.crateDark, 26, 4, 3, 24);
     [[4, 13, 24, 2], [4, 21, 24, 2], [15, 5, 2, 8], [9, 15, 2, 6], [21, 15, 2, 6], [15, 23, 2, 2]].forEach(([x, y, w, h]) => R(g, m.crateDark, x, y, w, h));
+    if (v === 1) { R(g, m.crateDark, 6, 7, 3, 3); R(g, m.crateDark, 23, 7, 3, 3); } // pregos
     if (id === "snow") R(g, 0xffffff, 6, 6, 8, 1, 0.8);
   });
 
-  mk(`${id}_pylon`, (g) => { // borda: arvore, cacto ou rocha
+  variants(`${id}_pylon`, 2, (g, v) => { // borda: arvore, cacto ou rocha
     shadow(g, 20);
     if (id === "desert") {
       R(g, OUT, 12, 5, 8, 25); R(g, m.border, 13, 6, 6, 23); R(g, OUT, 5, 12, 8, 4); R(g, OUT, 5, 12, 4, 10); R(g, m.border, 6, 13, 7, 2); R(g, m.border, 6, 13, 2, 8);
@@ -141,6 +159,7 @@ function mapTextures(mk: MK, m: MapDef) {
       R(g, shade(m.border, 1.9), 10, 7, 3, 2); R(g, shade(m.border, 1.9), 17, 12, 2, 2);
       if (id === "snow") g.fillStyle(0xffffff, 0.9).fillCircle(16, 6, 6);
     }
+    if (v === 1) R(g, shade(m.border, 1.6), 20, 9, 2, 2); // brilho extra na variante 1
   });
 
   mk(`${id}_wall`, (g) => { // borda: cerca viva, duna ou rochas
