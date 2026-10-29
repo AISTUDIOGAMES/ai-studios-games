@@ -109,72 +109,43 @@ BOTS.super.front = (g) => { R(g, 0xf2c14a, 28, 8, 2, 22); R(g, OUT, 27, 4, 4, 5)
 BOTS.ancestral.front = (g) => { R(g, 0xe6c070, 28, 9, 2, 21); R(g, OUT, 26, 3, 6, 7); R(g, 0x7dffe9, 27, 4, 4, 5); R(g, 0xffffff, 28, 5, 1, 1); };
 
 // ---------- mapas: cada bioma gera o proprio conjunto de texturas (arte original) ----------
-// padrao reutilizavel de variedade: cada elemento (chao, casinha, bloco, borda) tem 2-4 variantes
-// desenhadas por codigo e escolhidas por hash deterministico da posicao (sem quebrar grid/colisao,
-// que so olha o valor logico 0/1/2 da celula — a variante e puramente visual).
 function mapTextures(mk: MK, m: MapDef) {
   const id = m.id;
-  // ---- chao: 4 variantes (era 3), a 4a adiciona um pequeno agrupado de pedrinhas neutro ----
-  const spots: [number, number][][] = [
-    [[5, 7], [22, 20], [13, 26]], [[18, 6], [7, 22], [26, 27]], [[10, 12], [24, 14], [4, 28]], [[8, 18], [19, 9], [25, 24]],
-  ];
+  // gera N variantes (`nome0`, `nome1`, ...) — o FarmScene escolhe a variante por tile via variantOf()
+  const variants = (name: string, n: number, draw: (g: G, v: number) => void) => {
+    for (let v = 0; v < n; v++) mk(`${name}${v}`, (g) => draw(g, v));
+  };
+  const spots: [number, number][][] = [[[5, 7], [22, 20], [13, 26]], [[18, 6], [7, 22], [26, 27]], [[10, 12], [24, 14], [4, 28]], [[8, 9], [20, 25], [27, 5]]];
   spots.forEach((pts, i) => mk(`${id}_floor${i}`, (g) => {
-    R(g, m.floor[i % m.floor.length], 0, 0, T, T);
+    R(g, m.floor[i % m.floor.length], 0, 0, T, T); // 4 variantes, mas o mapa so define 3 cores de chao
     pts.forEach(([x, y]) => { R(g, m.tuft, x, y, 1, 3); R(g, m.tuft, x + 2, y + 1, 1, 2); R(g, m.tuft2, x + 1, y - 1, 1, 2); });
     if (i === 2 && (id === "meadow" || id === "jungle")) { R(g, 0xffffff, 20, 24, 2, 2); R(g, 0xffd24a, 21, 25, 1, 1); }
     if (i === 2 && id === "snow") { R(g, 0xffffff, 20, 24, 2, 1); R(g, 0xffffff, 8, 8, 1, 1); }
-    if (i === 3) { // pedrinhas: quebra a repeticao de textura sem depender de tema especifico
-      const pebble = shade(m.floor[0], 0.72);
-      [[6, 23], [14, 5], [23, 15]].forEach(([x, y]) => { R(g, pebble, x, y, 2, 1); R(g, shade(pebble, 1.3), x, y, 1, 1); });
-    }
   }));
 
-  // ---- casinha (pillar): 3 variantes — mesma base/fundacao (nao muda a "caixa"), telhado/janelas/chamine diferentes ----
-  const win = id === "volcano" ? 0xff8a2b : 0x8fd0ff;
-  const houseBase = (g: G) => {
+  variants(`${id}_pillar`, 3, (g, v) => { // casinha do bioma
     shadow(g, 27);
     R(g, OUT, 3, 12, 26, 17); R(g, m.wall, 4, 14, 24, 14); R(g, shade(m.wall, 0.8), 4, 24, 24, 4);
     R(g, OUT, 2, 3, 28, 12); R(g, m.roof, 3, 4, 26, 10); R(g, shade(m.roof, 1.25), 3, 4, 26, 3);
-    if (id === "snow") { R(g, 0xffffff, 3, 4, 26, 4); R(g, 0xdcebf7, 3, 7, 26, 1); }
-  };
-  mk(`${id}_pillar0`, (g) => { // original: telhado em 4 ripples, porta central, 2 janelas quadradas
-    houseBase(g);
     [7, 13, 19, 25].forEach((x) => R(g, shade(m.roof, 0.78), x - 1, 6, 2, 8));
+    if (id === "snow") { R(g, 0xffffff, 3, 4, 26, 4); R(g, 0xdcebf7, 3, 7, 26, 1); }
     R(g, OUT, 12, 19, 8, 10); R(g, m.trim, 13, 20, 6, 9); R(g, 0xffd24a, 17, 24, 1, 2);
+    if (v === 1) R(g, shade(m.roof, 0.6), 7, 5, 2, 9); // detalhe extra no telhado
+    if (v === 2) R(g, shade(m.wall, 1.2), 4, 14, 24, 2); // faixa clara na parede
+    const win = id === "volcano" ? 0xff8a2b : 0x8fd0ff;
     R(g, OUT, 5, 17, 5, 5); R(g, win, 6, 18, 3, 3); R(g, OUT, 22, 17, 5, 5); R(g, win, 23, 18, 3, 3);
   });
-  mk(`${id}_pillar1`, (g) => { // com chamine, 3 ripples, janela redonda unica
-    houseBase(g);
-    [9, 16, 23].forEach((x) => R(g, shade(m.roof, 0.78), x - 1, 6, 2, 8));
-    R(g, OUT, 23, 0, 4, 5); R(g, shade(m.roof, 0.7), 24, 1, 2, 3);
-    R(g, OUT, 12, 19, 8, 10); R(g, shade(m.trim, 1.15), 13, 20, 6, 9); R(g, 0xffd24a, 17, 24, 1, 2);
-    g.fillStyle(OUT).fillCircle(16, 19, 4); g.fillStyle(win).fillCircle(16, 19, 3);
-  });
-  mk(`${id}_pillar2`, (g) => { // 5 ripples estreitos, porta deslocada, janela grande + pequena
-    houseBase(g);
-    [6, 11, 16, 21, 26].forEach((x) => R(g, shade(m.roof, 0.78), x - 1, 6, 1, 8));
-    R(g, OUT, 10, 19, 7, 10); R(g, m.trim, 11, 20, 5, 9); R(g, 0xffd24a, 14, 24, 1, 2);
-    R(g, OUT, 21, 16, 6, 6); R(g, win, 22, 17, 4, 4); R(g, OUT, 3, 18, 3, 3); R(g, win, 4, 19, 1, 1);
-  });
 
-  // ---- bloco destrutivel: 2 variantes — caixa de madeira original e barril com aros ----
-  mk(`${id}_block0`, (g) => {
+  variants(`${id}_block`, 2, (g, v) => { // bloco destrutivel
     shadow(g, 27);
     R(g, OUT, 2, 3, 28, 26); R(g, m.crate, 3, 4, 26, 24); R(g, shade(m.crate, 1.25), 3, 4, 26, 3); R(g, shade(m.crate, 1.25), 3, 4, 3, 24);
     R(g, m.crateDark, 3, 25, 26, 3); R(g, m.crateDark, 26, 4, 3, 24);
     [[4, 13, 24, 2], [4, 21, 24, 2], [15, 5, 2, 8], [9, 15, 2, 6], [21, 15, 2, 6], [15, 23, 2, 2]].forEach(([x, y, w, h]) => R(g, m.crateDark, x, y, w, h));
+    if (v === 1) { R(g, m.crateDark, 6, 7, 3, 3); R(g, m.crateDark, 23, 7, 3, 3); } // pregos
     if (id === "snow") R(g, 0xffffff, 6, 6, 8, 1, 0.8);
   });
-  mk(`${id}_block1`, (g) => {
-    shadow(g, 27);
-    g.fillStyle(OUT).fillRoundedRect(5, 2, 22, 27, 6); g.fillStyle(m.crate).fillRoundedRect(6, 3, 20, 25, 5);
-    R(g, shade(m.crate, 1.3), 6, 3, 20, 3); R(g, shade(m.crate, 0.6), 6, 24, 20, 4);
-    [9, 16, 23].forEach((y) => R(g, m.crateDark, 6, y, 20, 2));
-    if (id === "snow") R(g, 0xffffff, 8, 4, 4, 1, 0.8);
-  });
 
-  // ---- borda (pylon): 2 variantes p/ arvore/cacto/rocha; desertos e vulcoes mantem a forma propria do bioma ----
-  mk(`${id}_pylon0`, (g) => {
+  variants(`${id}_pylon`, 2, (g, v) => { // borda: arvore, cacto ou rocha
     shadow(g, 20);
     if (id === "desert") {
       R(g, OUT, 12, 5, 8, 25); R(g, m.border, 13, 6, 6, 23); R(g, OUT, 5, 12, 8, 4); R(g, OUT, 5, 12, 4, 10); R(g, m.border, 6, 13, 7, 2); R(g, m.border, 6, 13, 2, 8);
@@ -182,29 +153,13 @@ function mapTextures(mk: MK, m: MapDef) {
     } else if (id === "volcano") {
       g.fillStyle(OUT).fillCircle(16, 19, 12); g.fillStyle(m.border).fillCircle(16, 19, 11); g.fillStyle(shade(m.border, 1.5)).fillCircle(13, 15, 5);
       R(g, 0xff6a2a, 18, 20, 5, 1); R(g, 0xff6a2a, 21, 20, 1, 5);
-    } else { // arvore de copa redonda (original)
+    } else {
       R(g, OUT, 13, 20, 6, 10); R(g, 0x7a4a2a, 14, 21, 4, 9);
       g.fillStyle(OUT).fillCircle(16, 13, 13); g.fillStyle(m.border).fillCircle(16, 13, 12); g.fillStyle(shade(m.border, 1.4)).fillCircle(13, 10, 7);
       R(g, shade(m.border, 1.9), 10, 7, 3, 2); R(g, shade(m.border, 1.9), 17, 12, 2, 2);
       if (id === "snow") g.fillStyle(0xffffff, 0.9).fillCircle(16, 6, 6);
     }
-  });
-  mk(`${id}_pylon1`, (g) => {
-    shadow(g, 20);
-    // desertos e vulcoes tem forma unica propria (cacto/rocha vulcanica): reaproveita a mesma arte do pylon0, sem variante extra
-    if (id === "desert") {
-      R(g, OUT, 12, 5, 8, 25); R(g, m.border, 13, 6, 6, 23); R(g, OUT, 5, 12, 8, 4); R(g, OUT, 5, 12, 4, 10); R(g, m.border, 6, 13, 7, 2); R(g, m.border, 6, 13, 2, 8);
-      R(g, OUT, 19, 14, 8, 4); R(g, OUT, 23, 8, 4, 10); R(g, m.border, 19, 15, 7, 2); R(g, m.border, 24, 9, 2, 8); R(g, shade(m.border, 1.4), 13, 6, 1, 23);
-    } else if (id === "volcano") {
-      g.fillStyle(OUT).fillCircle(16, 19, 12); g.fillStyle(m.border).fillCircle(16, 19, 11); g.fillStyle(shade(m.border, 1.5)).fillCircle(13, 15, 5);
-      R(g, 0xff6a2a, 18, 20, 5, 1); R(g, 0xff6a2a, 21, 20, 1, 5);
-    } else { // arvore de copa alta/ovalada com galho lateral — silhueta bem diferente da pylon0
-      R(g, OUT, 14, 18, 4, 12); R(g, 0x6a4020, 15, 19, 2, 11);
-      g.fillStyle(OUT).fillEllipse(16, 9, 11, 13); g.fillStyle(m.border).fillEllipse(16, 9, 10, 12); g.fillStyle(shade(m.border, 1.45)).fillEllipse(13, 5, 5, 6);
-      R(g, shade(m.border, 1.9), 12, 4, 2, 2); R(g, shade(m.border, 0.7), 19, 11, 2, 2);
-      R(g, OUT, 9, 16, 5, 3); R(g, shade(m.border, 1.1), 10, 17, 3, 1);
-      if (id === "snow") g.fillStyle(0xffffff, 0.85).fillEllipse(16, 4, 8, 5);
-    }
+    if (v === 1) R(g, shade(m.border, 1.6), 20, 9, 2, 2); // brilho extra na variante 1
   });
 
   mk(`${id}_wall`, (g) => { // borda: cerca viva, duna ou rochas
@@ -233,7 +188,9 @@ export function makeTextures(s: Phaser.Scene) {
       R(g, OUT, 14, 15, 4, 7); R(g, l, 15, 16, 2, 5);
       if (r === "mythic" || r === "legendary" || r === "super") { R(g, 0xffffff, 9, 5, 1, 4); R(g, 0xffffff, 7, 7, 5, 1); R(g, 0xffffff, 24, 3, 1, 3); R(g, 0xffffff, 23, 4, 3, 1); }
     });
-    [0, 1, 2, 3, 4, 5].forEach((f) => mk(`hero_${r}_${f}`, (g) => drawBot(g, BOTS[r], f))); // 0-3 caminhada, 4 golpe, 5 plantar bomba
+    // capacete na cor da raridade (a mesma usada no bau e na interface); levemente escurecido p/ os realces do drawBot nao estourarem p/ branco
+    const bot: Bot = { ...BOTS[r], helm: shade(c, 0.85) };
+    [0, 1, 2, 3, 4, 5].forEach((f) => mk(`hero_${r}_${f}`, (g) => drawBot(g, bot, f))); // 0-3 caminhada, 4 golpe, 5 plantar bomba
   });
 
   mk("bomb", (g) => {
