@@ -106,24 +106,39 @@
       /* ===== menu inferior (hub) ===== */
       #hub { position: fixed; left: 0; right: 0; bottom: 0; z-index: 20; display: flex; gap: 8px; justify-content: center; padding: 8px 10px calc(10px + var(--safe-b)); background: var(--metal); border-top: 1px solid var(--gold-lo); box-shadow: 0 -8px 24px #000a; }
       #hub::before { content: ""; position: absolute; left: 0; right: 0; top: -1px; height: 2px; background: linear-gradient(90deg, transparent, var(--gold) 20%, var(--gold-hi) 50%, var(--gold) 80%, transparent); opacity: .85; }
-      #hub button { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; min-width: 76px; min-height: 56px; padding: 6px 10px; background: linear-gradient(180deg, #0f1a33, #08101f); color: var(--text); border: 1px solid var(--line); box-shadow: 0 3px 0 #000a; font-size: .72rem; font-weight: 700; flex: none; }
+      #hub button { position: relative; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; min-width: 76px; min-height: 56px; padding: 6px 10px; background: linear-gradient(180deg, #0f1a33, #08101f); color: var(--text); border: 1px solid var(--line); box-shadow: 0 3px 0 #000a; font-size: .72rem; font-weight: 700; flex: none; }
       #hub button .ic { font-size: 1.35rem; line-height: 1; }
       #hub button.on, #hub button:hover { border-color: var(--gold); color: var(--gold-hi); box-shadow: 0 3px 0 #000a, inset 0 -2px 0 var(--gold); }
       #hub button .soon { font-size: .56rem; color: var(--muted); font-weight: 600; }
+      /* ===== indicador de novidade no menu inferior ===== */
+      #hub button .dot { position: absolute; top: 4px; right: 10px; width: 9px; height: 9px; border-radius: 999px; background: var(--blue); box-shadow: 0 0 0 2px #0a1224, 0 0 8px #39b6ffcc; opacity: 0; transform: scale(.4); transition: opacity .15s, transform .15s; }
+      #hub button .dot.on { opacity: 1; transform: scale(1); animation: dotpulse 1.8s ease-in-out infinite; }
+      #hub button .dot.gold { background: var(--amber); box-shadow: 0 0 0 2px #0a1224, 0 0 8px #ffb23dcc; }
+      @keyframes dotpulse { 0%, 100% { box-shadow: 0 0 0 2px #0a1224, 0 0 6px #39b6ffaa; } 50% { box-shadow: 0 0 0 2px #0a1224, 0 0 12px 2px #39b6ffee; } }
+      @media (prefers-reduced-motion: reduce) { #hub button .dot.on { animation: none; } }
 
       /* ===== janelas (modal) ===== */
       #modal { position: fixed; inset: 0; z-index: 30; display: grid; place-items: center; padding: 16px 16px calc(var(--hub-h) + var(--safe-b) + 16px); background: radial-gradient(circle at 50% 40%, #0a1224cc, #000d); backdrop-filter: blur(2px); }
-      #modal .panel { width: min(640px, 100%); max-height: 100%; overflow: auto; background: var(--metal); border: 1px solid var(--line2); border-top: 2px solid var(--gold); border-radius: 14px; padding: 16px; box-shadow: 0 16px 44px #000d, 0 0 40px #39b6ff10; animation: pop .18s ease-out; }
+      /* ===== identidade por tela: cada seção do hub tem uma cor de destaque própria, aplicada via data-theme ===== */
+      #modal { --acc: var(--gold); --acc-hi: var(--gold-hi); --acc-lo: var(--gold-lo); }
+      #modal[data-theme="capsules"] { --acc: var(--blue); --acc-hi: #9fe0ff; --acc-lo: #0d3a57; }
+      #modal[data-theme="lodging"] { --acc: var(--amber); --acc-hi: #ffd79a; --acc-lo: #6b3c0c; }
+      #modal[data-theme="vault"] { --acc: var(--gold); --acc-hi: var(--gold-hi); --acc-lo: var(--gold-lo); }
+      #modal[data-theme="manual"] { --acc: #8fdcff; --acc-hi: #c9f1ff; --acc-lo: #0d3a57; }
+      #modal[data-theme="settings"] { --acc: #93a4c2; --acc-hi: #cfd9ec; --acc-lo: #3a4d78; }
+      #modal[data-theme="soon"] { --acc: #6a7694; --acc-hi: #aab5cf; --acc-lo: #3a4260; }
+      #modal .panel { width: min(640px, 100%); max-height: 100%; overflow: auto; background: var(--metal); border: 1px solid var(--line2); border-top: 2px solid var(--acc); border-radius: 14px; padding: 16px; box-shadow: 0 16px 44px #000d, 0 0 40px color-mix(in srgb, var(--acc) 12%, transparent); animation: pop .18s ease-out; }
       @keyframes pop { from { opacity: 0; transform: translateY(8px) scale(.985); } to { opacity: 1; transform: none; } }
       #modal .panel-head { display: flex; align-items: center; gap: 10px; margin-bottom: 12px; }
-      #modal h2 { margin: 0 auto 0 0; font-size: 1.15rem; color: var(--gold-hi); letter-spacing: .03em; }
+      #modal .panel-head .picn { font-size: 1.3rem; line-height: 1; filter: drop-shadow(0 0 6px color-mix(in srgb, var(--acc) 60%, transparent)); flex: none; }
+      #modal h2 { margin: 0 auto 0 0; font-size: 1.15rem; color: var(--acc-hi); letter-spacing: .03em; }
       #modal .x { padding: 2px 12px; min-height: 34px; background: #2a0f18; color: #ffd6dc; border: 1px solid #8a2a3a; box-shadow: 0 2px 0 #12060a; }
       #modal p, #modal li { line-height: 1.45; }
       #modal ol, #modal ul.plain { padding-left: 20px; margin: 8px 0; display: block; }
       #modal .kv { display: flex; justify-content: space-between; gap: 12px; padding: 6px 0; border-bottom: 1px solid var(--line); }
-      #modal .kv b { color: var(--gold-hi); }
-      #modal .big { font-size: 1.8rem; font-weight: 800; color: var(--gold-hi); margin: 4px 0 10px; text-shadow: 0 0 14px #ffb23d44; }
-      #modal .badge { display: inline-block; padding: 2px 10px; border: 1px solid var(--gold); border-radius: 999px; font-size: .72rem; color: var(--gold-hi); margin-bottom: 8px; letter-spacing: .06em; text-transform: uppercase; }
+      #modal .kv b { color: var(--acc-hi); }
+      #modal .big { font-size: 1.8rem; font-weight: 800; color: var(--acc-hi); margin: 4px 0 10px; text-shadow: 0 0 14px color-mix(in srgb, var(--acc) 40%, transparent); }
+      #modal .badge { display: inline-block; padding: 2px 10px; border: 1px solid var(--acc); border-radius: 999px; font-size: .72rem; color: var(--acc-hi); margin-bottom: 8px; letter-spacing: .06em; text-transform: uppercase; }
       #modal button.danger { background: linear-gradient(180deg, #d9503a, #8f2214); border-color: #4a1208; box-shadow: 0 3px 0 #4a1208; color: #fff; }
 
       /* ===== telas pequenas e toque ===== */
@@ -155,7 +170,7 @@
         .stat.gain, #modal .panel { animation: none; }
       }
     </style>
-    <script type="module" crossorigin src="/bomber-idle/assets/index-Q52-tLH4.js"></script>
+    <script type="module" crossorigin src="/bomber-idle/assets/index-CZPSp6C6.js"></script>
     <link rel="modulepreload" crossorigin href="/bomber-idle/assets/phaser-CszcXVXQ.js">
   </head>
   <body>
@@ -213,10 +228,10 @@
     </main>
     <nav id="hub" aria-label="Menu principal">
       <button data-hub="heroes"><span class="ic">🧑‍🚀</span>Operadores</button>
-      <button data-hub="capsules"><span class="ic">📦</span>Cápsulas</button>
+      <button data-hub="capsules"><span class="dot"></span><span class="ic">📦</span>Cápsulas</button>
       <button data-hub="lodging"><span class="ic">🏠</span>Alojamentos</button>
       <button data-hub="exchange"><span class="ic">🪙</span>Bolsa<span class="soon">em breve</span></button>
-      <button data-hub="vault"><span class="ic">🗝️</span>Cofre</button>
+      <button data-hub="vault"><span class="dot gold"></span><span class="ic">🗝️</span>Cofre</button>
       <button data-hub="invites"><span class="ic">✉️</span>Convites<span class="soon">em breve</span></button>
       <button data-hub="manual"><span class="ic">📖</span>Manual</button>
       <button data-hub="settings"><span class="ic">⚙️</span>Config.</button>
