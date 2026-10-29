@@ -82,7 +82,7 @@ export class FarmScene extends Phaser.Scene {
     });
   }
 
-  private applyKaiSpritesheet() {
+    private applyKaiSpritesheet() {
     // Se o arquivo nao carregar, mantemos os sprites procedurais originais como fallback.
     if (!this.textures.exists("kai_custom")) {
       console.warn("[BomberIdle] Spritesheet personalizado do Kai nao carregou; usando arte padrao.");
@@ -95,6 +95,7 @@ export class FarmScene extends Phaser.Scene {
       if (this.textures.exists(textureKey)) this.textures.remove(textureKey);
 
       const texture = this.textures.createCanvas(textureKey, T, T);
+      if (!texture) continue; // createCanvas pode devolver null; sem isso o tsc recusa a build
       const ctx = texture.getContext();
       ctx.clearRect(0, 0, T, T);
       ctx.imageSmoothingEnabled = false;
