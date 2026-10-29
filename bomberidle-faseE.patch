@@ -1,0 +1,2049 @@
+--- /dev/null
++++ b/client/src/audio/audioEngine.ts
+@@ -0,0 +1,289 @@
++// Motor de áudio do BomberIdle (música + efeitos). Regras que ele garante:
++//  - UM único AudioContext, criado só depois de um gesto do jogador (política de autoplay dos navegadores);
++//  - a música nunca é duplicada (iniciar de novo é inofensivo) e é independente da cena do jogo;
++//  - se o áudio não existir ou falhar, tudo vira "não faz nada" e o jogo segue normal;
++//  - sobreposição controlada: intervalo mínimo por efeito, máximo de vozes por efeito, teto global de vozes
++//    e redução automática quando muita coisa soa ao mesmo tempo; um compressor/limitador no master evita estouro;
++//  - com a aba escondida o contexto é suspenso (nada soa nem consome CPU) e volta ao reaparecer.
++import { getAudioPrefs, onAudioPrefs, volToGain, type AudioPrefs } from "./audioSettings";
++import { MusicPlayer, type Timer, defaultTimer } from "./music";
++import { SFX, type SfxId, type VoiceOpts } from "./synth";
++
++export type AudioStatus = "idle" | "running" | "suspended" | "unsupported" | "error";
++export type Mood = "field" | "menu";
++
++export interface Buses {
++  musicIn: AudioNode;
++  filter: BiquadFilterNode;
++  duck: GainNode;
++  mood: GainNode;
++  musicGain: GainNode;
++  sfxGain: GainNode;
++  master: GainNode;
++  comp: DynamicsCompressorNode;
++}
++
++/**
++ * Curva do limitador suave: transparente até ~0,65 e satura devagar rumo a 0,95. O WaveShaper só enxerga a faixa
++ * -1..1 do sinal de entrada, por isso há um ganho 0,5 antes dele (a curva cobre -2..2 do sinal real).
++ */
++export function limiterCurve(n = 2048) {
++  const k = new Float32Array(n);
++  for (let i = 0; i < n; i++) {
++    const x = (i / (n - 1) * 2 - 1) * 2; // sinal real: -2..2
++    const a = Math.abs(x), knee = 0.65, room = 0.3;
++    k[i] = Math.sign(x) * (a <= knee ? a : knee + room * Math.tanh((a - knee) / room));
++  }
++  return k;
++}
++
++/** Cadeia de saída: música (filtro > duck > mood > volume) e efeitos (volume) somam no master > compressor > limitador > saída. */
++export function createBuses(c: BaseAudioContext): Buses {
++  const filter = c.createBiquadFilter();
++  filter.type = "lowpass";
++  filter.frequency.value = 16000;
++  const duck = c.createGain();
++  const mood = c.createGain();
++  const musicGain = c.createGain();
++  const sfxGain = c.createGain();
++  const master = c.createGain();
++  master.gain.value = 1;
++  const comp = c.createDynamicsCompressor(); // "cola" o mix: segura rajadas de explosões sem achatar o resto
++  comp.threshold.value = -12;
++  comp.knee.value = 10;
++  comp.ratio.value = 4;
++  comp.attack.value = 0.003;
++  comp.release.value = 0.2;
++  const pre = c.createGain();
++  pre.gain.value = 0.5;
++  const shaper = c.createWaveShaper();
++  shaper.curve = limiterCurve();
++  shaper.oversample = "2x";
++  filter.connect(duck); duck.connect(mood); mood.connect(musicGain); musicGain.connect(master);
++  sfxGain.connect(master);
++  master.connect(comp); comp.connect(pre); pre.connect(shaper); shaper.connect(c.destination);
++  return { musicIn: filter, filter, duck, mood, musicGain, sfxGain, master, comp };
++}
++
++export interface PlayOpts { pitch?: number; level?: number; rarity?: number; vol?: number }
++
++export interface EngineDeps {
++  createContext?: () => AudioContext;
++  timers?: Timer;
++  rnd?: () => number;
++  /** Tipo mínimo de `document` (testes passam um falso). */
++  doc?: Pick<Document, "addEventListener" | "removeEventListener"> & { hidden: boolean };
++}
++
++const MAX_VOICES = 18;        // teto de efeitos soando juntos (prioridade 2 pode passar até +6)
++const DENSITY_WINDOW = 0.4;   // s: janela para medir "quanta coisa está tocando"
++
++interface Voice { id: SfxId; endsAt: number; node: GainNode }
++
++function defaultCreateContext(): AudioContext {
++  const Ctor: typeof AudioContext | undefined = (globalThis as { AudioContext?: typeof AudioContext; webkitAudioContext?: typeof AudioContext }).AudioContext
++    ?? (globalThis as { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
++  if (!Ctor) throw new Error("Web Audio indisponível");
++  return new Ctor({ latencyHint: "interactive" });
++}
++
++export class AudioEngine {
++  private ctx: AudioContext | null = null;
++  private buses: Buses | null = null;
++  private music: MusicPlayer | null = null;
++  private voices: Voice[] = [];
++  private lastPlay = new Map<SfxId, number>();
++  private recent: number[] = [];
++  private mood: Mood = "field";
++  private pausedByHide = false;
++  private unlocking: Promise<boolean> | null = null;
++  private listeners = new Set<(s: AudioStatus) => void>();
++  private unsub: (() => void) | null = null;
++  private autoUnlockOff: (() => void) | null = null;
++  private _status: AudioStatus = "idle";
++  /** Quantos AudioContext já foram criados por este motor (testes exigem que nunca passe de 1). */
++  contextsCreated = 0;
++
++  constructor(private deps: EngineDeps = {}) {
++    this.unsub = onAudioPrefs(() => this.applyPrefs());
++  }
++
++  get status(): AudioStatus { return this._status; }
++  get activeVoices(): number { this.prune(); return this.voices.length; }
++
++  /** Remove (e desconecta) as vozes que já terminaram. Também roda a cada play(). */
++  private prune() {
++    const now = this.ctx?.currentTime ?? 0;
++    this.voices = this.voices.filter((v) => { if (v.endsAt > now) return true; try { v.node.disconnect(); } catch { /* ok */ } return false; });
++  }
++  get musicRunning(): boolean { return !!this.music?.running; }
++
++  onStatus(fn: (s: AudioStatus) => void): () => void { this.listeners.add(fn); return () => { this.listeners.delete(fn); }; }
++  private setStatus(s: AudioStatus) {
++    if (s === this._status) return;
++    this._status = s;
++    this.listeners.forEach((fn) => { try { fn(s); } catch { /* ouvinte com erro não afeta o áudio */ } });
++  }
++
++  /**
++   * Cria/retoma o AudioContext. Chame DENTRO de um gesto do jogador (clique, toque, tecla).
++   * Pode ser chamado quantas vezes quiser: nunca cria um segundo contexto nem duplica a música.
++   */
++  unlock(): Promise<boolean> {
++    if (this._status === "unsupported") return Promise.resolve(false);
++    if (this.unlocking) return this.unlocking;
++    try {
++      if (!this.ctx) {
++        this.ctx = (this.deps.createContext ?? defaultCreateContext)();
++        this.contextsCreated++;
++        this.buses = createBuses(this.ctx);
++        this.music = new MusicPlayer(this.ctx, { input: this.buses.musicIn }, this.deps.timers ?? defaultTimer);
++        this.ctx.onstatechange = () => this.syncState();
++        this.applyGains(true);
++      }
++      const p = Promise.resolve(this.ctx.resume());
++      this.unlocking = p.then(() => { this.syncState(); return this._status === "running"; }, () => { this.syncState(); return false; })
++        .finally(() => { this.unlocking = null; });
++      return this.unlocking;
++    } catch {
++      this.ctx = null; this.buses = null; this.music = null;
++      this.setStatus(typeof (globalThis as { AudioContext?: unknown }).AudioContext === "undefined" && typeof (globalThis as { webkitAudioContext?: unknown }).webkitAudioContext === "undefined" ? "unsupported" : "error");
++      return Promise.resolve(false);
++    }
++  }
++
++  /** Primeiro gesto em qualquer lugar da página libera o som (se o jogador não o desligou). Retira os ouvintes sozinho. */
++  installAutoUnlock(target: Pick<Document, "addEventListener" | "removeEventListener"> = this.deps.doc ?? document) {
++    if (this.autoUnlockOff) return;
++    const evs = ["pointerdown", "keydown", "touchend"];
++    const handler = () => {
++      const p = getAudioPrefs();
++      if (!p.music && !p.sfx) return; // som desligado de propósito: não liga sozinho
++      void this.unlock().then((ok) => { if (ok) this.autoUnlockOff?.(); });
++    };
++    evs.forEach((e) => target.addEventListener(e, handler, { passive: true } as AddEventListenerOptions));
++    this.autoUnlockOff = () => { evs.forEach((e) => target.removeEventListener(e, handler)); this.autoUnlockOff = null; };
++  }
++
++  /** Suspende com a aba escondida (sem som e sem CPU) e retoma ao voltar. */
++  installLifecycle(doc: EngineDeps["doc"] = this.deps.doc ?? document, win: Pick<Window, "addEventListener"> | null = typeof window !== "undefined" ? window : null) {
++    doc.addEventListener("visibilitychange", () => this.handleVisibility(doc.hidden));
++    win?.addEventListener("pagehide", () => this.handleVisibility(true));
++    win?.addEventListener("pageshow", () => this.handleVisibility(doc.hidden));
++  }
++
++  handleVisibility(hidden: boolean) {
++    const c = this.ctx;
++    if (!c) return;
++    if (hidden) {
++      if (c.state === "running") { this.pausedByHide = true; void c.suspend().catch(() => undefined); }
++    } else if (this.pausedByHide) {
++      this.pausedByHide = false;
++      void c.resume().catch(() => undefined);
++    }
++  }
++
++  private syncState() {
++    const c = this.ctx;
++    if (!c) return;
++    const s: AudioStatus = c.state === "running" ? "running" : c.state === "closed" ? "error" : "suspended";
++    this.setStatus(s);
++    this.applyPrefs();
++  }
++
++  /** Aplica volume/liga/desliga conforme as preferências. Chamado ao mudar a config e ao mudar o estado do contexto. */
++  applyPrefs() {
++    if (!this.ctx || !this.buses) return;
++    const p = getAudioPrefs();
++    this.applyGains(false, p);
++    const running = this.ctx.state === "running";
++    if (running && p.music) this.music?.start();
++    else this.music?.stop();
++  }
++
++  private applyGains(immediate: boolean, p: AudioPrefs = getAudioPrefs()) {
++    if (!this.ctx || !this.buses) return;
++    const now = this.ctx.currentTime;
++    const set = (param: AudioParam, v: number) => { if (immediate) param.setValueAtTime(v, now); else param.setTargetAtTime(v, now, 0.03); };
++    set(this.buses.musicGain.gain, p.music ? volToGain(p.musicVol) : 0);
++    set(this.buses.sfxGain.gain, p.sfx ? volToGain(p.sfxVol) : 0);
++    this.applyMood(immediate);
++  }
++
++  /** "menu" (janela aberta): música mais abafada e baixa, sem trocar de faixa. */
++  setMood(m: Mood) {
++    if (m === this.mood) return;
++    this.mood = m;
++    this.applyMood(false);
++  }
++  private applyMood(immediate: boolean) {
++    if (!this.ctx || !this.buses) return;
++    const now = this.ctx.currentTime, menu = this.mood === "menu";
++    const f = this.buses.filter.frequency, g = this.buses.mood.gain;
++    if (immediate) { f.setValueAtTime(menu ? 1800 : 16000, now); g.setValueAtTime(menu ? 0.8 : 1, now); }
++    else { f.setTargetAtTime(menu ? 1800 : 16000, now, 0.25); g.setTargetAtTime(menu ? 0.8 : 1, now, 0.25); }
++  }
++
++  /** Toca um efeito. Devolve true se ele realmente soou. Nunca lança erro. */
++  play(id: SfxId, opts: PlayOpts = {}): boolean {
++    try {
++      const c = this.ctx, b = this.buses;
++      if (!c || !b || c.state !== "running") return false;
++      if (!getAudioPrefs().sfx) return false;
++      const def = SFX[id];
++      if (!def) return false;
++      const now = c.currentTime;
++
++      // limpa vozes que já acabaram (e solta os nós)
++      this.prune();
++      this.recent = this.recent.filter((t) => t > now - DENSITY_WINDOW);
++
++      const last = this.lastPlay.get(id);
++      if (last !== undefined && now - last < def.cooldownMs / 1000) return false;
++      if (this.voices.filter((v) => v.id === id).length >= def.maxVoices) return false;
++      const cap = MAX_VOICES + (def.priority === 2 ? 6 : 0);
++      if (this.voices.length >= cap) return false;
++      if (def.priority === 0 && this.voices.length >= MAX_VOICES * 0.7) return false; // com muito som, os de enfeite saem primeiro
++
++      const rnd = this.deps.rnd ?? Math.random;
++      const density = Math.max(0.5, 1 / (1 + 0.1 * this.recent.length)); // quanto mais som recente, menor cada novo
++      const vg = c.createGain();
++      vg.gain.value = def.gain * (opts.vol ?? 1) * density;
++      vg.connect(b.sfxGain);
++      const vo: VoiceOpts = {
++        pitch: (opts.pitch ?? 1) * (0.94 + rnd() * 0.12), // variação de ±6%: sem "som carimbado"
++        level: Math.min(1, Math.max(0, opts.level ?? 0.5)),
++        rarity: Math.min(7, Math.max(0, Math.round(opts.rarity ?? 0))),
++        rnd,
++      };
++      let end: number;
++      try { end = def.play(c, vg, now + 0.005, vo); } catch (e) { try { vg.disconnect(); } catch { /* ok */ } throw e; }
++      this.voices.push({ id, endsAt: end, node: vg });
++      this.lastPlay.set(id, now);
++      this.recent.push(now);
++
++      if (def.duck) { // a música "abre espaço" para o efeito grande e volta suave
++        const d = b.duck.gain;
++        d.cancelScheduledValues(now);
++        d.setTargetAtTime(1 - def.duck.amount, now, 0.01);
++        d.setTargetAtTime(1, now + 0.06, def.duck.ms / 1000 / 3);
++      }
++      return true;
++    } catch {
++      return false; // áudio com problema nunca derruba o jogo
++    }
++  }
++
++  /** Encerra tudo: música, ouvintes e contexto. */
++  dispose() {
++    this.music?.stop();
++    this.autoUnlockOff?.();
++    this.unsub?.(); this.unsub = null;
++    try { void this.ctx?.close(); } catch { /* ok */ }
++    this.voices = []; this.ctx = null; this.buses = null; this.music = null;
++    this.setStatus("idle");
++  }
++}
++
++/** Instância única do jogo. Só toca em `window`/`document` quando alguém chama unlock()/install*(). */
++export const audio = new AudioEngine();
+--- /dev/null
++++ b/client/src/audio/audioSettings.ts
+@@ -0,0 +1,60 @@
++// Preferências de áudio (música/efeitos ligados e volumes).
++// É uma preferência do aparelho: fica numa chave própria e NÃO faz parte do save do jogo ("bomber-idle:v1"),
++// então economia e progresso nunca são tocados. Tudo é lido de forma preguiçosa e dentro de try/catch:
++// sem localStorage (modo privado, testes) o jogo segue com os padrões.
++export interface AudioPrefs {
++  music: boolean;
++  sfx: boolean;
++  /** 0..1 (posição do controle deslizante; o ganho real é perceptual, veja volToGain). */
++  musicVol: number;
++  sfxVol: number;
++}
++
++export const AUDIO_KEY = "bomber-idle:audio";
++export const AUDIO_DEFAULTS: Readonly<AudioPrefs> = { music: true, sfx: true, musicVol: 0.5, sfxVol: 0.7 };
++
++let cache: AudioPrefs | null = null;
++const listeners = new Set<(p: AudioPrefs) => void>();
++
++const clamp01 = (v: unknown, fallback: number) => (typeof v === "number" && Number.isFinite(v) ? Math.min(1, Math.max(0, v)) : fallback);
++const bool = (v: unknown, fallback: boolean) => (typeof v === "boolean" ? v : fallback);
++
++/** Aceita qualquer coisa vinda do armazenamento e devolve preferências válidas (valores ruins viram o padrão). */
++export function sanitizeAudioPrefs(raw: unknown): AudioPrefs {
++  const o = raw && typeof raw === "object" ? (raw as Record<string, unknown>) : {};
++  return {
++    music: bool(o.music, AUDIO_DEFAULTS.music),
++    sfx: bool(o.sfx, AUDIO_DEFAULTS.sfx),
++    musicVol: clamp01(o.musicVol, AUDIO_DEFAULTS.musicVol),
++    sfxVol: clamp01(o.sfxVol, AUDIO_DEFAULTS.sfxVol),
++  };
++}
++
++export function getAudioPrefs(): AudioPrefs {
++  if (!cache) {
++    let parsed: unknown = null;
++    try { const s = localStorage.getItem(AUDIO_KEY); parsed = s ? JSON.parse(s) : null; } catch { /* sem armazenamento ou JSON ruim: usa o padrão */ }
++    cache = sanitizeAudioPrefs(parsed);
++  }
++  return { ...cache };
++}
++
++export function setAudioPrefs(patch: Partial<AudioPrefs>): AudioPrefs {
++  cache = sanitizeAudioPrefs({ ...getAudioPrefs(), ...patch });
++  try { localStorage.setItem(AUDIO_KEY, JSON.stringify(cache)); } catch { /* sem armazenamento: vale só nesta sessão */ }
++  const snap = { ...cache };
++  listeners.forEach((fn) => { try { fn(snap); } catch { /* um ouvinte com erro não derruba os outros */ } });
++  return snap;
++}
++
++/** Avisa quando as preferências mudam. Devolve a função que cancela a inscrição. */
++export function onAudioPrefs(fn: (p: AudioPrefs) => void): () => void {
++  listeners.add(fn);
++  return () => { listeners.delete(fn); };
++}
++
++/** Volume 0..1 do controle -> ganho. Curva quadrática: a metade do controle soa como "metade" para o ouvido. */
++export const volToGain = (v: number) => { const c = Math.min(1, Math.max(0, v)); return c * c; };
++
++/** Só para testes: esquece o valor em memória e os ouvintes. */
++export function resetAudioPrefsCache() { cache = null; listeners.clear(); }
+--- /dev/null
++++ b/client/src/audio/music.ts
+@@ -0,0 +1,241 @@
++// Trilha ambiente do BomberIdle: música GERADA por código (síntese procedural), original, sem nenhum arquivo de áudio.
++// Importante: isto NÃO é uma trilha gravada por músicos. É uma base ambiente discreta (pad + baixo + arpejos
++// esparsos com eco) pensada para sessões longas. Se um dia houver uma trilha gravada/licenciada, basta trocar
++// o MusicPlayer por um <audio>/AudioBuffer: o resto do motor (barramentos, volume, pausa) não muda.
++//
++// A música é uma sequência infinita de passos de 1/16 de nota. planStep(n) é uma função PURA e determinística:
++// diz quais notas começam no passo n. Pad e baixo repetem a cada 8 compassos; os arpejos variam a cada volta
++// (4 variações) com a mesma semente, então o ciclo completo dura ~100 s. Como o contador de passos nunca
++// "volta ao zero" e as notas do pad se sobrepõem, não existe ponto de corte audível no loop.
++import { midiToFreq, noiseBuffer } from "./synth";
++
++export const BPM = 78;
++export const STEPS_PER_BAR = 16;
++export const BARS = 8;
++export const LOOP_STEPS = STEPS_PER_BAR * BARS;
++export const STEP_SEC = 60 / BPM / 4;
++
++export type MusicLayer = "pad" | "bass" | "arp" | "hat";
++export interface MusicNote { layer: MusicLayer; freq: number; /** duração em passos */ steps: number; vel: number }
++
++interface Chord { bass: number; pad: number[]; arp: number[] }
++// Lá menor: Am - F - C - G | Am - F - Dm - Em. Notas MIDI. O baixo nunca desce de ~80 Hz (alto-falantes pequenos).
++const CHORDS: Chord[] = [
++  { bass: 45, pad: [57, 60, 64, 69], arp: [69, 72, 76, 81, 84] },
++  { bass: 41, pad: [53, 57, 60, 65], arp: [65, 69, 72, 77, 81] },
++  { bass: 48, pad: [55, 60, 64, 67], arp: [67, 72, 76, 79, 84] },
++  { bass: 43, pad: [55, 59, 62, 67], arp: [67, 71, 74, 79, 83] },
++  { bass: 45, pad: [57, 60, 64, 69], arp: [69, 72, 76, 81, 84] },
++  { bass: 41, pad: [53, 57, 60, 65], arp: [65, 69, 72, 77, 81] },
++  { bass: 50, pad: [53, 57, 62, 65], arp: [62, 65, 69, 74, 77] },
++  { bass: 40, pad: [55, 59, 64, 67], arp: [64, 67, 71, 76, 79] },
++];
++
++const BASS_HITS: ReadonlyArray<[number, number]> = [[0, 1], [6, 0.7], [10, 0.85]]; // [passo no compasso, intensidade]
++
++/** Hash inteiro de 32 bits (determinístico): dá "aleatoriedade" repetível para os arpejos e para os testes. */
++export function hash32(n: number): number {
++  let h = Math.imul(n ^ 0x9e3779b9, 0x85ebca6b);
++  h ^= h >>> 13; h = Math.imul(h, 0xc2b2ae35); h ^= h >>> 16;
++  return h >>> 0;
++}
++
++export function planStep(step: number): MusicNote[] {
++  const s = ((step % LOOP_STEPS) + LOOP_STEPS) % LOOP_STEPS;
++  const loop = Math.floor(step / LOOP_STEPS);
++  const bar = Math.floor(s / STEPS_PER_BAR), inBar = s % STEPS_PER_BAR;
++  const ch = CHORDS[bar];
++  const notes: MusicNote[] = [];
++
++  if (inBar === 0) for (const m of ch.pad) notes.push({ layer: "pad", freq: midiToFreq(m), steps: STEPS_PER_BAR + 8, vel: 0.5 });
++
++  for (const [at, vel] of BASS_HITS) {
++    if (inBar === at) notes.push({ layer: "bass", freq: midiToFreq(ch.bass), steps: 3, vel });
++  }
++  if (inBar === 14 && (bar === 3 || bar === 7)) notes.push({ layer: "bass", freq: midiToFreq(ch.bass + 12), steps: 2, vel: 0.6 }); // virada
++
++  // arpejo esparso nas colcheias; mais presente na segunda metade do ciclo (forma A-B)
++  if (inBar % 2 === 0) {
++    const h = hash32(s * 7919 + (loop % 4) * 104729 + 1);
++    const p = bar < 4 ? 0.34 : 0.5;
++    if ((h % 1000) / 1000 < p) {
++      const idx = (h >>> 10) % ch.arp.length;
++      notes.push({ layer: "arp", freq: midiToFreq(ch.arp[idx]), steps: 3, vel: 0.35 + ((h >>> 20) % 100) / 100 * 0.3 });
++    }
++  }
++  if (bar >= 4 && inBar % 4 === 2) notes.push({ layer: "hat", freq: 0, steps: 1, vel: 0.25 }); // chiado suave nas contratempos
++
++  return notes;
++}
++
++// ---------- reprodutor ----------
++export interface MusicBuses { input: AudioNode }
++export interface Timer { set: (fn: () => void, ms: number) => unknown; clear: (id: unknown) => void }
++export const defaultTimer: Timer = {
++  set: (fn, ms) => setInterval(fn, ms),
++  clear: (id) => clearInterval(id as ReturnType<typeof setInterval>),
++};
++
++const AHEAD = 0.4;     // quanto à frente (s) as notas são agendadas
++const TICK_MS = 100;   // frequência do agendador
++
++export class MusicPlayer {
++  private timer: unknown = null;
++  private step = 0;
++  private next = 0;
++  private delayIn: GainNode | null = null;
++  private delay: DelayNode | null = null;
++  private fb: GainNode | null = null;
++
++  constructor(private ctx: BaseAudioContext, private buses: MusicBuses, private timers: Timer = defaultTimer) {}
++
++  get running() { return this.timer !== null; }
++  get currentStep() { return this.step; }
++
++  start() {
++    if (this.timer !== null) return; // idempotente: nunca dois agendadores (música duplicada)
++    this.buildDelay();
++    this.next = this.ctx.currentTime + 0.12;
++    this.timer = this.timers.set(() => this.tick(), TICK_MS);
++    this.tick();
++  }
++
++  stop() {
++    if (this.timer !== null) { this.timers.clear(this.timer); this.timer = null; }
++    try { this.delayIn?.disconnect(); this.delay?.disconnect(); this.fb?.disconnect(); } catch { /* já desconectado */ }
++    this.delayIn = this.delay = this.fb = null;
++  }
++
++  /** Um agendamento: coloca na fila do Web Audio todas as notas dos próximos AHEAD segundos. */
++  tick() {
++    const c = this.ctx;
++    if (c.state !== "running") { this.next = 0; return; } // pausado: nada de acumular notas atrasadas
++    if (this.next === 0 || this.next < c.currentTime - 0.25) this.next = c.currentTime + 0.05; // voltou de pausa/aba: ressincroniza sem rajada
++    while (this.next < c.currentTime + AHEAD) {
++      this.schedule(planStep(this.step), this.next);
++      this.next += STEP_SEC;
++      this.step++;
++    }
++  }
++
++  private buildDelay() {
++    const c = this.ctx;
++    // eco em colcheia pontuada (3 passos), escuro (filtro) e com poucas repetições
++    this.delayIn = c.createGain();
++    this.delay = c.createDelay(1.5);
++    this.delay.delayTime.value = STEP_SEC * 3;
++    this.fb = c.createGain();
++    this.fb.gain.value = 0.36;
++    const lp = c.createBiquadFilter();
++    lp.type = "lowpass";
++    lp.frequency.value = 2400;
++    const wet = c.createGain();
++    wet.gain.value = 0.5;
++    this.delayIn.connect(this.delay);
++    this.delay.connect(lp);
++    lp.connect(this.fb);
++    this.fb.connect(this.delay);
++    lp.connect(wet);
++    wet.connect(this.buses.input);
++  }
++
++  private schedule(notes: MusicNote[], t: number) {
++    const pads = notes.filter((n) => n.layer === "pad");
++    if (pads.length) this.pad(pads, t);
++    for (const n of notes) {
++      if (n.layer === "bass") this.bass(n, t);
++      else if (n.layer === "arp") this.arp(n, t);
++      else if (n.layer === "hat") this.hat(n, t);
++    }
++  }
++
++  /** Acorde: dois dentes-de-serra levemente desafinados por nota, filtro que "respira" e ataque/saída lentos. */
++  private pad(notes: MusicNote[], t: number) {
++    const c = this.ctx;
++    const dur = notes[0].steps * STEP_SEC;
++    const rel = 1.6;
++    const filt = c.createBiquadFilter();
++    filt.type = "lowpass";
++    filt.Q.value = 0.5;
++    filt.frequency.setValueAtTime(520, t);
++    filt.frequency.linearRampToValueAtTime(1500, t + dur * 0.45);
++    filt.frequency.linearRampToValueAtTime(600, t + dur);
++    const g = c.createGain();
++    g.gain.setValueAtTime(0.0001, t);
++    g.gain.linearRampToValueAtTime(1, t + 1.0);
++    g.gain.setValueAtTime(1, t + dur);
++    g.gain.linearRampToValueAtTime(0.0001, t + dur + rel);
++    filt.connect(g);
++    g.connect(this.buses.input);
++    const oscs: OscillatorNode[] = [];
++    for (const n of notes) {
++      for (const det of [-7, 7]) {
++        const o = c.createOscillator();
++        o.type = "sawtooth";
++        o.frequency.value = n.freq;
++        o.detune.value = det;
++        const og = c.createGain();
++        og.gain.value = 0.15 * n.vel;
++        o.connect(og);
++        og.connect(filt);
++        o.start(t);
++        o.stop(t + dur + rel + 0.05);
++        oscs.push(o);
++      }
++    }
++    oscs[0].onended = () => { try { g.disconnect(); filt.disconnect(); } catch { /* já desconectado */ } };
++  }
++
++  private bass(n: MusicNote, t: number) {
++    const c = this.ctx;
++    const dur = Math.max(0.3, n.steps * STEP_SEC);
++    const g = c.createGain();
++    g.gain.setValueAtTime(0.0001, t);
++    g.gain.exponentialRampToValueAtTime(0.5 * n.vel, t + 0.012);
++    g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
++    const lp = c.createBiquadFilter();
++    lp.type = "lowpass";
++    lp.frequency.value = 480;
++    lp.connect(g);
++    g.connect(this.buses.input);
++    const o1 = c.createOscillator(); o1.type = "sine"; o1.frequency.value = n.freq;
++    const o2 = c.createOscillator(); o2.type = "triangle"; o2.frequency.value = n.freq * 2;
++    const g2 = c.createGain(); g2.gain.value = 0.3;
++    o1.connect(lp); o2.connect(g2); g2.connect(lp);
++    for (const o of [o1, o2]) { o.start(t); o.stop(t + dur + 0.05); }
++    o1.onended = () => { try { g.disconnect(); lp.disconnect(); g2.disconnect(); } catch { /* já desconectado */ } };
++  }
++
++  private arp(n: MusicNote, t: number) {
++    const c = this.ctx;
++    const dur = n.steps * STEP_SEC * 1.4;
++    const g = c.createGain();
++    g.gain.setValueAtTime(0.0001, t);
++    g.gain.exponentialRampToValueAtTime(0.2 * n.vel, t + 0.006);
++    g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
++    const o1 = c.createOscillator(); o1.type = "triangle"; o1.frequency.value = n.freq;
++    const o2 = c.createOscillator(); o2.type = "sine"; o2.frequency.value = n.freq * 2;
++    const g2 = c.createGain(); g2.gain.value = 0.25;
++    o1.connect(g); o2.connect(g2); g2.connect(g);
++    g.connect(this.buses.input);
++    let send: GainNode | null = null;
++    if (this.delayIn) { send = c.createGain(); send.gain.value = 0.55; g.connect(send); send.connect(this.delayIn); }
++    for (const o of [o1, o2]) { o.start(t); o.stop(t + dur + 0.05); }
++    o1.onended = () => { try { g.disconnect(); g2.disconnect(); send?.disconnect(); } catch { /* já desconectado */ } };
++  }
++
++  private hat(n: MusicNote, t: number) {
++    const c = this.ctx;
++    const src = c.createBufferSource();
++    src.buffer = noiseBuffer(c);
++    const hp = c.createBiquadFilter(); hp.type = "highpass"; hp.frequency.value = 7500;
++    const g = c.createGain();
++    g.gain.setValueAtTime(0.0001, t);
++    g.gain.exponentialRampToValueAtTime(0.085 * n.vel, t + 0.004);
++    g.gain.exponentialRampToValueAtTime(0.0001, t + 0.05);
++    src.connect(hp); hp.connect(g); g.connect(this.buses.input);
++    src.start(t, (this.step % 17) * 0.1);
++    src.stop(t + 0.07);
++    src.onended = () => { try { g.disconnect(); hp.disconnect(); } catch { /* já desconectado */ } };
++  }
++}
+--- /dev/null
++++ b/client/src/audio/synth.ts
+@@ -0,0 +1,282 @@
++// Efeitos sonoros do BomberIdle, sintetizados com Web Audio (nenhum arquivo de som é baixado).
++// Cada receita recebe o contexto, o nó de saída e o instante de início, cria seus nós, agenda o fim deles
++// e devolve o instante em que o som termina. Os nós se desconectam sozinhos quando a fonte acaba.
++// Os valores de "peak" são relativos: o volume final vem do ganho do efeito (SFX[...].gain), do barramento
++// de efeitos, do volume do jogador e do limitador do master (veja audioEngine.ts).
++
++export type SfxId =
++  | "uiClick" | "uiOpen" | "uiClose" | "uiError" | "upgrade" | "mission" | "capsule"
++  | "bombPlant" | "fuse" | "explosion" | "blockHit" | "blockBreak" | "chestHit" | "chestOpen"
++  | "enemyHit" | "enemyDeath" | "coin" | "crit" | "levelUp" | "ability" | "mapClear";
++
++export interface VoiceOpts {
++  /** Multiplicador de altura (1 = normal). O motor sorteia uma pequena variação para o som não parecer "carimbo". */
++  pitch: number;
++  /** 0..1: intensidade (alcance da explosão, MVP, etc.). */
++  level: number;
++  /** 0..7: índice de raridade (baús e cápsulas soam mais ricos nas raridades altas). */
++  rarity: number;
++  rnd: () => number;
++}
++
++export interface SfxDef {
++  play: (c: BaseAudioContext, out: AudioNode, t: number, o: VoiceOpts) => number;
++  /** Intervalo mínimo entre dois disparos do mesmo efeito (rajadas viram um som só). */
++  cooldownMs: number;
++  /** Quantas instâncias do mesmo efeito podem soar ao mesmo tempo. */
++  maxVoices: number;
++  /** Ajuste de volume relativo do efeito. */
++  gain: number;
++  /** 0 = pode ser descartado quando há muito som; 2 = quase sempre toca. */
++  priority: 0 | 1 | 2;
++  /** Abaixa a música por um instante (explosões e marcos). */
++  duck?: { amount: number; ms: number };
++}
++
++export const midiToFreq = (m: number) => 440 * Math.pow(2, (m - 69) / 12);
++
++// ---------- peças básicas ----------
++const noiseCache = new WeakMap<BaseAudioContext, AudioBuffer>();
++
++/** 2 s de ruído branco, gerado uma vez por contexto com semente fixa (renders offline ficam reproduzíveis). */
++export function noiseBuffer(c: BaseAudioContext): AudioBuffer {
++  let b = noiseCache.get(c);
++  if (b) return b;
++  b = c.createBuffer(1, Math.max(1, Math.floor(c.sampleRate * 2)), c.sampleRate);
++  const d = b.getChannelData(0);
++  let s = 0x12345678;
++  for (let i = 0; i < d.length; i++) { s = (Math.imul(s, 1664525) + 1013904223) >>> 0; d[i] = s / 2147483648 - 1; }
++  noiseCache.set(c, b);
++  return b;
++}
++
++interface ToneSpec { type: OscillatorType; f0: number; f1?: number; t: number; dur: number; peak: number; attack?: number; lp?: number }
++
++/** Oscilador com envelope exponencial (ataque curto, queda até o silêncio). Devolve o instante final. */
++function tone(c: BaseAudioContext, out: AudioNode, s: ToneSpec): number {
++  const attack = Math.min(s.attack ?? 0.004, s.dur * 0.5);
++  const end = s.t + s.dur;
++  const o = c.createOscillator();
++  o.type = s.type;
++  o.frequency.setValueAtTime(s.f0, s.t);
++  if (s.f1 !== undefined && s.f1 !== s.f0) o.frequency.exponentialRampToValueAtTime(Math.max(1, s.f1), end);
++  const g = c.createGain();
++  g.gain.setValueAtTime(0.0001, s.t);
++  g.gain.exponentialRampToValueAtTime(Math.max(0.0002, s.peak), s.t + attack);
++  g.gain.exponentialRampToValueAtTime(0.0001, end);
++  if (s.lp) {
++    const f = c.createBiquadFilter();
++    f.type = "lowpass";
++    f.frequency.value = s.lp;
++    o.connect(f);
++    f.connect(g);
++  } else o.connect(g);
++  g.connect(out);
++  o.start(s.t);
++  o.stop(end + 0.02);
++  o.onended = () => { try { g.disconnect(); } catch { /* já desconectado */ } };
++  return end + 0.02;
++}
++
++interface NoiseSpec { t: number; dur: number; peak: number; type: BiquadFilterType; f0: number; f1?: number; q?: number; attack?: number; rnd: () => number }
++
++/** Rajada de ruído filtrado, com varredura opcional de frequência. */
++function noiseHit(c: BaseAudioContext, out: AudioNode, s: NoiseSpec): number {
++  const attack = Math.min(s.attack ?? 0.002, s.dur * 0.5);
++  const end = s.t + s.dur;
++  const src = c.createBufferSource();
++  src.buffer = noiseBuffer(c);
++  const f = c.createBiquadFilter();
++  f.type = s.type;
++  f.Q.value = s.q ?? 0.8;
++  f.frequency.setValueAtTime(s.f0, s.t);
++  if (s.f1 !== undefined && s.f1 !== s.f0) f.frequency.exponentialRampToValueAtTime(Math.max(20, s.f1), end);
++  const g = c.createGain();
++  g.gain.setValueAtTime(0.0001, s.t);
++  g.gain.exponentialRampToValueAtTime(Math.max(0.0002, s.peak), s.t + attack);
++  g.gain.exponentialRampToValueAtTime(0.0001, end);
++  src.connect(f);
++  f.connect(g);
++  g.connect(out);
++  src.start(s.t, s.rnd() * 0.95); // trecho sorteado do ruído: dois disparos nunca soam idênticos
++  src.stop(end + 0.02);
++  src.onended = () => { try { g.disconnect(); f.disconnect(); } catch { /* já desconectado */ } };
++  return end + 0.02;
++}
++
++// Pentatônica maior (semitons) usada nos "brilhos" de baús, cápsulas e subida de nível.
++const PENTA = [0, 2, 4, 7, 9, 12, 14, 16, 19];
++
++/** Arpejo ascendente de sino: quanto maior a raridade, mais notas e mais brilho. */
++function chime(c: BaseAudioContext, out: AudioNode, t: number, o: VoiceOpts, baseMidi: number, gap: number, vol: number): number {
++  const notes = 3 + Math.floor(o.rarity / 2); // 3 (comum) a 6 (ancestral)
++  let end = t;
++  for (let i = 0; i < notes; i++) {
++    const f = midiToFreq(baseMidi + PENTA[i]) * o.pitch;
++    const at = t + i * gap;
++    end = Math.max(end, tone(c, out, { type: "sine", f0: f, t: at, dur: 0.55, peak: vol, attack: 0.004 }));
++    end = Math.max(end, tone(c, out, { type: "triangle", f0: f * 2, t: at, dur: 0.3, peak: vol * 0.35, attack: 0.003 }));
++  }
++  if (o.rarity >= 4) end = Math.max(end, noiseHit(c, out, { t: t + notes * gap * 0.5, dur: 0.5, peak: 0.05, type: "highpass", f0: 6500, f1: 9000, q: 0.5, rnd: o.rnd }));
++  if (o.rarity >= 6) end = Math.max(end, tone(c, out, { type: "sine", f0: midiToFreq(baseMidi + 24) * o.pitch, t: t + notes * gap, dur: 0.9, peak: vol * 0.7, attack: 0.01 }));
++  return end;
++}
++
++const max = (...v: number[]) => Math.max(...v);
++
++// ---------- efeitos ----------
++const uiClick: SfxDef["play"] = (c, out, t, o) =>
++  tone(c, out, { type: "triangle", f0: 760 * o.pitch, f1: 520 * o.pitch, t, dur: 0.035, peak: 0.28 });
++
++const uiOpen: SfxDef["play"] = (c, out, t, o) =>
++  max(tone(c, out, { type: "triangle", f0: 420 * o.pitch, f1: 660 * o.pitch, t, dur: 0.1, peak: 0.26 }),
++    tone(c, out, { type: "sine", f0: 840 * o.pitch, f1: 1320 * o.pitch, t: t + 0.03, dur: 0.1, peak: 0.1 }));
++
++const uiClose: SfxDef["play"] = (c, out, t, o) =>
++  tone(c, out, { type: "triangle", f0: 640 * o.pitch, f1: 380 * o.pitch, t, dur: 0.09, peak: 0.24 });
++
++const uiError: SfxDef["play"] = (c, out, t, o) =>
++  max(tone(c, out, { type: "square", f0: 160 * o.pitch, f1: 130 * o.pitch, t, dur: 0.09, peak: 0.16, lp: 700 }),
++    tone(c, out, { type: "square", f0: 140 * o.pitch, f1: 110 * o.pitch, t: t + 0.12, dur: 0.12, peak: 0.16, lp: 700 }));
++
++const upgrade: SfxDef["play"] = (c, out, t, o) => {
++  let end = t;
++  [64, 69, 76].forEach((m, i) => {
++    end = max(end,
++      tone(c, out, { type: "square", f0: midiToFreq(m) * o.pitch, t: t + i * 0.06, dur: 0.12, peak: 0.1, lp: 3200 }),
++      tone(c, out, { type: "triangle", f0: midiToFreq(m + 12) * o.pitch, t: t + i * 0.06, dur: 0.16, peak: 0.12 }));
++  });
++  return end;
++};
++
++const mission: SfxDef["play"] = (c, out, t, o) => chime(c, out, t, { ...o, rarity: 2 }, 72, 0.075, 0.2);
++
++const capsule: SfxDef["play"] = (c, out, t, o) => {
++  const w = noiseHit(c, out, { t, dur: 0.38, peak: 0.22, type: "bandpass", f0: 220, f1: 3200, q: 1.4, attack: 0.05, rnd: o.rnd });
++  const sub = tone(c, out, { type: "sine", f0: 70 * o.pitch, f1: 140 * o.pitch, t, dur: 0.4, peak: 0.25, attack: 0.08 });
++  return max(w, sub, chime(c, out, t + 0.3, o, 72, 0.085, 0.2));
++};
++
++const bombPlant: SfxDef["play"] = (c, out, t, o) =>
++  max(tone(c, out, { type: "sine", f0: 210 * o.pitch, f1: 78 * o.pitch, t, dur: 0.14, peak: 0.5 }),
++    tone(c, out, { type: "triangle", f0: 640 * o.pitch, f1: 300 * o.pitch, t, dur: 0.05, peak: 0.14 }),
++    noiseHit(c, out, { t, dur: 0.03, peak: 0.1, type: "bandpass", f0: 2600, q: 1.2, rnd: o.rnd }));
++
++const fuse: SfxDef["play"] = (c, out, t, o) =>
++  tone(c, out, { type: "square", f0: 1500 * o.pitch, t, dur: 0.03, peak: 0.07, lp: 3000 });
++
++/** Explosão em camadas: estalo inicial, rugido de ruído que escurece, corpo grave e crepitar final. */
++const explosion: SfxDef["play"] = (c, out, t, o) => {
++  const len = 0.5 + 0.35 * o.level;
++  let end = t;
++  end = max(end,
++    noiseHit(c, out, { t, dur: 0.1, peak: 0.3, type: "bandpass", f0: 2200, f1: 700, q: 0.9, rnd: o.rnd }), // estalo
++    noiseHit(c, out, { t, dur: len, peak: 0.46, type: "lowpass", f0: 3200, f1: 150, q: 0.7, attack: 0.004, rnd: o.rnd }), // rugido
++    tone(c, out, { type: "sine", f0: 125 * o.pitch, f1: 36 * o.pitch, t, dur: len, peak: 0.5, attack: 0.005 }), // sub
++    tone(c, out, { type: "triangle", f0: 74 * o.pitch, f1: 30 * o.pitch, t, dur: len * 0.8, peak: 0.26, attack: 0.005 })); // corpo
++  const crackles = 3 + Math.floor(o.rnd() * 3);
++  for (let i = 0; i < crackles; i++) {
++    end = max(end, noiseHit(c, out, { t: t + 0.07 + o.rnd() * (len * 0.8), dur: 0.025, peak: 0.1, type: "highpass", f0: 3000, q: 0.6, rnd: o.rnd }));
++  }
++  return end;
++};
++
++const blockHit: SfxDef["play"] = (c, out, t, o) =>
++  max(noiseHit(c, out, { t, dur: 0.05, peak: 0.34, type: "bandpass", f0: 700 * o.pitch, q: 1, rnd: o.rnd }),
++    tone(c, out, { type: "sine", f0: 150 * o.pitch, f1: 80 * o.pitch, t, dur: 0.07, peak: 0.3 }));
++
++const blockBreak: SfxDef["play"] = (c, out, t, o) => {
++  let end = max(
++    noiseHit(c, out, { t, dur: 0.18, peak: 0.4, type: "lowpass", f0: 1900, f1: 400, q: 0.8, rnd: o.rnd }),
++    tone(c, out, { type: "sine", f0: 115 * o.pitch, f1: 60 * o.pitch, t, dur: 0.13, peak: 0.3 }));
++  for (let i = 0; i < 3; i++) end = max(end, noiseHit(c, out, { t: t + 0.04 + i * 0.035 + o.rnd() * 0.02, dur: 0.02, peak: 0.16, type: "bandpass", f0: 2200 + o.rnd() * 1200, q: 1.5, rnd: o.rnd }));
++  return end;
++};
++
++const chestHit: SfxDef["play"] = (c, out, t, o) =>
++  max(tone(c, out, { type: "triangle", f0: 900 * o.pitch, f1: 620 * o.pitch, t, dur: 0.055, peak: 0.22 }),
++    tone(c, out, { type: "sine", f0: 1800 * o.pitch, t, dur: 0.13, peak: 0.05 }),
++    noiseHit(c, out, { t, dur: 0.03, peak: 0.1, type: "highpass", f0: 3000, q: 0.6, rnd: o.rnd }));
++
++const chestOpen: SfxDef["play"] = (c, out, t, o) =>
++  max(noiseHit(c, out, { t, dur: 0.09, peak: 0.16, type: "bandpass", f0: 500, f1: 1800, q: 1, rnd: o.rnd }),
++    tone(c, out, { type: "sine", f0: 160 * o.pitch, f1: 90 * o.pitch, t, dur: 0.12, peak: 0.2 }),
++    chime(c, out, t + 0.04, o, 72, 0.07, 0.2));
++
++const enemyHit: SfxDef["play"] = (c, out, t, o) =>
++  max(tone(c, out, { type: "sawtooth", f0: 240 * o.pitch, f1: 150 * o.pitch, t, dur: 0.06, peak: 0.26, lp: 1800 }),
++    noiseHit(c, out, { t, dur: 0.04, peak: 0.18, type: "bandpass", f0: 1200, q: 1, rnd: o.rnd }));
++
++const enemyDeath: SfxDef["play"] = (c, out, t, o) => {
++  const mvp = o.level > 0.5;
++  const len = mvp ? 0.55 : 0.3;
++  let end = max(
++    tone(c, out, { type: "sawtooth", f0: (mvp ? 260 : 340) * o.pitch, f1: 50 * o.pitch, t, dur: len, peak: 0.3, lp: 1400 }),
++    noiseHit(c, out, { t, dur: len, peak: 0.28, type: "lowpass", f0: 2500, f1: 280, q: 0.8, rnd: o.rnd }));
++  if (mvp) end = max(end, tone(c, out, { type: "sine", f0: 95 * o.pitch, f1: 38 * o.pitch, t, dur: 0.6, peak: 0.4 }));
++  return end;
++};
++
++const coin: SfxDef["play"] = (c, out, t, o) =>
++  max(tone(c, out, { type: "sine", f0: 1319 * o.pitch, t, dur: 0.07, peak: 0.2 }),
++    tone(c, out, { type: "sine", f0: 1976 * o.pitch, t: t + 0.06, dur: 0.18, peak: 0.2 }),
++    tone(c, out, { type: "triangle", f0: 3951 * o.pitch, t: t + 0.06, dur: 0.1, peak: 0.05 }));
++
++const crit: SfxDef["play"] = (c, out, t, o) =>
++  max(tone(c, out, { type: "sawtooth", f0: 1500 * o.pitch, f1: 2400 * o.pitch, t, dur: 0.08, peak: 0.16, lp: 5000 }),
++    tone(c, out, { type: "sine", f0: 3000 * o.pitch, t, dur: 0.13, peak: 0.1 }));
++
++const levelUp: SfxDef["play"] = (c, out, t, o) => {
++  let end = t;
++  [72, 76, 79, 84, 88].forEach((m, i) => {
++    end = max(end,
++      tone(c, out, { type: "sine", f0: midiToFreq(m) * o.pitch, t: t + i * 0.07, dur: 0.5, peak: 0.2 }),
++      tone(c, out, { type: "triangle", f0: midiToFreq(m + 12) * o.pitch, t: t + i * 0.07, dur: 0.25, peak: 0.06 }));
++  });
++  return max(end, noiseHit(c, out, { t: t + 0.2, dur: 0.5, peak: 0.04, type: "highpass", f0: 7000, q: 0.5, rnd: o.rnd }));
++};
++
++const ability: SfxDef["play"] = (c, out, t, o) =>
++  max(noiseHit(c, out, { t, dur: 0.32, peak: 0.2, type: "bandpass", f0: 250 * o.pitch, f1: 2600 * o.pitch, q: 1.2, attack: 0.05, rnd: o.rnd }),
++    tone(c, out, { type: "sine", f0: 220 * o.pitch, f1: 880 * o.pitch, t, dur: 0.3, peak: 0.14, attack: 0.06 }));
++
++/** Vitória de mapa: fanfarra curta de 5 notas sobre um pad suave. */
++const mapClear: SfxDef["play"] = (c, out, t, o) => {
++  let end = t;
++  [67, 72, 76, 79, 84].forEach((m, i) => {
++    const last = i === 4;
++    end = max(end,
++      tone(c, out, { type: "triangle", f0: midiToFreq(m) * o.pitch, t: t + i * 0.12, dur: last ? 0.9 : 0.22, peak: 0.2, attack: 0.006 }),
++      tone(c, out, { type: "sine", f0: midiToFreq(m + 12) * o.pitch, t: t + i * 0.12, dur: last ? 0.7 : 0.18, peak: 0.07 }));
++  });
++  end = max(end,
++    tone(c, out, { type: "sine", f0: midiToFreq(60) * o.pitch, t, dur: 1.4, peak: 0.12, attack: 0.25 }),
++    tone(c, out, { type: "sine", f0: midiToFreq(67) * o.pitch, t, dur: 1.4, peak: 0.1, attack: 0.25 }));
++  return end;
++};
++
++export const SFX: Record<SfxId, SfxDef> = {
++  uiClick:    { play: uiClick,    cooldownMs: 40,  maxVoices: 3, gain: 1.74, priority: 1 },
++  uiOpen:     { play: uiOpen,     cooldownMs: 120, maxVoices: 2, gain: 1.77,  priority: 1 },
++  uiClose:    { play: uiClose,    cooldownMs: 120, maxVoices: 2, gain: 2.01,  priority: 1 },
++  uiError:    { play: uiError,    cooldownMs: 250, maxVoices: 2, gain: 1.46,  priority: 1 },
++  upgrade:    { play: upgrade,    cooldownMs: 120, maxVoices: 2, gain: 1.79,  priority: 1 },
++  mission:    { play: mission,    cooldownMs: 150, maxVoices: 2, gain: 1.33,  priority: 1 },
++  capsule:    { play: capsule,    cooldownMs: 200, maxVoices: 2, gain: 1.64, priority: 2 },
++  bombPlant:  { play: bombPlant,  cooldownMs: 70,  maxVoices: 3, gain: 2.20,  priority: 0 },
++  fuse:       { play: fuse,       cooldownMs: 260, maxVoices: 2, gain: 2.78,  priority: 0 },
++  explosion:  { play: explosion,  cooldownMs: 140, maxVoices: 3, gain: 1.95, priority: 2, duck: { amount: 0.45, ms: 380 } },
++  blockHit:   { play: blockHit,   cooldownMs: 70,  maxVoices: 3, gain: 2.11,  priority: 0 },
++  blockBreak: { play: blockBreak, cooldownMs: 90,  maxVoices: 3, gain: 2.94,  priority: 0 },
++  chestHit:   { play: chestHit,   cooldownMs: 70,  maxVoices: 3, gain: 2.14, priority: 0 },
++  chestOpen:  { play: chestOpen,  cooldownMs: 80,  maxVoices: 3, gain: 1.39,  priority: 2 },
++  enemyHit:   { play: enemyHit,   cooldownMs: 70,  maxVoices: 3, gain: 2.66, priority: 0 },
++  enemyDeath: { play: enemyDeath, cooldownMs: 100, maxVoices: 2, gain: 3.31,  priority: 1 },
++  coin:       { play: coin,       cooldownMs: 90,  maxVoices: 2, gain: 1.63,  priority: 1 },
++  crit:       { play: crit,       cooldownMs: 100, maxVoices: 2, gain: 3.00,  priority: 0 },
++  levelUp:    { play: levelUp,    cooldownMs: 200, maxVoices: 2, gain: 1.42,  priority: 2 },
++  ability:    { play: ability,    cooldownMs: 130, maxVoices: 2, gain: 2.06, priority: 1 },
++  mapClear:   { play: mapClear,   cooldownMs: 800, maxVoices: 1, gain: 1.36, priority: 2, duck: { amount: 0.5, ms: 1400 } },
++};
++
++export const SFX_IDS = Object.keys(SFX) as SfxId[];
+--- a/client/src/scenes/FarmScene.ts
++++ b/client/src/scenes/FarmScene.ts
+@@ -1,5 +1,5 @@
+ import Phaser from "phaser";
+-import { RARITIES, Rarity, HeroData, store, addReward, addEnemyReward, mapState, track, levelMult, REWARD_SCALE, bombDamage, bumpStat } from "../state";
++import { RARITIES, RARITY_ORDER, Rarity, HeroData, store, addReward, addEnemyReward, mapState, track, levelMult, REWARD_SCALE, bombDamage, bumpStat } from "../state";
+ import { makeTextures } from "../art";
+ import { MAPS, COLS, ROWS, MapDef, INSTANCES_PER_MAP, chestDropChance, blockHp, chestHpMult, enemyHp, mvpHp, hasMvp, mapProgress } from "../maps";
+ import type { AbilityContext, AbilityDef, AbilityRuntime, BomberClass, CellTarget, WorldView } from "../game/bomberTypes";
+@@ -10,6 +10,7 @@
+ import { FxPool } from "../game/bomberFx";
+ import { planExplosion } from "../game/bomberExplosion";
+ import { SPARK_MULT, getFxLevel } from "../game/fxSettings";
++import { audio } from "../audio/audioEngine";
+ 
+ const T = 32;
+ const HERO_SCALE = 1.5; // tamanho dos operadores em campo
+@@ -22,11 +23,14 @@
+ 
+ const DIRS: [number, number][] = [[1, 0], [-1, 0], [0, 1], [0, -1]];
+ const SPAWNS: [number, number][] = [[0, 0], [COLS - 1, 0], [0, ROWS - 1], [COLS - 1, ROWS - 1], [14, 0], [14, ROWS - 1]];
++const RARITY_INDEX = Object.fromEntries(RARITY_ORDER.map((r, i) => [r, i])) as Record<Rarity, number>;
+ const key = (x: number, y: number) => `${x},${y}`;
+ const inBounds = (x: number, y: number) => x >= 0 && y >= 0 && x < COLS && y < ROWS;
+ const CLASS_COLOR: Record<BomberClass, number> = { lyra: 0x55ffb0, kai: 0xffa94d, titan: 0xff9a3c, vex: 0x39e6ff, kira: 0xdfe8ff, jax: 0xff3fd0, orion: 0xfff1b8, aeon: 0x7dffe9 };
+ const CLASS_CSS: Record<BomberClass, string> = { lyra: "#55ffb0", kai: "#ffc27a", titan: "#ffb15a", vex: "#7df0ff", kira: "#dfe8ff", jax: "#ff9af0", orion: "#fff1b8", aeon: "#9ffff0" };
+ const POSE_ATTACK = 4, POSE_BOMB = 5;
++// Altura do som da habilidade por classe (so identidade sonora; nao afeta a jogabilidade).
++const CLASS_PITCH: Record<BomberClass, number> = { lyra: 1.25, kai: 1, titan: 0.7, vex: 1.5, kira: 1.4, jax: 1.1, orion: 0.9, aeon: 1.2 };
+ 
+ interface Runtime {
+   data: HeroData; gx: number; gy: number;
+@@ -296,6 +300,8 @@
+     if (!this.enemies.includes(e)) return;
+     e.hp -= dmg;
+     if (e.hp <= 0) {
++      audio.play("enemyDeath", { level: e.mvp ? 1 : 0 });
++      audio.play("coin");
+       addEnemyReward(e.reward, owner);
+       bumpStat(owner, "enemies");
+       const [cx, cy] = [e.sprite.x, e.sprite.y];
+@@ -307,6 +313,7 @@
+       this.viewCache = null;
+       return;
+     }
++    audio.play("enemyHit");
+     e.barBg.setVisible(true);
+     e.barFg.setVisible(true);
+     e.barFg.width = 26 * (e.hp / e.maxHp);
+@@ -373,6 +380,7 @@
+     const stuck = this.idle >= 40 && this.bombs.size === 0;
+     const cleared = this.blocksLeft === 0 && this.chests.size === 0 && this.bombs.size === 0 && this.enemies.length === 0;
+     if (cleared || stuck) {
++      if (cleared) audio.play("mapClear"); // so quando o mapa foi limpo de verdade (nao no "destravar")
+       this.idle = 0;
+       if (mapState.auto) {
+         if (mapState.instance < INSTANCES_PER_MAP) mapState.instance++; // sobe de instancia no mesmo mapa
+@@ -558,6 +566,7 @@
+ 
+   private abilityFx(h: Runtime, def: AbilityDef) {
+     const x = h.sprite.x, y = h.sprite.y;
++    audio.play("ability", { pitch: CLASS_PITCH[h.cls] });
+     this.fx.image({ texture: "fx_ring", x, y: y + 8, tint: CLASS_COLOR[h.cls], scale: 0.5, toScale: 1.7, alpha: 0.9, duration: 450, depth: 3.6, add: true });
+     this.fx.text({ x, y: y - 13 * HERO_SCALE - 16, text: def.name, color: CLASS_CSS[h.cls], size: 10, rise: 14, duration: 900 });
+   }
+@@ -598,6 +607,7 @@
+ 
+   private levelUpFx(h: Runtime) {
+     this.updatePips(h);
++    audio.play("levelUp");
+     const x = h.sprite.x, y = h.sprite.y;
+     this.fx.image({ texture: "fx_ring", x, y: y + 6, tint: 0xffd24a, scale: 0.4, toScale: 1.9, duration: 700, depth: 3.6, add: true });
+     this.fx.image({ texture: "fx_star", x, y: y - 10, tint: 0xfff3b0, scale: 0.3, toScale: 0.8, duration: 700, dy: -12, depth: 6, add: true });
+@@ -651,6 +661,7 @@
+     h.sprite.setFlipX(c.tx < h.gx);
+     this.fx.image({ texture: "fx_slash", x: cx, y: cy, tint: hit.finisher ? 0xffd24a : crit ? 0xffffff : 0xff7af0, scale: crit ? 0.8 : 0.55, toScale: crit ? 1.3 : 1, alpha: 0.95, duration: 220, angle: ang - 45, depth: 5, add: true });
+     if (crit) {
++      audio.play("crit");
+       bumpStat(d, "crits");
+       this.fx.image({ texture: "fx_star", x: cx, y: cy - 6, tint: 0xfff3b0, scale: 0.4, toScale: 0.9, duration: 350, depth: 6, add: true });
+       this.fx.text({ x: cx, y: cy - 10, text: "CRÍTICO", color: "#fff3b0", size: 11, rise: 18 });
+@@ -666,6 +677,7 @@
+     if (this.chests.get(key(x, y)) !== chest) return;
+     chest.hp -= dmg;
+     if (chest.hp <= 0) { this.openChest(owner, x, y, chest); return; }
++    audio.play("chestHit");
+     chest.barBg.setVisible(true);
+     chest.barFg.setVisible(true);
+     chest.barFg.width = 26 * (chest.hp / chest.maxHp);
+@@ -677,6 +689,7 @@
+   private openChest(owner: HeroData, x: number, y: number, chest: Chest) {
+     const base = RARITIES[chest.rarity].chest;
+     const value = Math.round(base * RARITIES[owner.rarity].mult * owner.chestMult * levelMult(owner) * (1 + owner.power * 0.05) * REWARD_SCALE);
++    audio.play("chestOpen", { rarity: RARITY_INDEX[chest.rarity] });
+     addReward(value, owner, base);
+     bumpStat(owner, "chests");
+     this.chests.delete(key(x, y));
+@@ -702,6 +715,7 @@
+     if (!spendStamina(d, BALANCE.bombCost * m.staminaCostMult)) { h.sleeping = true; return; }
+     consumeArmed(h.ab); // Impacto Sismico vale para esta bomba
+     track.bomb();
++    audio.play("bombPlant");
+     const sprite = this.add.image(h.gx * T + T / 2, h.gy * T + T / 2, "bomb").setDepth(3).setScale(0.2);
+     if (snap.splash > 0) sprite.setTint(0xffb15a);
+     // "pop" ao plantar e so entao o pulso do pavio (explode() mata todos os tweens da bomba)
+@@ -715,6 +729,7 @@
+     this.time.delayedCall(Math.max(0, BALANCE.bombFuseMs - 500), () => {
+       if (this.bombs.get(k) !== bomb || !bomb.sprite.active) return;
+       bomb.sprite.setTint(0xff5a3a);
++      audio.play("fuse");
+       this.tweens.add({ targets: bomb.sprite, alpha: 0.55, duration: 70, yoyo: true, repeat: -1 });
+     });
+     this.viewCache = null;
+@@ -747,6 +762,7 @@
+     if (bh) { bh.barBg?.destroy(); bh.barFg?.destroy(); this.blocksHp.delete(key(x, y)); }
+     this.blocksLeft--;
+     this.viewCache = null;
++    audio.play("blockBreak");
+     track.block();
+     if (owner) bumpStat(owner, "blocks");
+     this.burst(cx, cy, this.map.crate, 8, false);
+@@ -773,6 +789,7 @@
+       b.barFg.setVisible(true);
+       b.barFg.width = 22 * (b.hp / b.maxHp);
+     }
++    audio.play("blockHit");
+     const sprite = this.blockSprites[y][x];
+     if (sprite) { sprite.setScale(1); this.tweens.add({ targets: sprite, scale: 1.1, duration: 70, yoyo: true }); }
+     this.burst(x * T + T / 2, y * T + T / 2, this.map.crate, 3, false);
+@@ -794,6 +811,7 @@
+     // so visual: o fogo corre pelas celulas ja calculadas acima (nao decide dano nem colisao)
+     const plan = planExplosion({ cells, gx: bomb.gx, gy: bomb.gy, range: bomb.snap.range, splash: bomb.snap.splash, tile: T, level: getFxLevel(), rng: Math.random });
+     this.cameras.main.shake(plan.shake.duration, plan.shake.intensity);
++    audio.play("explosion", { level: Math.min(1, (bomb.snap.range + bomb.snap.splash) / 6) }); // so som: dano/alcance ja foram decididos acima
+     for (const st of plan.steps) this.fx.image(st);
+     for (const [x, y] of cells) {
+       const bh = this.blocksHp.get(key(x, y));
+--- a/client/src/main.ts
++++ b/client/src/main.ts
+@@ -11,6 +11,17 @@
+ import type { Modifiers } from "./game/bomberTypes";
+ import { connect, requestClaim } from "./wallet";
+ import { FX_LABELS, getFxLevel, setFxLevel } from "./game/fxSettings";
++import { audio } from "./audio/audioEngine";
++import { getAudioPrefs, onAudioPrefs, setAudioPrefs, type AudioPrefs } from "./audio/audioSettings";
++
++// Audio: o navegador so libera o som depois de um gesto do jogador; o primeiro clique/toque/tecla liga tudo.
++// O motor fica fora da cena do jogo (um unico contexto, uma unica musica) e vale ate para os menus.
++audio.installAutoUnlock();
++audio.installLifecycle();
++document.addEventListener("click", (e) => {
++  const b = (e.target as Element | null)?.closest?.("button");
++  if (b && !(b as HTMLButtonElement).disabled && b.id !== "sound-btn" && b.id !== "modal-close") audio.play("uiClick");
++});
+ 
+ new Phaser.Game({
+   type: Phaser.AUTO,
+@@ -134,12 +145,16 @@
+ 
+     const upsRow = el("div", "ups");
+     const work = el("button", "up");
+-    work.onclick = () => { const err = setWorking(h, !isWorking(h)); if (err) toast(err); };
++    work.onclick = () => { const err = setWorking(h, !isWorking(h)); if (err) { audio.play("uiError"); toast(err); } };
+     upsRow.append(work);
+     const ups = {} as Record<UpKey, HTMLButtonElement>;
+     for (const u of UPS) {
+       const b = el("button", "up");
+-      b.onclick = () => toast(upgrade(h, u.key) ? `${h.name}: ${u.label} nível ${h.up[u.key]}` : "$BOMBERSI insuficientes ou nível máximo");
++      b.onclick = () => {
++        const ok = upgrade(h, u.key);
++        audio.play(ok ? "upgrade" : "uiError");
++        toast(ok ? `${h.name}: ${u.label} nível ${h.up[u.key]}` : "$BOMBERSI insuficientes ou nível máximo");
++      };
+       ups[u.key] = b;
+       upsRow.append(b);
+     }
+@@ -193,7 +208,11 @@
+     bar.append(fill);
+     const txt = el("div", "muted small");
+     const btn = el("button", "up", "Resgatar");
+-    btn.onclick = () => toast(claimMission(m.id) ? `+${fmt(m.reward)} $BOMBERSI resgatados` : "Missão ainda não concluída");
++    btn.onclick = () => {
++      const ok = claimMission(m.id);
++      audio.play(ok ? "mission" : "uiError");
++      toast(ok ? `+${fmt(m.reward)} $BOMBERSI resgatados` : "Missão ainda não concluída");
++    };
+     const box = el("div");
+     box.append(el("strong", "", `${m.label} · +${fmt(m.reward)}`), bar, txt);
+     li.append(box, btn);
+@@ -336,7 +355,11 @@
+ // ---------- hub (menu inferior) ----------
+ const modal = $("modal");
+ const modalBody = $("modal-body");
+-function closeModal() { modal.hidden = true; liveUpdate = null; hubBtns.forEach((b) => b.classList.remove("on")); }
++function closeModal() {
++  if (!modal.hidden) audio.play("uiClose");
++  audio.setMood("field");
++  modal.hidden = true; liveUpdate = null; hubBtns.forEach((b) => b.classList.remove("on"));
++}
+ // theme dá a cada seção do hub sua própria cor de destaque (ver data-theme no CSS); icon repete o emblema do botão do hub.
+ function openModal(title: string, build: (body: HTMLElement) => void, live?: () => void, theme = "", icon = "") {
+   modal.dataset.theme = theme;
+@@ -353,6 +376,8 @@
+   build(modalBody);
+   liveUpdate = live ?? null;
+   modal.hidden = false;
++  audio.play("uiOpen");
++  audio.setMood("menu");
+   $("modal-close").focus();
+   liveUpdate?.(); // evita o modal abrir com valores vazios por 400 ms
+ }
+@@ -399,10 +424,11 @@
+   };
+   const buy = (n: number) => {
+     const r = buyCapsule(n);
+-    if (typeof r === "string") { toast(r); return; }
++    if (typeof r === "string") { audio.play("uiError"); toast(r); return; }
+     results = r;
+     showResults();
+     const best = sortOps(r)[0];
++    audio.play("capsule", { rarity: RARITY_ORDER.indexOf(best.rarity) });
+     toast(n === 1 ? `Novo operador: ${best.name} (${RARITIES[best.rarity].label})` : `5 novos operadores! Melhor: ${best.name} (${RARITIES[best.rarity].label})`);
+   };
+   b1.onclick = () => buy(1);
+@@ -444,7 +470,7 @@
+       const own = el("b"), occ = el("b");
+       const buy = el("button", "", L.price === null ? "Em breve · $ASG" : `Comprar · ${fmt(L.price)} $BOMBERSI`);
+       buy.disabled = L.price === null;
+-      buy.onclick = () => { const e = buyLodging(kind); toast(e ?? `${L.label} comprado`); };
++      buy.onclick = () => { const e = buyLodging(kind); audio.play(e ? "uiError" : "upgrade"); toast(e ?? `${L.label} comprado`); };
+       const r1 = kv("Capacidade", `${L.cap} operadores`), r2 = kv("Recuperação", `${Math.round(L.rate * 60)}/min`);
+       const r3 = el("div", "kv"); r3.append(el("span", "muted", "Você tem"), own);
+       const r4 = el("div", "kv"); r4.append(el("span", "muted", "Vagas ocupadas"), occ);
+@@ -466,7 +492,7 @@
+     const bstat = el("b");
+     const bbtn = el("button");
+     bbtn.onclick = () => {
+-      if (!store.butler.owned) { const e = buyButler(); toast(e ?? "Droide Zelador ativado"); } else toggleButler();
++      if (!store.butler.owned) { const e = buyButler(); audio.play(e ? "uiError" : "upgrade"); toast(e ?? "Droide Zelador ativado"); } else toggleButler();
+     };
+     const brow = el("div", "kv"); brow.append(el("span", "muted", "Estado"), bstat);
+     bc.append(
+@@ -571,6 +597,40 @@
+     paint();
+     fxRow.append(el("span", "muted", "Efeitos visuais"), seg);
+     body.append(fxRow, el("p", "note", "Baixo reduz fumaça, fagulhas e o tremor de tela nas explosões. Vale para este aparelho."));
++    // áudio: ligar/desligar e volume de música e de efeitos (preferência do aparelho, fora do save do jogo)
++    body.append(el("div", "muted small audio-head", "Áudio"));
++    const audioRow = (label: string, on: "music" | "sfx", vol: "musicVol" | "sfxVol", sample: () => void) => {
++      const row = el("div", "audio-row");
++      const top = el("div", "kv");
++      const tog = el("button", "chip");
++      const pct = el("b", "audio-pct");
++      top.append(el("span", "muted", label), tog);
++      const range = el("input", "audio-range");
++      range.type = "range"; range.min = "0"; range.max = "100"; range.step = "5";
++      range.setAttribute("aria-label", `Volume: ${label.toLowerCase()}`);
++      range.oninput = () => { setAudioPrefs({ [vol]: Number(range.value) / 100 } as Partial<AudioPrefs>); paint(); };
++      range.onchange = sample; // ao soltar o controle, toca uma amostra no novo volume
++      tog.onclick = () => { setAudioPrefs({ [on]: !getAudioPrefs()[on] } as Partial<AudioPrefs>); void audio.unlock(); paint(); };
++      const paint = () => {
++        const p = getAudioPrefs();
++        tog.textContent = p[on] ? "Ligada" : "Desligada";
++        tog.classList.toggle("on", p[on]);
++        tog.setAttribute("aria-pressed", String(p[on]));
++        range.value = String(Math.round(p[vol] * 100));
++        range.disabled = !p[on];
++        pct.textContent = `${Math.round(p[vol] * 100)}%`;
++      };
++      paint();
++      const line = el("div", "audio-line");
++      line.append(range, pct);
++      row.append(top, line);
++      return row;
++    };
++    body.append(
++      audioRow("Música", "music", "musicVol", () => undefined),
++      audioRow("Efeitos sonoros", "sfx", "sfxVol", () => audio.play("coin")),
++      el("p", "note", "O navegador só libera o som depois do seu primeiro clique ou toque. A música é gerada pelo próprio jogo (sem arquivos) e as escolhas ficam salvas neste aparelho."),
++    );
+     const reset = el("button", "danger", "Apagar progresso deste navegador");
+     reset.style.marginTop = "14px";
+     reset.onclick = () => {
+@@ -582,6 +642,40 @@
+     body.append(reset);
+   }, undefined, "settings", "⚙️"),
+ };
++// botão de som do cabeçalho: "Ativar som" (pulsando) até o navegador liberar o áudio; depois liga/desliga tudo de uma vez
++const soundBtn = $("sound-btn") as HTMLButtonElement;
++const soundIc = soundBtn.querySelector(".ic") as HTMLElement, soundLbl = soundBtn.querySelector(".lbl") as HTMLElement;
++function paintSound() {
++  const p = getAudioPrefs(), st = audio.status;
++  const wants = p.music || p.sfx, running = st === "running";
++  const on = running && wants;
++  soundBtn.classList.toggle("needs-unlock", wants && !running && st !== "unsupported");
++  soundBtn.disabled = st === "unsupported";
++  soundIc.textContent = on ? "🔊" : "🔇";
++  soundLbl.textContent = st === "unsupported" ? "Sem áudio" : wants && !running ? "Ativar som" : on ? "Som" : "Mudo";
++  soundBtn.setAttribute("aria-pressed", String(on));
++  soundBtn.setAttribute("aria-label", on ? "Som ligado. Tocar para silenciar" : "Som desligado. Tocar para ativar");
++}
++// O primeiro gesto da página já libera o áudio (pointerdown/keydown), ANTES do "click". Por isso o botão guarda o estado
++// de quando foi pressionado: se estava travado, este toque é "ativar" e não "silenciar".
++let pressedLocked = false;
++const notePress = () => { pressedLocked = audio.status !== "running"; };
++soundBtn.addEventListener("pointerdown", notePress, true);
++soundBtn.addEventListener("keydown", notePress, true);
++soundBtn.onclick = async () => {
++  const p = getAudioPrefs();
++  const wasLocked = pressedLocked || audio.status !== "running";
++  pressedLocked = false;
++  if (wasLocked) {
++    if (!p.music && !p.sfx) setAudioPrefs({ music: true, sfx: true });
++    if (await audio.unlock()) audio.play("uiOpen");
++  } else if (p.music || p.sfx) setAudioPrefs({ music: false, sfx: false });
++  else setAudioPrefs({ music: true, sfx: true });
++  paintSound();
++};
++audio.onStatus(paintSound);
++onAudioPrefs(paintSound);
++paintSound();
+ const hubBtns = Array.from(document.querySelectorAll<HTMLButtonElement>("#hub button"));
+ hubBtns.forEach((b) => {
+   b.onclick = () => {
+--- a/client/index.html
++++ b/client/index.html
+@@ -51,6 +51,24 @@
+       button:focus-visible { outline: 3px solid #7dd3ff; outline-offset: 2px; }
+       button:disabled { opacity: .5; cursor: not-allowed; filter: saturate(.5); }
+       #connect { background: linear-gradient(180deg, #12304f, #0b1d33); color: #bfe6ff; border-color: var(--blue); box-shadow: inset 0 1px 0 #7dd3ff33, 0 0 12px #39b6ff33; }
++      /* ===== áudio: botão do cabeçalho e controles das configurações ===== */
++      #sound-btn { display: inline-flex; align-items: center; gap: 6px; min-height: 38px; background: linear-gradient(180deg, #12304f, #0b1d33); color: #bfe6ff; border-color: var(--blue); box-shadow: inset 0 1px 0 #7dd3ff33, 0 0 10px #39b6ff22; }
++      #sound-btn .ic { font-size: 1.05rem; line-height: 1; }
++      #sound-btn[aria-pressed="false"]:not(.needs-unlock) { color: var(--muted); border-color: var(--line2); box-shadow: none; }
++      #sound-btn.needs-unlock { border-color: var(--amber); color: var(--gold-hi); animation: soundhint 1.8s ease-in-out infinite; }
++      @keyframes soundhint { 0%, 100% { box-shadow: 0 0 0 0 #ffb23d00, inset 0 1px 0 #ffffff22; } 50% { box-shadow: 0 0 14px 3px #ffb23d66, inset 0 1px 0 #ffffff22; } }
++      @media (max-width: 520px) {
++        #sound-btn { min-height: 44px; min-width: 44px; justify-content: center; }
++        #sound-btn:not(.needs-unlock) .lbl { display: none; } /* depois de ativado, só o ícone (o rótulo continua no aria-label) */
++      }
++      #modal .audio-head { margin-top: 14px; padding-top: 10px; border-top: 1px solid var(--line); text-transform: uppercase; letter-spacing: .08em; }
++      #modal .audio-row { padding: 6px 0 4px; }
++      #modal .audio-row .kv { border-bottom: 0; align-items: center; }
++      #modal .audio-line { display: flex; align-items: center; gap: 10px; }
++      #modal .audio-range { flex: 1; min-width: 0; height: 28px; accent-color: var(--gold); background: transparent; }
++      #modal .audio-range:disabled { opacity: .45; }
++      #modal .audio-range:focus-visible { outline: 3px solid #7dd3ff; outline-offset: 2px; }
++      #modal .audio-pct { min-width: 4ch; text-align: right; color: var(--gold-hi); font-variant-numeric: tabular-nums; }
+       button.ghost { background: transparent; color: var(--text); border: 1px solid var(--line2); box-shadow: none; width: 100%; margin-top: 12px; }
+       button.ghost:hover:not(:disabled) { border-color: var(--gold); color: var(--gold-hi); }
+       .maps { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 16px; }
+@@ -167,7 +185,7 @@
+       }
+       @media (prefers-reduced-motion: reduce) {
+         .bar div, #toast, button { transition: none; }
+-        .stat.gain, #modal .panel { animation: none; }
++        .stat.gain, #modal .panel, #sound-btn.needs-unlock { animation: none; }
+       }
+     </style>
+   </head>
+@@ -196,6 +214,7 @@
+         <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="2" y="6" width="20" height="15" rx="2" fill="#060b17" stroke="#d4a537" stroke-width="1.2"/><rect x="3.5" y="7.5" width="17" height="12" fill="#1c2c52"/><rect x="3.5" y="7.5" width="17" height="3.2" fill="#2f4880"/><rect x="10.5" y="11" width="3" height="5" rx=".6" fill="#f2c24a"/></svg>
+         <b id="chests">0</b>
+       </span>
++      <button id="sound-btn" type="button" aria-pressed="false" aria-label="Ativar som" title="Som: tocar para ligar ou desligar"><span class="ic" aria-hidden="true">🔇</span><span class="lbl">Ativar som</span></button>
+       <button id="connect">Conectar carteira</button>
+       <button id="claim" disabled>Cofre · Sacar</button>
+     </header>
+--- /dev/null
++++ b/client/test/audio.test.ts
+@@ -0,0 +1,383 @@
++import { test, beforeEach } from "node:test";
++import assert from "node:assert/strict";
++import { AudioEngine, createBuses, limiterCurve } from "../src/audio/audioEngine";
++import { AUDIO_DEFAULTS, AUDIO_KEY, getAudioPrefs, onAudioPrefs, resetAudioPrefsCache, sanitizeAudioPrefs, setAudioPrefs, volToGain } from "../src/audio/audioSettings";
++import { BPM, LOOP_STEPS, MusicPlayer, STEP_SEC, STEPS_PER_BAR, hash32, planStep, type Timer } from "../src/audio/music";
++import { SFX, SFX_IDS, midiToFreq } from "../src/audio/synth";
++
++// ---------- armazenamento falso (as preferências usam localStorage) ----------
++const mem = new Map<string, string>();
++(globalThis as any).localStorage = {
++  getItem: (k: string) => mem.get(k) ?? null,
++  setItem: (k: string, v: string) => void mem.set(k, v),
++  removeItem: (k: string) => void mem.delete(k),
++};
++
++// ---------- AudioContext falso: conta o que foi criado e confere se tudo que começou também termina ----------
++const param = (v = 0) => ({ value: v, setValueAtTime() {}, linearRampToValueAtTime() {}, exponentialRampToValueAtTime() {}, setTargetAtTime() {}, cancelScheduledValues() {} });
++class FakeCtx {
++  currentTime = 0; state: "suspended" | "running" | "closed" = "suspended"; sampleRate = 44100; onstatechange: (() => void) | null = null;
++  destination = { connect() {}, disconnect() {} };
++  started = 0; stopped = 0; nodes = 0; suspendCalls = 0; resumeCalls = 0; failOsc = false;
++  private node<T extends object>(extra: T) { this.nodes++; return { connect: (n: unknown) => n, disconnect() {}, ...extra }; }
++  createGain() { return this.node({ gain: param(1) }); }
++  createOscillator() {
++    if (this.failOsc) throw new Error("falha simulada");
++    const self = this;
++    return this.node({ type: "sine", frequency: param(440), detune: param(0), onended: null as null | (() => void), addEventListener() {}, start() { self.started++; }, stop() { self.stopped++; } });
++  }
++  createBiquadFilter() { return this.node({ type: "lowpass", frequency: param(1000), Q: param(1) }); }
++  createBufferSource() { const self = this; return this.node({ buffer: null, onended: null as null | (() => void), start() { self.started++; }, stop() { self.stopped++; } }); }
++  createBuffer(_c: number, len: number) { return { getChannelData: () => new Float32Array(len) }; }
++  createDynamicsCompressor() { return this.node({ threshold: param(), knee: param(), ratio: param(), attack: param(), release: param() }); }
++  createDelay() { return this.node({ delayTime: param() }); }
++  createWaveShaper() { return this.node({ curve: null, oversample: "none" }); }
++  resume() { this.resumeCalls++; this.state = "running"; this.onstatechange?.(); return Promise.resolve(); }
++  suspend() { this.suspendCalls++; this.state = "suspended"; this.onstatechange?.(); return Promise.resolve(); }
++  close() { this.state = "closed"; return Promise.resolve(); }
++}
++class FakeTimers implements Timer {
++  active = new Map<number, () => void>(); sets = 0; private n = 1;
++  set(fn: () => void) { const id = this.n++; this.sets++; this.active.set(id, fn); return id; }
++  clear(id: unknown) { this.active.delete(id as number); }
++  run() { [...this.active.values()].forEach((f) => f()); }
++}
++class FakeDoc {
++  hidden = false; handlers = new Map<string, (() => void)[]>();
++  addEventListener(e: string, f: () => void) { this.handlers.set(e, [...(this.handlers.get(e) ?? []), f]); }
++  removeEventListener(e: string, f: () => void) { this.handlers.set(e, (this.handlers.get(e) ?? []).filter((x) => x !== f)); }
++  fire(e: string) { (this.handlers.get(e) ?? []).forEach((f) => f()); }
++}
++
++function setup(opts: { prefs?: Partial<typeof AUDIO_DEFAULTS> } = {}) {
++  if (opts.prefs) setAudioPrefs(opts.prefs);
++  const ctx = new FakeCtx(), timers = new FakeTimers(), doc = new FakeDoc();
++  let made = 0;
++  let seed = 1; const rnd = () => { seed = (seed * 16807) % 2147483647; return seed / 2147483647; };
++  const engine = new AudioEngine({ createContext: () => { made++; return ctx as unknown as AudioContext; }, timers, doc: doc as any, rnd });
++  return { ctx, timers, doc, engine, made: () => made };
++}
++beforeEach(() => { mem.clear(); resetAudioPrefsCache(); });
++
++// ===================== preferências =====================
++test("áudio/prefs: padrões, ida e volta no armazenamento e fora do save do jogo", () => {
++  assert.deepEqual(getAudioPrefs(), AUDIO_DEFAULTS);
++  mem.set("bomber-idle:v1", "SAVE-DO-JOGADOR");
++  setAudioPrefs({ music: false, sfxVol: 0.25 });
++  resetAudioPrefsCache();
++  assert.deepEqual(getAudioPrefs(), { ...AUDIO_DEFAULTS, music: false, sfxVol: 0.25 });
++  assert.equal(mem.get("bomber-idle:v1"), "SAVE-DO-JOGADOR", "o save não pode ser tocado");
++  assert.ok(mem.has(AUDIO_KEY) && AUDIO_KEY !== "bomber-idle:v1");
++});
++
++test("áudio/prefs: valores inválidos, JSON quebrado e fora da faixa viram valores seguros", () => {
++  mem.set(AUDIO_KEY, "{isso nao e json");
++  assert.deepEqual(getAudioPrefs(), AUDIO_DEFAULTS);
++  assert.deepEqual(sanitizeAudioPrefs({ music: "sim", sfx: 1, musicVol: NaN, sfxVol: Infinity }), AUDIO_DEFAULTS);
++  assert.equal(sanitizeAudioPrefs({ musicVol: 9, sfxVol: -3 }).musicVol, 1);
++  assert.equal(sanitizeAudioPrefs({ musicVol: 9, sfxVol: -3 }).sfxVol, 0);
++  assert.deepEqual(sanitizeAudioPrefs(null), AUDIO_DEFAULTS);
++  assert.equal(setAudioPrefs({ musicVol: 5 }).musicVol, 1);
++});
++
++test("áudio/prefs: ouvintes são avisados, um que falha não derruba os outros, e dá para cancelar", () => {
++  const seen: number[] = [];
++  const off = onAudioPrefs(() => { throw new Error("ouvinte ruim"); });
++  const off2 = onAudioPrefs((p) => seen.push(p.musicVol));
++  setAudioPrefs({ musicVol: 0.2 });
++  off2();
++  setAudioPrefs({ musicVol: 0.3 });
++  off();
++  assert.deepEqual(seen, [0.2]);
++});
++
++test("áudio/prefs: sem localStorage o jogo segue com os padrões", () => {
++  const saved = (globalThis as any).localStorage;
++  (globalThis as any).localStorage = { getItem() { throw new Error("bloqueado"); }, setItem() { throw new Error("bloqueado"); } };
++  resetAudioPrefsCache();
++  assert.deepEqual(getAudioPrefs(), AUDIO_DEFAULTS);
++  assert.equal(setAudioPrefs({ sfx: false }).sfx, false); // vale na sessão
++  (globalThis as any).localStorage = saved;
++});
++
++test("áudio/volume: curva perceptual, 0 e 1 nos extremos", () => {
++  assert.equal(volToGain(0), 0);
++  assert.equal(volToGain(1), 1);
++  assert.equal(volToGain(0.5), 0.25);
++  assert.equal(volToGain(-4), 0);
++  assert.equal(volToGain(4), 1);
++});
++
++// ===================== motor =====================
++test("áudio/motor: sem Web Audio o jogo continua (nada lança erro, nada toca)", async () => {
++  const engine = new AudioEngine({ createContext: () => { throw new Error("sem AudioContext"); } });
++  assert.equal(await engine.unlock(), false);
++  assert.equal(engine.play("explosion"), false);
++  engine.setMood("menu"); engine.applyPrefs(); engine.handleVisibility(true);
++  assert.ok(["unsupported", "error"].includes(engine.status));
++  engine.dispose();
++});
++
++test("áudio/motor: antes do primeiro gesto nada toca e nenhum contexto existe", () => {
++  const { engine, made } = setup();
++  assert.equal(engine.play("uiClick"), false);
++  assert.equal(made(), 0);
++  assert.equal(engine.status, "idle");
++});
++
++test("áudio/motor: vários unlock() criam UM contexto e UMA música", async () => {
++  const { engine, timers, made, ctx } = setup();
++  const r = await Promise.all([engine.unlock(), engine.unlock(), engine.unlock()]);
++  await engine.unlock();
++  assert.deepEqual(r, [true, true, true]);
++  assert.equal(made(), 1);
++  assert.equal(engine.contextsCreated, 1);
++  assert.equal(timers.active.size, 1, "um único agendador de música");
++  assert.equal(timers.sets, 1);
++  assert.equal(engine.status, "running");
++  assert.ok(engine.musicRunning);
++  assert.equal(ctx.state, "running");
++});
++
++test("áudio/motor: música desligada nas preferências não agenda nada; ligar depois inicia uma vez só", async () => {
++  const { engine, timers } = setup({ prefs: { music: false } });
++  await engine.unlock();
++  assert.equal(timers.active.size, 0);
++  assert.equal(engine.musicRunning, false);
++  setAudioPrefs({ music: true });
++  setAudioPrefs({ music: true, musicVol: 0.9 });
++  assert.equal(timers.active.size, 1);
++  setAudioPrefs({ music: false });
++  assert.equal(timers.active.size, 0, "desligar a música cancela o agendador");
++  assert.equal(engine.musicRunning, false);
++});
++
++test("áudio/motor: efeitos desligados não criam nenhum nó novo", async () => {
++  const { engine, ctx } = setup({ prefs: { sfx: false } });
++  await engine.unlock();
++  const before = ctx.nodes;
++  for (const id of SFX_IDS) assert.equal(engine.play(id), false);
++  assert.equal(ctx.nodes, before);
++});
++
++test("áudio/motor: intervalo mínimo entre o mesmo efeito (rajada vira um som só)", async () => {
++  const { engine, ctx } = setup();
++  await engine.unlock();
++  assert.equal(engine.play("blockBreak"), true);
++  for (let i = 0; i < 20; i++) assert.equal(engine.play("blockBreak"), false);
++  ctx.currentTime += SFX.blockBreak.cooldownMs / 1000 + 0.001;
++  assert.equal(engine.play("blockBreak"), true);
++});
++
++test("áudio/motor: no máximo N vozes do mesmo efeito soando juntas", async () => {
++  const { engine, ctx } = setup();
++  await engine.unlock();
++  const max = SFX.explosion.maxVoices;
++  let played = 0;
++  for (let i = 0; i < max + 2; i++) { if (engine.play("explosion")) played++; ctx.currentTime += SFX.explosion.cooldownMs / 1000 + 0.001; }
++  assert.equal(played, max);
++  assert.ok(engine.activeVoices <= max);
++  ctx.currentTime += 5; // tudo acabou
++  assert.equal(engine.play("explosion"), true);
++  assert.equal(engine.activeVoices, 1, "vozes antigas são removidas e desconectadas");
++});
++
++test("áudio/motor: teto global de vozes e prioridade (enfeites saem primeiro, eventos grandes passam)", async () => {
++  const { engine, ctx } = setup();
++  await engine.unlock();
++  const ids = SFX_IDS.filter((i) => SFX[i].priority < 2 && SFX[i].maxVoices >= 2);
++  let ok = 0;
++  for (let round = 0; round < 6; round++) for (const id of ids) { if (engine.play(id)) ok++; ctx.currentTime += 0.011; }
++  assert.ok(engine.activeVoices <= 18 + 6, `teto global respeitado (${engine.activeVoices})`);
++  assert.ok(ok > 0);
++  // enfeites (prioridade 0) já são recusados quando há ~70% do teto; um evento importante ainda toca
++  ctx.currentTime += SFX.levelUp.cooldownMs / 1000;
++  assert.equal(engine.play("levelUp"), true);
++});
++
++test("áudio/motor: efeito que dá erro na síntese não derruba o jogo nem deixa nó solto", async () => {
++  const { engine, ctx } = setup();
++  await engine.unlock();
++  ctx.failOsc = true;
++  assert.doesNotThrow(() => engine.play("uiClick"));
++  assert.equal(engine.play("uiClick"), false);
++  assert.equal(engine.activeVoices, 0);
++});
++
++test("áudio/motor: aba escondida suspende, ao voltar retoma; sem ter tocado nada não retoma sozinho", async () => {
++  const { engine, ctx, doc } = setup();
++  engine.installLifecycle(doc as any, null);
++  engine.handleVisibility(true); // ainda sem contexto: nada acontece
++  await engine.unlock();
++  const resumes = ctx.resumeCalls;
++  doc.hidden = true; doc.fire("visibilitychange");
++  assert.equal(ctx.suspendCalls, 1);
++  assert.equal(ctx.state, "suspended");
++  assert.equal(engine.status, "suspended");
++  assert.equal(engine.play("explosion"), false, "escondido: nada soa");
++  assert.equal(engine.musicRunning, false, "escondido: o agendador para");
++  doc.hidden = false; doc.fire("visibilitychange");
++  assert.equal(ctx.resumeCalls, resumes + 1);
++  assert.equal(engine.status, "running");
++  assert.equal(engine.musicRunning, true);
++  doc.fire("visibilitychange"); // visível de novo sem ter pausado: não retoma duas vezes
++  assert.equal(ctx.resumeCalls, resumes + 1);
++});
++
++test("áudio/motor: primeiro gesto libera o som uma vez; som desligado de propósito não liga sozinho", async () => {
++  const a = setup();
++  a.engine.installAutoUnlock(a.doc as any);
++  a.engine.installAutoUnlock(a.doc as any); // idempotente
++  assert.equal(a.doc.handlers.get("pointerdown")!.length, 1);
++  a.doc.fire("pointerdown");
++  await new Promise((r) => setImmediate(r));
++  assert.equal(a.made(), 1);
++  assert.equal(a.doc.handlers.get("pointerdown")!.length, 0, "ouvintes removidos depois de liberar");
++
++  resetAudioPrefsCache(); mem.clear();
++  const b = setup({ prefs: { music: false, sfx: false } });
++  b.engine.installAutoUnlock(b.doc as any);
++  b.doc.fire("keydown");
++  await new Promise((r) => setImmediate(r));
++  assert.equal(b.made(), 0);
++});
++
++test("áudio/motor: mudar volume/ligar/desligar reage na hora; menu abafa a música; dispose limpa tudo", async () => {
++  const { engine, ctx, timers } = setup();
++  await engine.unlock();
++  setAudioPrefs({ sfxVol: 0.1, musicVol: 0 });
++  engine.setMood("menu"); engine.setMood("menu"); engine.setMood("field");
++  engine.dispose();
++  assert.equal(ctx.state, "closed");
++  assert.equal(timers.active.size, 0);
++  assert.equal(engine.activeVoices, 0);
++  assert.equal(engine.play("explosion"), false);
++});
++
++test("áudio/limitador: curva transparente em volume normal e nunca passa de 0,95", () => {
++  const k = limiterCurve(2049);
++  const at = (x: number) => k[Math.round(((x / 2 + 1) / 2) * (k.length - 1))];
++  assert.ok(Math.abs(at(0.3) - 0.3) < 0.003);
++  assert.ok(Math.abs(at(-0.5) + 0.5) < 0.003);
++  assert.ok(at(1) > 0.8 && at(1) < 0.95);
++  assert.ok(Math.max(...k) < 0.951 && Math.min(...k) > -0.951);
++  const ctx = new FakeCtx();
++  const b = createBuses(ctx as unknown as BaseAudioContext);
++  assert.ok(b.musicIn && b.sfxGain && b.master && b.comp);
++});
++
++// ===================== efeitos sonoros =====================
++test("áudio/efeitos: todos os 21 efeitos tocam, terminam no futuro e não deixam fonte sem parar", async () => {
++  assert.equal(SFX_IDS.length, 21);
++  const { engine, ctx } = setup();
++  await engine.unlock();
++  for (const id of SFX_IDS) {
++    const s0 = ctx.started, e0 = ctx.stopped;
++    assert.equal(engine.play(id, { rarity: 6, level: 1 }), true, id);
++    assert.ok(ctx.started > s0, `${id} cria fontes`);
++    assert.equal(ctx.started - s0, ctx.stopped - e0, `${id}: toda fonte iniciada é parada`);
++    ctx.currentTime += 3;
++  }
++});
++
++test("áudio/efeitos: raridade alta soa mais rica (mais notas) e o ajuste de altura é limitado", async () => {
++  const count = async (rarity: number) => { const { engine, ctx } = setup(); await engine.unlock(); const s = ctx.started; engine.play("chestOpen", { rarity }); return ctx.started - s; };
++  assert.ok((await count(7)) > (await count(0)));
++  const { engine } = setup();
++  await engine.unlock();
++  assert.equal(engine.play("coin", { pitch: 999, level: 99, rarity: 99, vol: 5 }), true); // valores absurdos são limitados, sem erro
++});
++
++test("áudio/efeitos: ganho de cada efeito é finito e positivo; frequências usadas são audíveis", () => {
++  for (const id of SFX_IDS) {
++    const d = SFX[id];
++    assert.ok(Number.isFinite(d.gain) && d.gain > 0, id);
++    assert.ok(d.cooldownMs >= 0 && d.maxVoices >= 1, id);
++  }
++  assert.ok(Math.abs(midiToFreq(69) - 440) < 1e-9);
++});
++
++// ===================== música =====================
++test("áudio/música: planStep é puro e determinístico", () => {
++  for (let s = 0; s < LOOP_STEPS * 2; s += 5) assert.deepEqual(planStep(s), planStep(s));
++  assert.equal(hash32(123), hash32(123));
++  assert.notEqual(hash32(1), hash32(2));
++});
++
++test("áudio/música: pad e baixo repetem a cada volta; os arpejos variam e fecham o ciclo em 4 voltas", () => {
++  const strip = (s: number, layers: string[]) => planStep(s).filter((n) => layers.includes(n.layer));
++  for (let s = 0; s < LOOP_STEPS; s++) assert.deepEqual(strip(s, ["pad", "bass"]), strip(s + LOOP_STEPS, ["pad", "bass"]), `passo ${s}`);
++  let diff = 0;
++  for (let s = 0; s < LOOP_STEPS; s++) { if (JSON.stringify(strip(s, ["arp"])) !== JSON.stringify(strip(s + LOOP_STEPS, ["arp"]))) diff++; }
++  assert.ok(diff > 0, "a segunda volta tem arpejos diferentes");
++  for (let s = 0; s < LOOP_STEPS; s++) assert.deepEqual(planStep(s), planStep(s + LOOP_STEPS * 4), `ciclo completo, passo ${s}`);
++});
++
++test("áudio/música: notas dentro de faixas seguras (graves audíveis, agudos suaves) e poucas por passo", () => {
++  let pads = 0, arps = 0, bass = 0;
++  for (let s = 0; s < LOOP_STEPS * 4; s++) {
++    const notes = planStep(s);
++    assert.ok(notes.length <= 9, `passo ${s} tem ${notes.length} notas`);
++    for (const n of notes) {
++      assert.ok(n.vel > 0 && n.vel <= 1 && n.steps >= 1);
++      if (n.layer === "bass") { bass++; assert.ok(n.freq >= 78 && n.freq <= 220, `baixo ${n.freq}`); }
++      if (n.layer === "pad") { pads++; assert.ok(n.freq >= 170 && n.freq <= 500, `pad ${n.freq}`); }
++      if (n.layer === "arp") { arps++; assert.ok(n.freq >= 290 && n.freq <= 1100, `arpejo ${n.freq}`); }
++    }
++  }
++  const bars = 4 * (LOOP_STEPS / STEPS_PER_BAR);
++  assert.equal(pads, bars * 4, "um acorde de 4 notas por compasso");
++  assert.ok(bass >= bars * 3);
++  const density = arps / (LOOP_STEPS * 4);
++  assert.ok(density > 0.05 && density < 0.3, `arpejos esparsos (${density.toFixed(2)} por passo)`);
++});
++
++test("áudio/música: o andamento é calmo e o loop dura ~25 s", () => {
++  assert.equal(BPM, 78);
++  assert.ok(LOOP_STEPS * STEP_SEC > 20 && LOOP_STEPS * STEP_SEC < 30);
++});
++
++test("áudio/música: o agendador antecipa só o necessário, não duplica e não acumula atraso", () => {
++  const ctx = new FakeCtx(); ctx.state = "running";
++  const timers = new FakeTimers();
++  const bus = { input: { connect() {}, disconnect() {} } as unknown as AudioNode };
++  const p = new MusicPlayer(ctx as unknown as BaseAudioContext, bus, timers);
++  p.start(); p.start(); p.start();
++  assert.equal(timers.active.size, 1, "start() repetido não cria outro agendador");
++  const first = p.currentStep;
++  assert.ok(first >= 1 && first <= Math.ceil(0.55 / STEP_SEC) + 1, `agenda ~0,4 s à frente (${first} passos)`);
++  timers.run(); timers.run();
++  assert.equal(p.currentStep, first, "sem o tempo avançar, não agenda de novo");
++  ctx.currentTime += 1;
++  timers.run();
++  assert.ok(p.currentStep > first);
++  // pausa longa (aba escondida): ao voltar não pode despejar uma rajada de notas atrasadas
++  ctx.state = "suspended"; timers.run();
++  const during = p.currentStep;
++  ctx.currentTime += 120; ctx.state = "running"; timers.run();
++  assert.ok(p.currentStep - during <= Math.ceil(0.6 / STEP_SEC) + 1, `sem rajada (${p.currentStep - during} passos)`);
++  const s0 = ctx.started, e0 = ctx.stopped;
++  p.stop(); p.stop();
++  assert.equal(timers.active.size, 0);
++  assert.equal(p.running, false);
++  assert.ok(ctx.started >= ctx.stopped && s0 >= 0 && e0 >= 0);
++});
++
++test("áudio/música: toda fonte de som agendada pela trilha também tem hora para parar", () => {
++  const ctx = new FakeCtx(); ctx.state = "running";
++  const timers = new FakeTimers();
++  const p = new MusicPlayer(ctx as unknown as BaseAudioContext, { input: { connect() {}, disconnect() {} } as unknown as AudioNode }, timers);
++  p.start();
++  for (let i = 0; i < 40; i++) { ctx.currentTime += 0.4; timers.run(); }
++  assert.ok(ctx.started > 100, "a trilha realmente agendou notas");
++  assert.equal(ctx.started, ctx.stopped, "nenhum oscilador fica tocando para sempre");
++});
++
++test("áudio/motor: vozes terminadas somem do contador mesmo sem novo play()", async () => {
++  const { engine, ctx } = setup();
++  await engine.unlock();
++  engine.play("explosion"); engine.play("capsule");
++  assert.equal(engine.activeVoices, 2);
++  ctx.currentTime += 10;
++  assert.equal(engine.activeVoices, 0);
++});
+--- a/client/test/smoke/scene-smoke.mts
++++ b/client/test/smoke/scene-smoke.mts
+@@ -17,6 +17,11 @@
+ const st = await import("../../src/state.ts");
+ const { FarmScene } = await import("../../src/scenes/FarmScene.ts");
+ const ab = await import("../../src/game/bomberAbilities.ts");
++// Espia o audio: conta cada som pedido pela cena (antes dos limites do motor) para conferir com as estatisticas do proprio jogo.
++const { audio } = await import("../../src/audio/audioEngine.ts");
++const sounds: Record<string, number> = {};
++const realPlay = audio.play.bind(audio);
++audio.play = ((id: any, o?: any) => { sounds[id] = (sounds[id] ?? 0) + 1; return realPlay(id, o); }) as typeof audio.play;
+ 
+ const timers: { at: number; cb: () => void }[] = [];
+ const loops: { every: number; next: number; cb: () => void }[] = [];
+@@ -70,5 +75,18 @@
+   fxImagesPooled: sc.fx.allImg.length, fxTextsPooled: sc.fx.allTxt.length, holo: sc.holo.length, statuses: [...statuses].sort(), stats,
+ }, null, 1));
+ assert.ok(st.store.chests <= chestsCreated, "nenhum bau pago mais de uma vez");
++// ---- audio x jogo: cada som corresponde a UM evento real (sem som duplicado, sem evento mudo) ----
++const sum = (k: string) => Object.values(stats).reduce((n: number, x: any) => n + (x[k] ?? 0), 0);
++console.log("sons pedidos pela cena:", JSON.stringify(sounds));
++assert.equal(sounds.chestOpen ?? 0, st.store.chests, "1 som de abertura por bau aberto");
++assert.equal(sounds.enemyDeath ?? 0, sum("enemies"), "1 som de morte por inimigo derrotado");
++assert.equal(sounds.crit ?? 0, sum("crits"), "1 som por critico");
++assert.equal(sounds.ability ?? 0, sum("skills"), "1 som por habilidade ativada");
++assert.ok((sounds.blockBreak ?? 0) >= sum("blocks"), "todo bloco quebrado soa");
++assert.ok((sounds.explosion ?? 0) <= (sounds.bombPlant ?? 0), "nunca mais explosoes do que bombas plantadas");
++assert.ok((sounds.bombPlant ?? 0) - (sounds.explosion ?? 0) <= maxBombs, "so as bombas ainda acesas no fim ficam sem explosao");
++assert.ok((sounds.fuse ?? 0) <= (sounds.bombPlant ?? 0), "no maximo um aviso por bomba");
++assert.ok((sounds.mapClear ?? 0) <= mapChanges, "vitoria so quando o mapa mudou");
++if (process.env.EXPECT_LEVELUPS) assert.ok((sounds.levelUp ?? 0) > 0, "subida de nivel toca som");
+ assert.ok(Object.values(stats).every((x: any) => Object.values(x).every((v) => Number.isFinite(v as number))), "estatisticas finitas");
+ console.log("SMOKE OK");
+--- /dev/null
++++ b/client/test/audio-render/entry.ts
+@@ -0,0 +1,6 @@
++// Ponto de entrada do bundle usado só pela verificação em navegador (render.mjs).
++export { SFX, SFX_IDS } from "../../src/audio/synth";
++export { createBuses, AudioEngine } from "../../src/audio/audioEngine";
++export { MusicPlayer, planStep, STEP_SEC, LOOP_STEPS } from "../../src/audio/music";
++export { volToGain, setAudioPrefs } from "../../src/audio/audioSettings";
++export { audio } from "../../src/audio/audioEngine";
+--- /dev/null
++++ b/client/test/audio-render/render.mjs
+@@ -0,0 +1,105 @@
++// Verificação OPCIONAL do áudio em navegador real (Chromium headless + OfflineAudioContext).
++// Renderiza cada efeito e a música sem tocar nada, mede pico/clipping/volume e grava prévias .wav.
++// Requisitos: playwright + chromium instalados e esbuild (já vem com o vite).  Uso (na pasta client/):
++//   node test/audio-render/render.mjs [pasta-de-saída]
++import { createRequire } from "node:module";
++import { mkdirSync, writeFileSync } from "node:fs";
++import { dirname, join, resolve } from "node:path";
++import { fileURLToPath } from "node:url";
++
++const here = dirname(fileURLToPath(import.meta.url));
++const req = createRequire(import.meta.url);
++const load = (name, fallbacks = []) => { for (const p of [name, ...fallbacks]) { try { return req(p); } catch { /* tenta o próximo */ } } throw new Error(`módulo ${name} não encontrado`); };
++const G = process.env.NODE_GLOBAL ?? "/home/claude/.npm-global/lib/node_modules";
++const esbuild = load("esbuild", [`${G}/tsx/node_modules/esbuild`]);
++const { chromium } = load("playwright", [`${G}/playwright`]);
++const out = resolve(process.argv[2] ?? join(here, "out"));
++mkdirSync(out, { recursive: true });
++
++const bundle = await esbuild.build({ entryPoints: [join(here, "entry.ts")], bundle: true, format: "iife", globalName: "A", write: false, target: "es2022" });
++const code = bundle.outputFiles[0].text;
++
++const browser = await chromium.launch({ args: ["--autoplay-policy=no-user-gesture-required"] });
++const page = await browser.newPage();
++const errors = [];
++page.on("pageerror", (e) => errors.push(String(e)));
++page.on("console", (m) => { if (m.type() === "error") errors.push(m.text()); });
++await page.setContent("<!doctype html><html><body></body></html>");
++await page.addScriptTag({ content: code });
++
++const result = await page.evaluate(async () => {
++  const SR = 44100;
++  const stats = (d, from = 0, to = d.length) => {
++    let peak = 0, sum = 0, clip = 0, nan = 0, dc = 0, last = 0;
++    for (let i = from; i < to; i++) { const v = d[i]; if (!Number.isFinite(v)) { nan++; continue; } const a = Math.abs(v); if (a > peak) peak = a; if (a >= 0.999) clip++; sum += v * v; dc += v; if (a > 0.001) last = i; }
++    const n = Math.max(1, to - from);
++    return { peak, rms: Math.sqrt(sum / n), clip, nan, dc: dc / n, tail: last / SR };
++  };
++  const db = (x) => (x > 0 ? 20 * Math.log10(x) : -120);
++  const wavB64 = (d) => { const b = new Int16Array(d.length); for (let i = 0; i < d.length; i++) b[i] = Math.max(-1, Math.min(1, d[i])) * 32767; const h = new ArrayBuffer(44), v = new DataView(h); const w = (o, s) => [...s].forEach((c, i) => v.setUint8(o + i, c.charCodeAt(0)));
++    w(0, "RIFF"); v.setUint32(4, 36 + b.byteLength, true); w(8, "WAVEfmt "); v.setUint32(16, 16, true); v.setUint16(20, 1, true); v.setUint16(22, 1, true); v.setUint32(24, SR, true); v.setUint32(28, SR * 2, true); v.setUint16(32, 2, true); v.setUint16(34, 16, true); w(36, "data"); v.setUint32(40, b.byteLength, true);
++    const all = new Uint8Array(44 + b.byteLength); all.set(new Uint8Array(h), 0); all.set(new Uint8Array(b.buffer), 44); let s = ""; for (let i = 0; i < all.length; i += 0x8000) s += String.fromCharCode.apply(null, all.subarray(i, i + 0x8000)); return btoa(s); };
++  const mk = (sec) => { const ctx = new OfflineAudioContext(1, Math.ceil(SR * sec), SR); const buses = A.createBuses(ctx); return { ctx, buses }; };
++  const res = { sfx: {}, music: {}, stress: {}, wavs: {} };
++
++  // 1) cada efeito sozinho, no volume padrão do jogador (efeitos 70%)
++  for (const id of A.SFX_IDS) {
++    const { ctx, buses } = mk(2.6);
++    buses.sfxGain.gain.value = A.volToGain(0.7);
++    const def = A.SFX[id]; const vg = ctx.createGain(); vg.gain.value = def.gain; vg.connect(buses.sfxGain);
++    let n = 0; const rnd = () => { n = (n * 1664525 + 1013904223) >>> 0; return n / 4294967296; };
++    const end = def.play(ctx, vg, 0.01, { pitch: 1, level: id === "explosion" ? 1 : 0.5, rarity: 5, rnd });
++    const buf = await ctx.startRendering(); const d = buf.getChannelData(0);
++    const s = stats(d); res.sfx[id] = { ...s, peakDb: db(s.peak), rmsDb: db(s.rms), endSec: end };
++    if (["explosion", "chestOpen", "levelUp", "bombPlant", "blockBreak", "mapClear", "capsule", "enemyDeath", "uiClick", "upgrade"].includes(id)) res.wavs[`sfx-${id}.wav`] = wavB64(d.subarray(0, Math.min(d.length, Math.ceil((end + 0.2) * SR))));
++  }
++
++  // 2) música: 52 s (2 voltas completas do pad/baixo) no volume padrão (música 50%)
++  {
++    const sec = 52; const { ctx, buses } = mk(sec);
++    buses.musicGain.gain.value = A.volToGain(0.5);
++    const p = new A.MusicPlayer(ctx, { input: buses.musicIn }); p.buildDelay();
++    const steps = Math.ceil(sec / A.STEP_SEC); for (let i = 0; i < steps; i++) p.schedule(A.planStep(i), 0.1 + i * A.STEP_SEC);
++    const buf = await ctx.startRendering(); const d = buf.getChannelData(0);
++    const s = stats(d, SR * 4); // ignora os 4 s de entrada do pad
++    const win = []; for (let t = 4; t + 0.25 <= sec; t += 0.25) win.push(stats(d, Math.floor(t * SR), Math.floor((t + 0.25) * SR)).rms);
++    const sorted = [...win].sort((a, b) => a - b), med = sorted[Math.floor(sorted.length / 2)];
++    const bar = 16 * A.STEP_SEC, seamBar = A.LOOP_STEPS / 16; // compasso da emenda do loop
++    const atBar = (k) => db(stats(d, Math.floor((0.1 + k * bar - 0.25) * SR), Math.floor((0.1 + k * bar + 0.25) * SR)).rms); // janela de 500 ms em volta da virada
++    const others = []; for (let k = 2; k < Math.floor((sec - 1) / bar) && k !== seamBar; k++) others.push(atBar(k));
++    others.sort((x, y) => x - y); const medBar = others[Math.floor(others.length / 2)];
++    const seamDev = atBar(seamBar) - medBar, spread = others[others.length - 1] - others[0];
++    res.music = { ...s, peakDb: db(s.peak), rmsDb: db(s.rms), medianWinDb: db(med), minWinDb: db(sorted[0]), maxWinDb: db(sorted[sorted.length - 1]), seamDevDb: seamDev, barSpreadDb: spread, loopSec: A.LOOP_STEPS * A.STEP_SEC };
++    res.wavs["music-loop-30s.wav"] = wavB64(d.subarray(0, 30 * SR));
++  }
++
++  // 3) estresse: 12 explosões + chuva de outros efeitos no mesmo instante (15 operadores trabalhando)
++  {
++    const { ctx, buses } = mk(3);
++    buses.sfxGain.gain.value = A.volToGain(1); buses.musicGain.gain.value = A.volToGain(1);
++    const p = new A.MusicPlayer(ctx, { input: buses.musicIn }); p.buildDelay(); for (let i = 0; i < 20; i++) p.schedule(A.planStep(i), 0.05 + i * A.STEP_SEC);
++    let n = 7; const rnd = () => { n = (n * 1664525 + 1013904223) >>> 0; return n / 4294967296; };
++    for (let k = 0; k < 12; k++) { const def = A.SFX.explosion; const vg = ctx.createGain(); vg.gain.value = def.gain; vg.connect(buses.sfxGain); def.play(ctx, vg, 1 + k * 0.01, { pitch: 0.94 + rnd() * 0.12, level: 1, rarity: 0, rnd }); }
++    for (const id of ["blockBreak", "chestOpen", "enemyDeath", "levelUp", "capsule", "mapClear"]) for (let k = 0; k < 3; k++) { const def = A.SFX[id]; const vg = ctx.createGain(); vg.gain.value = def.gain; vg.connect(buses.sfxGain); def.play(ctx, vg, 1 + k * 0.02, { pitch: 1, level: 1, rarity: 7, rnd }); }
++    const buf = await ctx.startRendering(); const s = stats(buf.getChannelData(0)); res.stress = { ...s, peakDb: db(s.peak), rmsDb: db(s.rms), compReduction: buses.comp.reduction };
++  }
++  return res;
++});
++
++const fmt = (n) => (Math.round(n * 10) / 10).toFixed(1);
++console.log("\n== EFEITOS (volume padrão 70%) ==");
++let bad = 0;
++for (const [id, s] of Object.entries(result.sfx)) {
++  const flag = s.nan || s.clip || s.peak < 0.02 || s.peakDb > -0.5 ? "  <-- VERIFICAR" : "";
++  if (flag) bad++;
++  console.log(`${id.padEnd(11)} pico ${fmt(s.peakDb).padStart(6)} dBFS  rms ${fmt(s.rmsDb).padStart(6)}  fim ${s.endSec.toFixed(2)}s  clip ${s.clip} nan ${s.nan} dc ${s.dc.toExponential(1)}${flag}`);
++}
++const m = result.music;
++console.log(`\n== MÚSICA (volume padrão 50%, 52 s) ==\npico ${fmt(m.peakDb)} dBFS · rms ${fmt(m.rmsDb)} dBFS · janelas de 250 ms: mediana ${fmt(m.medianWinDb)}, mín ${fmt(m.minWinDb)}, máx ${fmt(m.maxWinDb)} dBFS\nemenda do loop (${m.loopSec.toFixed(1)} s): ${fmt(m.seamDevDb)} dB em relação à mediana das outras viradas de compasso (variação normal entre compassos: ${fmt(m.barSpreadDb)} dB) · clip ${m.clip} · nan ${m.nan} · dc ${m.dc.toExponential(1)}`);
++const st = result.stress;
++console.log(`\n== ESTRESSE (12 explosões + 18 efeitos + música, tudo a 100%) ==\npico ${fmt(st.peakDb)} dBFS · clip ${st.clip} · nan ${st.nan} · redução do compressor ${fmt(st.compReduction)} dB`);
++for (const [name, b64] of Object.entries(result.wavs)) writeFileSync(join(out, name), Buffer.from(b64, "base64"));
++console.log(`\n${Object.keys(result.wavs).length} prévias .wav gravadas em ${out}`);
++if (errors.length) console.log("ERROS DE CONSOLE:", errors);
++await browser.close();
++process.exit(errors.length || bad || st.clip || st.nan || m.clip || m.nan ? 1 : 0);
+--- /dev/null
++++ b/client/test/audio-render/live.mjs
+@@ -0,0 +1,78 @@
++// Verificação OPCIONAL com AudioContext REAL (Chromium headless): gesto do jogador -> música audível -> estresse ->
++// mudo -> aba escondida. Mede a saída real com um AnalyserNode ligado ao fim da cadeia.
++// Uso (na pasta client/): node test/audio-render/live.mjs
++import { createRequire } from "node:module";
++import { dirname, join } from "node:path";
++import { fileURLToPath } from "node:url";
++const here = dirname(fileURLToPath(import.meta.url));
++const req = createRequire(import.meta.url);
++const G = process.env.NODE_GLOBAL ?? "/home/claude/.npm-global/lib/node_modules";
++const load = (n) => { try { return req(n); } catch { return req(`${G}/${n === "esbuild" ? "tsx/node_modules/esbuild" : n}`); } };
++const esbuild = load("esbuild"), { chromium } = load("playwright");
++const code = (await esbuild.build({ entryPoints: [join(here, "entry.ts")], bundle: true, format: "iife", globalName: "A", write: false, target: "es2022" })).outputFiles[0].text;
++
++const browser = await chromium.launch({ args: ["--autoplay-policy=document-user-activation-required"] }); // política REAL: exige gesto
++const page = await browser.newPage();
++const errors = [];
++page.on("pageerror", (e) => errors.push(String(e)));
++page.on("console", (m) => { if (m.type() === "error") errors.push(m.text()); });
++await page.setContent("<!doctype html><body><button id='b'>clique</button></body>");
++await page.addScriptTag({ content: `(() => { const O = window.AudioContext; let n = 0; window.__made = () => n;
++  window.AudioContext = class extends O { constructor(...a) { super(...a); n++; window.__ctx = this; const ws = this.createWaveShaper.bind(this);
++    this.createWaveShaper = () => { const s = ws(); const an = this.createAnalyser(); an.fftSize = 2048; s.connect(an); window.__an = an; return s; }; } }; })();` });
++await page.addScriptTag({ content: code });
++
++const out = await page.evaluate(async () => {
++  const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
++  const meter = async (ms) => { const buf = new Float32Array(window.__an.fftSize); let peak = 0, sum = 0, n = 0; const t0 = performance.now();
++    while (performance.now() - t0 < ms) { window.__an.getFloatTimeDomainData(buf); for (const v of buf) { peak = Math.max(peak, Math.abs(v)); sum += v * v; n++; } await sleep(20); }
++    return { peak, rms: Math.sqrt(sum / Math.max(1, n)) }; };
++  const r = {}; const e = new A.AudioEngine(); window.__e = e; e.installAutoUnlock();
++  r.before = { status: e.status, made: window.__made(), play: e.play("explosion") };
++  return r;
++});
++await page.click("#b"); // gesto real do jogador
++await page.waitForTimeout(400);
++const live = await page.evaluate(async () => {
++  const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
++  const e = window.__e, r = {};
++  const meter = async (ms) => { const buf = new Float32Array(window.__an.fftSize); let peak = 0, sum = 0, n = 0; const t0 = performance.now();
++    while (performance.now() - t0 < ms) { window.__an.getFloatTimeDomainData(buf); for (const v of buf) { peak = Math.max(peak, Math.abs(v)); sum += v * v; n++; } await sleep(20); }
++    return { peak, rms: Math.sqrt(sum / Math.max(1, n)) }; };
++  r.afterGesture = { status: e.status, made: window.__made(), contexts: e.contextsCreated, music: e.musicRunning };
++  await sleep(2600); r.music = await meter(800);
++  r.explosionPlayed = e.play("explosion", { level: 1 }); r.explosion = await meter(300);
++  // estresse: ~600 pedidos de som aleatorios em ~3 s (15 operadores + interface)
++  const ids = A.SFX_IDS; let maxVoices = 0, played = 0, asked = 0;
++  const t0 = performance.now();
++  while (performance.now() - t0 < 3000) { for (let k = 0; k < 4; k++) { asked++; if (e.play(ids[Math.floor(Math.random() * ids.length)], { rarity: Math.floor(Math.random() * 8), level: Math.random() })) played++; } maxVoices = Math.max(maxVoices, e.activeVoices); await sleep(5); }
++  const stressPeak = await meter(200);
++  r.stress = { asked, played, maxVoices, state: window.__ctx.state, peak: stressPeak.peak };
++  await sleep(2500); r.afterStress = e.activeVoices; // o som mais longo (vitória de mapa) dura ~1,4 s
++  // mudo geral
++  A.setAudioPrefs({ music: false, sfx: false }); await sleep(600); r.muted = await meter(400); r.mutedMusic = e.musicRunning; r.mutedPlay = e.play("explosion");
++  A.setAudioPrefs({ music: true, sfx: true }); await sleep(2200); r.unmuted = await meter(500); r.unmutedMusic = e.musicRunning;
++  // aba escondida
++  e.handleVisibility(true); await sleep(300); r.hidden = { state: window.__ctx.state, status: e.status, music: e.musicRunning, play: e.play("explosion") };
++  e.handleVisibility(false); await sleep(800); r.shown = { state: window.__ctx.state, status: e.status, music: e.musicRunning };
++  r.contextsAtEnd = window.__made();
++  e.dispose(); r.disposed = window.__ctx.state;
++  return r;
++});
++
++const db = (x) => (x > 0 ? (20 * Math.log10(x)).toFixed(1) : "-inf");
++let fail = 0; const check = (ok, msg) => { console.log(`${ok ? "OK  " : "FALHA"} ${msg}`); if (!ok) fail++; };
++check(out.before.status === "idle" && out.before.made === 0 && out.before.play === false, "antes do gesto: nenhum AudioContext criado e nada toca");
++check(live.afterGesture.status === "running" && live.afterGesture.contexts === 1 && live.afterGesture.music, "gesto real libera o áudio: 1 contexto, música ligada");
++check(live.music.rms > 3e-3, `música audível na saída real (rms ${db(live.music.rms)} dBFS, pico ${db(live.music.peak)})`);
++check(live.explosionPlayed && live.explosion.peak > live.music.peak * 1.5 && live.explosion.peak <= 0.951, `explosão se destaca sem passar do teto (pico ${db(live.explosion.peak)} dBFS)`);
++check(live.stress.maxVoices <= 24 && live.stress.state === "running" && live.stress.peak <= 0.951, `estresse: ${live.stress.asked} pedidos -> ${live.stress.played} sons, no máx. ${live.stress.maxVoices} vozes, pico ${db(live.stress.peak)} dBFS`);
++check(live.afterStress === 0, "depois do estresse todas as vozes são liberadas");
++check(live.muted.rms < 1e-3 && !live.mutedMusic && live.mutedPlay === false, `mudo: saída silenciosa (rms ${db(live.muted.rms)}), música parada, efeitos não tocam`);
++check(live.unmuted.rms > 3e-3 && live.unmutedMusic, "ao religar a música volta (uma só)");
++check(live.hidden.state === "suspended" && !live.hidden.music && live.hidden.play === false, "aba escondida: contexto suspenso, música parada, nada toca");
++check(live.shown.state === "running" && live.shown.music, "aba visível de novo: retoma sozinho");
++check(live.contextsAtEnd === 1, "durante toda a sessão existiu um único AudioContext");
++check(live.disposed === "closed" && errors.length === 0, `encerramento limpo e sem erros de console ${errors.length ? JSON.stringify(errors) : ""}`);
++await browser.close();
++process.exit(fail ? 1 : 0);
+--- /dev/null
++++ b/client/test/audio-render/ui.mjs
+@@ -0,0 +1,82 @@
++// Verificação OPCIONAL da INTERFACE de áudio no Chromium: monta o main.ts real + index.html com o Phaser trocado por um stub.
++// Uso (na pasta client/): node test/audio-render/ui.mjs [pasta-de-capturas]
++import { createRequire } from "node:module";
++import { mkdirSync, readFileSync } from "node:fs";
++import { dirname, join, resolve } from "node:path";
++import { fileURLToPath } from "node:url";
++const here = dirname(fileURLToPath(import.meta.url)), client = resolve(here, "../..");
++const req = createRequire(import.meta.url);
++const G = process.env.NODE_GLOBAL ?? "/home/claude/.npm-global/lib/node_modules";
++const load = (n) => { try { return req(n); } catch { return req(`${G}/${n === "esbuild" ? "tsx/node_modules/esbuild" : n}`); } };
++const esbuild = load("esbuild"), { chromium } = load("playwright");
++const shots = resolve(process.argv[2] ?? join(here, "out")); mkdirSync(shots, { recursive: true });
++const bundle = (await esbuild.build({ entryPoints: [join(client, "src/main.ts")], bundle: true, format: "iife", write: false, target: "es2022",
++  alias: { phaser: join(here, "stubs/phaser-stub.js"), "@solana/web3.js": join(here, "stubs/solana-stub.js") }, define: { "import.meta.env": "{}" }, loader: { ".png": "dataurl" } })).outputFiles[0].text;
++let html = readFileSync(join(client, "index.html"), "utf8").replace(/<script type="module"[^>]*><\/script>/, "");
++if (!/<script type="module"/.test(readFileSync(join(client, "index.html"), "utf8"))) throw new Error("index.html sem script module: ajuste o teste");
++html = html.replace("</body>", `<script>${bundle.replace(/<\/script>/g, "<\\/script>")}</script></body>`);
++
++const browser = await chromium.launch({ args: ["--autoplay-policy=document-user-activation-required"] });
++const errors = []; let fail = 0;
++const check = (ok, msg) => { console.log(`${ok ? "OK  " : "FALHA"} ${msg}`); if (!ok) fail++; };
++const open = async (viewport) => {
++  const ctx = await browser.newContext({ viewport, hasTouch: viewport.width < 600 });
++  const page = await ctx.newPage();
++  page.on("pageerror", (e) => errors.push(String(e)));
++  page.on("console", (m) => { if (m.type() === "error") errors.push(m.text()); });
++  await page.route("http://app.test/**", (r) => r.fulfill({ status: 200, contentType: "text/html", body: html }));
++  await page.goto("http://app.test/bomber-idle/");
++  return { ctx, page };
++};
++const btn = (page) => page.evaluate(() => { const b = document.getElementById("sound-btn"); return { lbl: b.querySelector(".lbl").textContent, ic: b.querySelector(".ic").textContent, pressed: b.getAttribute("aria-pressed"), hint: b.classList.contains("needs-unlock"), disabled: b.disabled }; });
++
++// ---------- desktop ----------
++let { ctx, page } = await open({ width: 1280, height: 800 });
++let b = await btn(page);
++check(b.lbl === "Ativar som" && b.hint && b.pressed === "false" && b.ic === "🔇", "1ª visita: botão pulsando \"Ativar som\" (nada toca antes do gesto)");
++await page.screenshot({ path: join(shots, "ui-desktop-antes.png"), clip: { x: 0, y: 0, width: 1280, height: 120 } });
++await page.click("#sound-btn"); await page.waitForTimeout(700);
++b = await btn(page);
++check(b.lbl === "Som" && b.ic === "🔊" && !b.hint && b.pressed === "true", "clique no botão libera o som: vira \"Som\" 🔊 sem pulsar");
++await page.click('#hub button[data-hub="settings"]'); await page.waitForTimeout(200);
++const rows = await page.evaluate(() => [...document.querySelectorAll("#modal .audio-row")].map((r) => ({ name: r.querySelector(".muted").textContent, tog: r.querySelector("button").textContent, pressed: r.querySelector("button").getAttribute("aria-pressed"), val: r.querySelector("input").value, label: r.querySelector("input").getAttribute("aria-label"), pct: r.querySelector(".audio-pct").textContent })));
++check(rows.length === 2 && rows[0].name === "Música" && rows[0].val === "50" && rows[1].name === "Efeitos sonoros" && rows[1].val === "70" && rows.every((r) => r.tog === "Ligada" && r.label), "Configurações: Música 50% e Efeitos 70%, ligados, sliders com rótulo de acessibilidade");
++check(await page.evaluate(() => document.body.scrollWidth <= innerWidth), "sem rolagem horizontal no desktop");
++await page.screenshot({ path: join(shots, "ui-desktop-config.png") });
++await page.evaluate(() => { const r = document.querySelector("#modal .audio-range"); r.value = "20"; r.dispatchEvent(new Event("input", { bubbles: true })); r.dispatchEvent(new Event("change", { bubbles: true })); });
++await page.locator("#modal .audio-row").nth(1).locator("button").click(); // desliga efeitos
++await page.waitForTimeout(200);
++let saved = await page.evaluate(() => JSON.parse(localStorage.getItem("bomber-idle:audio")));
++check(saved.musicVol === 0.2 && saved.sfx === false && saved.music === true, `preferências gravadas em bomber-idle:audio (${JSON.stringify(saved)})`);
++check(await page.evaluate(() => { const r = document.querySelectorAll("#modal .audio-range"); return r[1].disabled && !r[0].disabled; }), "slider de efeitos fica desabilitado quando efeitos estão desligados");
++await page.screenshot({ path: join(shots, "ui-desktop-config-editado.png") });
++await page.click("#modal-close");
++await page.click("#sound-btn"); await page.waitForTimeout(300); // com música ligada -> silencia tudo
++b = await btn(page);
++check(b.lbl === "Mudo" && b.ic === "🔇" && b.pressed === "false", "botão do cabeçalho silencia tudo (Mudo)");
++saved = await page.evaluate(() => JSON.parse(localStorage.getItem("bomber-idle:audio")));
++check(saved.music === false && saved.sfx === false && saved.musicVol === 0.2, "mudo mantém os volumes escolhidos");
++await page.reload(); await page.waitForTimeout(300);
++b = await btn(page);
++check(b.lbl === "Mudo" && !b.hint, "depois de recarregar a página, o mudo continua e nada pulsa/toca sozinho");
++await page.click("#sound-btn"); await page.waitForTimeout(700);
++b = await btn(page);
++saved = await page.evaluate(() => JSON.parse(localStorage.getItem("bomber-idle:audio")));
++check(b.lbl === "Som" && saved.music && saved.sfx && saved.musicVol === 0.2, "religar pelo botão volta ao som com o volume salvo");
++await ctx.close();
++
++// ---------- celular ----------
++({ ctx, page } = await open({ width: 390, height: 780 }));
++await page.screenshot({ path: join(shots, "ui-mobile-antes.png") });
++const size = await page.evaluate(() => { const r = document.getElementById("sound-btn").getBoundingClientRect(); return { w: r.width, h: r.height, off: r.right > innerWidth }; });
++check(size.h >= 44 && !size.off, `celular: botão de som com área de toque ${Math.round(size.w)}x${Math.round(size.h)} px e dentro da tela`);
++await page.tap("#sound-btn"); await page.waitForTimeout(600);
++await page.tap('#hub button[data-hub="settings"]'); await page.waitForTimeout(250);
++await page.evaluate(() => document.querySelector("#modal .audio-head")?.scrollIntoView());
++await page.screenshot({ path: join(shots, "ui-mobile-config.png") });
++const hs = await page.evaluate(() => ({ hs: document.body.scrollWidth <= innerWidth, tg: [...document.querySelectorAll("#modal .audio-row button")].map((x) => Math.round(x.getBoundingClientRect().height)), rg: [...document.querySelectorAll("#modal .audio-range")].map((x) => Math.round(x.getBoundingClientRect().height)) }));
++check(hs.hs && hs.tg.every((h) => h >= 40) && hs.rg.every((h) => h >= 24), `celular: sem rolagem horizontal, botões ${hs.tg.join("/")} px e sliders ${hs.rg.join("/")} px de altura`);
++await ctx.close();
++check(errors.length === 0, `sem erros de console ${errors.length ? JSON.stringify(errors) : ""}`);
++await browser.close();
++process.exit(fail ? 1 : 0);
+--- /dev/null
++++ b/client/test/audio-render/.gitignore
+@@ -0,0 +1 @@
++out/
+--- /dev/null
++++ b/client/test/audio-render/stubs/phaser-stub.js
+@@ -0,0 +1,4 @@
++// Stub minimo do Phaser so para montar a interface (main.ts) no navegador sem a engine grafica.
++class Scene { constructor(k) { this.k = k; } }
++class Game { constructor(c) { this.config = c; } }
++export default { Scene, Game, AUTO: 0, WEBGL: 2, BlendModes: { ADD: 1, NORMAL: 0 }, Scenes: { Events: { SHUTDOWN: "shutdown" } }, Scale: { FIT: 1, CENTER_BOTH: 1 }, GameObjects: {}, Utils: { Array: { Shuffle: (a) => a } } };
+--- /dev/null
++++ b/client/test/audio-render/stubs/solana-stub.js
+@@ -0,0 +1 @@
++export const Connection = class {}; export const PublicKey = class {}; export const Transaction = class {}; export default {};
+--- /dev/null
++++ b/docs/AUDIO.md
+@@ -0,0 +1,66 @@
++# Áudio do BomberIdle (BomberIdle Premium, fase E)
++
++Música e efeitos sonoros do BomberIdle. **Tudo é gerado por código (Web Audio): nenhum arquivo de som é baixado**, então não há licença de terceiros, nem caminho de asset que possa quebrar, e a publicação não muda.
++
++> **Sobre a trilha:** ela é uma base ambiente **procedural** (pad, baixo e arpejos esparsos com eco, em Lá menor, 78 BPM). É original e discreta, mas **não é uma gravação de músicos nem de estúdio**. Se um dia houver uma trilha gravada ou licenciada, basta trocar o `MusicPlayer` (ver "Como trocar a trilha").
++
++## Arquivos
++
++| Arquivo | Papel |
++|---|---|
++| `client/src/audio/audioEngine.ts` | Motor: um único `AudioContext`, barramentos, limitador, controle de sobreposição, ciclo de vida da aba. Exporta a instância `audio`. |
++| `client/src/audio/synth.ts` | Os 21 efeitos (`SFX`) e o ganho/intervalo/vozes de cada um. |
++| `client/src/audio/music.ts` | `planStep()` (função pura que diz quais notas tocam) e `MusicPlayer` (agenda as notas com antecedência). |
++| `client/src/audio/audioSettings.ts` | Preferências (música/efeitos ligados e volumes) em `localStorage["bomber-idle:audio"]`, **fora do save do jogo**. |
++| `client/src/scenes/FarmScene.ts`, `client/src/main.ts`, `client/index.html` | Ganchos nos eventos do jogo, botão de som no cabeçalho e seção "Áudio" em Configurações. |
++
++## Comportamento
++
++- **Autoplay:** nada soa antes de um gesto. O primeiro clique, toque ou tecla libera o áudio. O botão do cabeçalho mostra **"Ativar som"** (pulsando) até isso acontecer; depois liga/desliga tudo. Quem desligou o som de propósito não é "religado" por um clique qualquer.
++- **Contexto único:** `unlock()` pode ser chamado quantas vezes quiser; nunca cria um segundo `AudioContext` nem uma segunda música. A música independe da cena do jogo.
++- **Falhas:** sem Web Audio, ou se algo der erro, todas as chamadas viram "não faz nada" e o jogo segue.
++- **Aba escondida / fechada:** o contexto é suspenso (sem som e sem CPU) e retoma ao voltar. `dispose()` fecha tudo.
++- **Menus:** com uma janela aberta a música fica mais abafada e baixa (`setMood("menu")`), sem trocar de faixa.
++- **Sobreposição:** intervalo mínimo por efeito (rajadas viram um som só), máximo de vozes por efeito, teto global de 18 vozes (eventos de prioridade 2 podem passar até 24), redução automática quando muita coisa soa junta, variação de altura de ±6% a cada disparo, ducking da música nas explosões e na vitória, e compressor + limitador suave no master (pico nunca passa de −0,45 dBFS).
++- **Volume:** curva quadrática (50% do controle soa como "metade"). Padrões: música 50%, efeitos 70%.
++
++## Efeitos e onde disparam
++
++| Efeito | Quando |
++|---|---|
++| `bombPlant`, `fuse` | Bomba plantada; aviso nos últimos 500 ms |
++| `explosion` | Explosão (o alcance muda a duração). Só som: dano e alcance seguem em `blastCells`/`explode` |
++| `blockHit`, `blockBreak` | Bloco danificado / destruído |
++| `chestHit`, `chestOpen` | Baú atingido / aberto (raridade = mais notas e brilho) |
++| `enemyHit`, `enemyDeath`, `coin` | Inimigo atingido / derrotado (MVP mais grave e longo) / recompensa |
++| `crit`, `ability` | Golpe crítico / habilidade ativa (altura por classe) |
++| `levelUp` | Operador sobe de nível |
++| `mapClear` | Mapa limpo de verdade (não no "destravar") |
++| `capsule` | Compra de cápsula (raridade do melhor resultado) |
++| `upgrade`, `mission` | Upgrade, alojamento e zelador comprados / missão resgatada |
++| `uiClick`, `uiOpen`, `uiClose`, `uiError` | Botões, janelas, ação recusada |
++
++O jogo **não tem dano ao jogador nem tela de derrota** (operadores trabalham sozinhos), por isso não há som de "dano recebido" ou "derrota". O equivalente de vitória é `mapClear`.
++
++## Como trocar a trilha por um arquivo gravado
++
++1. Coloque o arquivo (ogg/mp3) em `client/public/` e carregue-o em um `AudioBuffer` ou `<audio>`.
++2. Crie uma classe com `start()`/`stop()`/`running` no lugar de `MusicPlayer` em `audioEngine.ts` (ela deve sair em `buses.musicIn`).
++3. Barramentos, volume, mudo, pausa de aba e testes de contexto único continuam valendo.
++
++## Testes
++
++Automáticos (rodam com `npm test` e `npm run smoke`, sem navegador):
++- `client/test/audio.test.ts` (28 testes): preferências e persistência, contexto único, música sem duplicar, mudo, intervalo e teto de vozes, pausa com aba escondida, falhas silenciosas, determinismo e faixas de notas da trilha, e nenhuma fonte sem hora de parar.
++- `client/test/smoke/scene-smoke.mts`: roda a cena real e confere que **cada som corresponde a um evento do jogo** (ex.: uma explosão por bomba, um som de abertura por baú).
++
++Opcionais, em navegador real (precisam de `playwright` + Chromium; ver cabeçalho de cada arquivo), na pasta `client/`:
++- `node test/audio-render/render.mjs [pasta]`: renderiza cada efeito e a música sem tocar nada, mede pico/volume/clipping e grava prévias `.wav` para você ouvir.
++- `node test/audio-render/live.mjs`: `AudioContext` real com a política real de autoplay (gesto, estresse, mudo, aba escondida).
++- `node test/audio-render/ui.mjs [pasta]`: botão de som e Configurações no celular e no desktop, com capturas de tela.
++
++## Ajustes rápidos
++
++- Volume relativo de um efeito: `gain` em `SFX` (`synth.ts`). Menos repetição: `cooldownMs`/`maxVoices`.
++- Padrões de volume: `AUDIO_DEFAULTS` em `audioSettings.ts`.
++- Andamento e acordes: `BPM` e `CHORDS` em `music.ts` (`planStep` é testado, então os testes avisam se algo sair da faixa segura).
+--- a/CHANGELOG.md
++++ b/CHANGELOG.md
+@@ -9,6 +9,8 @@
+ - Bomba: "pop" ao plantar e aviso de explosão (aquece e pisca) nos últimos 500 ms. Inimigo atingido mostra o dano e uma faísca; baú aberto "estoura" com anel na cor da raridade; bloco danificado solta poeira.
+ - **Configurações > Efeitos visuais** (Baixo, Médio, Alto), guardado fora do save em `bomber-idle:fx`. Respeita `prefers-reduced-motion` (padrão Baixo). Os efeitos de enfeite são cortados sozinhos quando há muitos na tela.
+ - Testes: `client/test/explosion.test.ts`.
++- **Áudio (BomberIdle Premium, fase E)**: trilha ambiente e 21 efeitos sonoros gerados por código (Web Audio, sem arquivos). Um único contexto de áudio e uma única música, independentes da cena; bomba, explosão, bloco, baú, inimigo, crítico, habilidade, subida de nível, cápsula, upgrade, missão, vitória de mapa e interface têm som próprio, com limite de sobreposição, redução automática quando há muito som, ducking da música nas explosões e limitador no master. O som só começa depois do primeiro clique (botão **Ativar som** no cabeçalho), pausa com a aba escondida e, se o áudio falhar, o jogo segue normal. **Configurações > Áudio**: música e efeitos ligam/desligam e têm volume próprio, guardados fora do save em `bomber-idle:audio`. A trilha é procedural (não é gravação de estúdio); como trocar por uma gravada está em [docs/AUDIO.md](docs/AUDIO.md).
++- Testes: `client/test/audio.test.ts` e verificações de áudio no smoke da cena (cada som corresponde a um evento real). Verificações opcionais em navegador em `client/test/audio-render/`.
+ - **Dois novos BOMBERS**: **Kai** (Techno-Stalker, **Incomum**, caçador de inimigos) e **Aeon** (Grid Architect, **Ancestral**, o topo dos BOMBERS), com cartas NFT em `client/public/nft/` e sprites próprios. A ordem de raridade passa a ser Comum, Incomum, Raro, Épico, Mítico, Lendário, Super lendário, Ancestral.
+ - **Cápsula**: Comum 41,9%, Incomum 13%, Ancestral 0,1%. Raro a Super lendário **não mudaram** (os 55% do Comum foram repartidos). Valores em `CAPSULE_ODDS`, ajustáveis.
+ - **Habilidades por classe** (1 passiva + 1 ativa automática, com duração, recarga e custo de stamina): Lyra (Eficiência Bio-mecânica, Pulso de Reparo), Kai (Rastreador Urbano, Marca de Caça), Titan (Quebra-Blindagem, Impacto Sísmico), Vex (Scanner de Tesouros, Varredura Profunda), Kira (Passo Furtivo, Impulso), Jax (Mestre da Lâmina, Tempestade de Lâminas), Orion (Presença Suprema, Ascensão), Aeon (Arquiteto da Grade, Reescrita da Grade). A ativa libera no nível 3 (Ascensão no 8, Reescrita da Grade no 10).

@@ -1,13 +1,5 @@
 # Changelog
 
-## Bomber Idle 2.0: ajustes de revisão
-- Botão "Recarregar stamina de todos (teste)" agora fica oculto; só aparece em desenvolvimento ou com `?debug` na URL.
-- Rótulo de versão atualizado para v2.0.
-- Regeneração de stamina em campo passa a ser por segundo real (`BALANCE.fieldRegenPerSec`, padrão 2 x regen), sem depender da velocidade do operador.
-- Custo das melhorias cresce 1,4x por nível (`UPGRADE_GROWTH`, antes 1,5x): maximizar os 3 atributos de um operador cai de ~3,4 mi para ~2,1 mi.
-- Novo teste de custo das melhorias (72 testes passando).
-- Para publicar: `npm run publish:bomber` (a pasta public/bomber-idle/assets ainda tem a build antiga).
-
 Formato baseado em [Keep a Changelog](https://keepachangelog.com/) e versionamento [SemVer](https://semver.org/lang/pt-BR/).
 
 ## [Não lançado] - Bombers Overhaul 2.0
@@ -17,6 +9,8 @@ Cada operador agora é uma classe de combate com habilidades, IA e visual própr
 - Bomba: "pop" ao plantar e aviso de explosão (aquece e pisca) nos últimos 500 ms. Inimigo atingido mostra o dano e uma faísca; baú aberto "estoura" com anel na cor da raridade; bloco danificado solta poeira.
 - **Configurações > Efeitos visuais** (Baixo, Médio, Alto), guardado fora do save em `bomber-idle:fx`. Respeita `prefers-reduced-motion` (padrão Baixo). Os efeitos de enfeite são cortados sozinhos quando há muitos na tela.
 - Testes: `client/test/explosion.test.ts`.
+- **Áudio (BomberIdle Premium, fase E)**: trilha ambiente e 21 efeitos sonoros gerados por código (Web Audio, sem arquivos). Um único contexto de áudio e uma única música, independentes da cena; bomba, explosão, bloco, baú, inimigo, crítico, habilidade, subida de nível, cápsula, upgrade, missão, vitória de mapa e interface têm som próprio, com limite de sobreposição, redução automática quando há muito som, ducking da música nas explosões e limitador no master. O som só começa depois do primeiro clique (botão **Ativar som** no cabeçalho), pausa com a aba escondida e, se o áudio falhar, o jogo segue normal. **Configurações > Áudio**: música e efeitos ligam/desligam e têm volume próprio, guardados fora do save em `bomber-idle:audio`. A trilha é procedural (não é gravação de estúdio); como trocar por uma gravada está em [docs/AUDIO.md](docs/AUDIO.md).
+- Testes: `client/test/audio.test.ts` e verificações de áudio no smoke da cena (cada som corresponde a um evento real). Verificações opcionais em navegador em `client/test/audio-render/`.
 - **Dois novos BOMBERS**: **Kai** (Techno-Stalker, **Incomum**, caçador de inimigos) e **Aeon** (Grid Architect, **Ancestral**, o topo dos BOMBERS), com cartas NFT em `client/public/nft/` e sprites próprios. A ordem de raridade passa a ser Comum, Incomum, Raro, Épico, Mítico, Lendário, Super lendário, Ancestral.
 - **Cápsula**: Comum 41,9%, Incomum 13%, Ancestral 0,1%. Raro a Super lendário **não mudaram** (os 55% do Comum foram repartidos). Valores em `CAPSULE_ODDS`, ajustáveis.
 - **Habilidades por classe** (1 passiva + 1 ativa automática, com duração, recarga e custo de stamina): Lyra (Eficiência Bio-mecânica, Pulso de Reparo), Kai (Rastreador Urbano, Marca de Caça), Titan (Quebra-Blindagem, Impacto Sísmico), Vex (Scanner de Tesouros, Varredura Profunda), Kira (Passo Furtivo, Impulso), Jax (Mestre da Lâmina, Tempestade de Lâminas), Orion (Presença Suprema, Ascensão), Aeon (Arquiteto da Grade, Reescrita da Grade). A ativa libera no nível 3 (Ascensão no 8, Reescrita da Grade no 10).

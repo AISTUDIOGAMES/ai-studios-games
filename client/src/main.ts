@@ -11,6 +11,17 @@ import { CLASS_INFO, NEUTRAL_MODS } from "./game/bomberConfig";
 import type { Modifiers } from "./game/bomberTypes";
 import { connect, requestClaim } from "./wallet";
 import { FX_LABELS, getFxLevel, setFxLevel } from "./game/fxSettings";
+import { audio } from "./audio/audioEngine";
+import { getAudioPrefs, onAudioPrefs, setAudioPrefs, type AudioPrefs } from "./audio/audioSettings";
+
+// Audio: o navegador so libera o som depois de um gesto do jogador; o primeiro clique/toque/tecla liga tudo.
+// O motor fica fora da cena do jogo (um unico contexto, uma unica musica) e vale ate para os menus.
+audio.installAutoUnlock();
+audio.installLifecycle();
+document.addEventListener("click", (e) => {
+  const b = (e.target as Element | null)?.closest?.("button");
+  if (b && !(b as HTMLButtonElement).disabled && b.id !== "sound-btn" && b.id !== "modal-close") audio.play("uiClick");
+});
 
 new Phaser.Game({
   type: Phaser.AUTO,
@@ -134,12 +145,16 @@ function buildHeroes() {
 
     const upsRow = el("div", "ups");
     const work = el("button", "up");
-    work.onclick = () => { const err = setWorking(h, !isWorking(h)); if (err) toast(err); };
+    work.onclick = () => { const err = setWorking(h, !isWorking(h)); if (err) { audio.play("uiError"); toast(err); } };
     upsRow.append(work);
     const ups = {} as Record<UpKey, HTMLButtonElement>;
     for (const u of UPS) {
       const b = el("button", "up");
-      b.onclick = () => toast(upgrade(h, u.key) ? `${h.name}: ${u.label} nível ${h.up[u.key]}` : "$BOMBERSI insuficientes ou nível máximo");
+      b.onclick = () => {
+        const ok = upgrade(h, u.key);
+        audio.play(ok ? "upgrade" : "uiError");
+        toast(ok ? `${h.name}: ${u.label} nível ${h.up[u.key]}` : "$BOMBERSI insuficientes ou nível máximo");
+      };
       ups[u.key] = b;
       upsRow.append(b);
     }
@@ -193,7 +208,11 @@ function buildMissions() {
     bar.append(fill);
     const txt = el("div", "muted small");
     const btn = el("button", "up", "Resgatar");
-    btn.onclick = () => toast(claimMission(m.id) ? `+${fmt(m.reward)} $BOMBERSI resgatados` : "Missão ainda não concluída");
+    btn.onclick = () => {
+      const ok = claimMission(m.id);
+      audio.play(ok ? "mission" : "uiError");
+      toast(ok ? `+${fmt(m.reward)} $BOMBERSI resgatados` : "Missão ainda não concluída");
+    };
     const box = el("div");
     box.append(el("strong", "", `${m.label} · +${fmt(m.reward)}`), bar, txt);
     li.append(box, btn);
@@ -302,9 +321,7 @@ try {
   }
 } catch { /* sem storage: ignora */ }
 
-// Botão de teste (stamina infinita): só aparece em desenvolvimento ou com ?debug na URL. Nunca para jogadores comuns.
-if (import.meta.env.DEV || new URLSearchParams(location.search).has("debug")) $("refill").hidden = false;
-$("refill").onclick = () => { if ($("refill").hidden) return; refillAll(); toast("Stamina recarregada (modo teste)"); };
+$("refill").onclick = () => { refillAll(); toast("Stamina recarregada (modo teste)"); };
 
 $("connect").onclick = async () => {
   try {
@@ -338,7 +355,11 @@ $("claim").onclick = async () => {
 // ---------- hub (menu inferior) ----------
 const modal = $("modal");
 const modalBody = $("modal-body");
-function closeModal() { modal.hidden = true; liveUpdate = null; hubBtns.forEach((b) => b.classList.remove("on")); }
+function closeModal() {
+  if (!modal.hidden) audio.play("uiClose");
+  audio.setMood("field");
+  modal.hidden = true; liveUpdate = null; hubBtns.forEach((b) => b.classList.remove("on"));
+}
 // theme dá a cada seção do hub sua própria cor de destaque (ver data-theme no CSS); icon repete o emblema do botão do hub.
 function openModal(title: string, build: (body: HTMLElement) => void, live?: () => void, theme = "", icon = "") {
   modal.dataset.theme = theme;
@@ -355,6 +376,8 @@ function openModal(title: string, build: (body: HTMLElement) => void, live?: () 
   build(modalBody);
   liveUpdate = live ?? null;
   modal.hidden = false;
+  audio.play("uiOpen");
+  audio.setMood("menu");
   $("modal-close").focus();
   liveUpdate?.(); // evita o modal abrir com valores vazios por 400 ms
 }
@@ -401,10 +424,11 @@ function openCapsules() {
   };
   const buy = (n: number) => {
     const r = buyCapsule(n);
-    if (typeof r === "string") { toast(r); return; }
+    if (typeof r === "string") { audio.play("uiError"); toast(r); return; }
     results = r;
     showResults();
     const best = sortOps(r)[0];
+    audio.play("capsule", { rarity: RARITY_ORDER.indexOf(best.rarity) });
     toast(n === 1 ? `Novo operador: ${best.name} (${RARITIES[best.rarity].label})` : `5 novos operadores! Melhor: ${best.name} (${RARITIES[best.rarity].label})`);
   };
   b1.onclick = () => buy(1);
@@ -446,7 +470,7 @@ function openLodging() {
       const own = el("b"), occ = el("b");
       const buy = el("button", "", L.price === null ? "Em breve · $ASG" : `Comprar · ${fmt(L.price)} $BOMBERSI`);
       buy.disabled = L.price === null;
-      buy.onclick = () => { const e = buyLodging(kind); toast(e ?? `${L.label} comprado`); };
+      buy.onclick = () => { const e = buyLodging(kind); audio.play(e ? "uiError" : "upgrade"); toast(e ?? `${L.label} comprado`); };
       const r1 = kv("Capacidade", `${L.cap} operadores`), r2 = kv("Recuperação", `${Math.round(L.rate * 60)}/min`);
       const r3 = el("div", "kv"); r3.append(el("span", "muted", "Você tem"), own);
       const r4 = el("div", "kv"); r4.append(el("span", "muted", "Vagas ocupadas"), occ);
@@ -468,7 +492,7 @@ function openLodging() {
     const bstat = el("b");
     const bbtn = el("button");
     bbtn.onclick = () => {
-      if (!store.butler.owned) { const e = buyButler(); toast(e ?? "Droide Zelador ativado"); } else toggleButler();
+      if (!store.butler.owned) { const e = buyButler(); audio.play(e ? "uiError" : "upgrade"); toast(e ?? "Droide Zelador ativado"); } else toggleButler();
     };
     const brow = el("div", "kv"); brow.append(el("span", "muted", "Estado"), bstat);
     bc.append(
@@ -573,6 +597,40 @@ const HUB: Record<string, () => void> = {
     paint();
     fxRow.append(el("span", "muted", "Efeitos visuais"), seg);
     body.append(fxRow, el("p", "note", "Baixo reduz fumaça, fagulhas e o tremor de tela nas explosões. Vale para este aparelho."));
+    // áudio: ligar/desligar e volume de música e de efeitos (preferência do aparelho, fora do save do jogo)
+    body.append(el("div", "muted small audio-head", "Áudio"));
+    const audioRow = (label: string, on: "music" | "sfx", vol: "musicVol" | "sfxVol", sample: () => void) => {
+      const row = el("div", "audio-row");
+      const top = el("div", "kv");
+      const tog = el("button", "chip");
+      const pct = el("b", "audio-pct");
+      top.append(el("span", "muted", label), tog);
+      const range = el("input", "audio-range");
+      range.type = "range"; range.min = "0"; range.max = "100"; range.step = "5";
+      range.setAttribute("aria-label", `Volume: ${label.toLowerCase()}`);
+      range.oninput = () => { setAudioPrefs({ [vol]: Number(range.value) / 100 } as Partial<AudioPrefs>); paint(); };
+      range.onchange = sample; // ao soltar o controle, toca uma amostra no novo volume
+      tog.onclick = () => { setAudioPrefs({ [on]: !getAudioPrefs()[on] } as Partial<AudioPrefs>); void audio.unlock(); paint(); };
+      const paint = () => {
+        const p = getAudioPrefs();
+        tog.textContent = p[on] ? "Ligada" : "Desligada";
+        tog.classList.toggle("on", p[on]);
+        tog.setAttribute("aria-pressed", String(p[on]));
+        range.value = String(Math.round(p[vol] * 100));
+        range.disabled = !p[on];
+        pct.textContent = `${Math.round(p[vol] * 100)}%`;
+      };
+      paint();
+      const line = el("div", "audio-line");
+      line.append(range, pct);
+      row.append(top, line);
+      return row;
+    };
+    body.append(
+      audioRow("Música", "music", "musicVol", () => undefined),
+      audioRow("Efeitos sonoros", "sfx", "sfxVol", () => audio.play("coin")),
+      el("p", "note", "O navegador só libera o som depois do seu primeiro clique ou toque. A música é gerada pelo próprio jogo (sem arquivos) e as escolhas ficam salvas neste aparelho."),
+    );
     const reset = el("button", "danger", "Apagar progresso deste navegador");
     reset.style.marginTop = "14px";
     reset.onclick = () => {
@@ -584,6 +642,40 @@ const HUB: Record<string, () => void> = {
     body.append(reset);
   }, undefined, "settings", "⚙️"),
 };
+// botão de som do cabeçalho: "Ativar som" (pulsando) até o navegador liberar o áudio; depois liga/desliga tudo de uma vez
+const soundBtn = $("sound-btn") as HTMLButtonElement;
+const soundIc = soundBtn.querySelector(".ic") as HTMLElement, soundLbl = soundBtn.querySelector(".lbl") as HTMLElement;
+function paintSound() {
+  const p = getAudioPrefs(), st = audio.status;
+  const wants = p.music || p.sfx, running = st === "running";
+  const on = running && wants;
+  soundBtn.classList.toggle("needs-unlock", wants && !running && st !== "unsupported");
+  soundBtn.disabled = st === "unsupported";
+  soundIc.textContent = on ? "🔊" : "🔇";
+  soundLbl.textContent = st === "unsupported" ? "Sem áudio" : wants && !running ? "Ativar som" : on ? "Som" : "Mudo";
+  soundBtn.setAttribute("aria-pressed", String(on));
+  soundBtn.setAttribute("aria-label", on ? "Som ligado. Tocar para silenciar" : "Som desligado. Tocar para ativar");
+}
+// O primeiro gesto da página já libera o áudio (pointerdown/keydown), ANTES do "click". Por isso o botão guarda o estado
+// de quando foi pressionado: se estava travado, este toque é "ativar" e não "silenciar".
+let pressedLocked = false;
+const notePress = () => { pressedLocked = audio.status !== "running"; };
+soundBtn.addEventListener("pointerdown", notePress, true);
+soundBtn.addEventListener("keydown", notePress, true);
+soundBtn.onclick = async () => {
+  const p = getAudioPrefs();
+  const wasLocked = pressedLocked || audio.status !== "running";
+  pressedLocked = false;
+  if (wasLocked) {
+    if (!p.music && !p.sfx) setAudioPrefs({ music: true, sfx: true });
+    if (await audio.unlock()) audio.play("uiOpen");
+  } else if (p.music || p.sfx) setAudioPrefs({ music: false, sfx: false });
+  else setAudioPrefs({ music: true, sfx: true });
+  paintSound();
+};
+audio.onStatus(paintSound);
+onAudioPrefs(paintSound);
+paintSound();
 const hubBtns = Array.from(document.querySelectorAll<HTMLButtonElement>("#hub button"));
 hubBtns.forEach((b) => {
   b.onclick = () => {

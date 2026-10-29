@@ -17,6 +17,11 @@ const P: any = (await import("phaser")).default;
 const st = await import("../../src/state.ts");
 const { FarmScene } = await import("../../src/scenes/FarmScene.ts");
 const ab = await import("../../src/game/bomberAbilities.ts");
+// Espia o audio: conta cada som pedido pela cena (antes dos limites do motor) para conferir com as estatisticas do proprio jogo.
+const { audio } = await import("../../src/audio/audioEngine.ts");
+const sounds: Record<string, number> = {};
+const realPlay = audio.play.bind(audio);
+audio.play = ((id: any, o?: any) => { sounds[id] = (sounds[id] ?? 0) + 1; return realPlay(id, o); }) as typeof audio.play;
 
 const timers: { at: number; cb: () => void }[] = [];
 const loops: { every: number; next: number; cb: () => void }[] = [];
@@ -70,5 +75,18 @@ console.log(JSON.stringify({
   fxImagesPooled: sc.fx.allImg.length, fxTextsPooled: sc.fx.allTxt.length, holo: sc.holo.length, statuses: [...statuses].sort(), stats,
 }, null, 1));
 assert.ok(st.store.chests <= chestsCreated, "nenhum bau pago mais de uma vez");
+// ---- audio x jogo: cada som corresponde a UM evento real (sem som duplicado, sem evento mudo) ----
+const sum = (k: string) => Object.values(stats).reduce((n: number, x: any) => n + (x[k] ?? 0), 0);
+console.log("sons pedidos pela cena:", JSON.stringify(sounds));
+assert.equal(sounds.chestOpen ?? 0, st.store.chests, "1 som de abertura por bau aberto");
+assert.equal(sounds.enemyDeath ?? 0, sum("enemies"), "1 som de morte por inimigo derrotado");
+assert.equal(sounds.crit ?? 0, sum("crits"), "1 som por critico");
+assert.equal(sounds.ability ?? 0, sum("skills"), "1 som por habilidade ativada");
+assert.ok((sounds.blockBreak ?? 0) >= sum("blocks"), "todo bloco quebrado soa");
+assert.ok((sounds.explosion ?? 0) <= (sounds.bombPlant ?? 0), "nunca mais explosoes do que bombas plantadas");
+assert.ok((sounds.bombPlant ?? 0) - (sounds.explosion ?? 0) <= maxBombs, "so as bombas ainda acesas no fim ficam sem explosao");
+assert.ok((sounds.fuse ?? 0) <= (sounds.bombPlant ?? 0), "no maximo um aviso por bomba");
+assert.ok((sounds.mapClear ?? 0) <= mapChanges, "vitoria so quando o mapa mudou");
+if (process.env.EXPECT_LEVELUPS) assert.ok((sounds.levelUp ?? 0) > 0, "subida de nivel toca som");
 assert.ok(Object.values(stats).every((x: any) => Object.values(x).every((v) => Number.isFinite(v as number))), "estatisticas finitas");
 console.log("SMOKE OK");
