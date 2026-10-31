@@ -1,6 +1,8 @@
 import type { Env } from "./env";
 import { isWalletAddress, parseWalletList, randomHex, sha256Hex, hitRateLimit, audit } from "./util";
 import { NONCE_TTL_MS, SESSION_TTL_MS, loginMessage, verifyWalletSignature } from "./auth";
+import { devnetStatus } from "./solana";
+import { DEVNET_RPC } from "./alpha-config";
 
 const VERSION_TAG = "0.1.0";
 const MAX_BODY_BYTES = 4096;
@@ -105,8 +107,8 @@ export async function handle(req: Request, env: Env, now: number = Date.now()): 
       cluster: env.SOLANA_CLUSTER,
       version: env.VERSION ?? VERSION_TAG,
       services: { api: "ok", db },
-      // Ainda nao implementado (proxima etapa): mint TEST, programa Anchor, saldo do vault, RPC.
-      onchain: "pendente",
+      // Leitura da Devnet feita pelo servidor: rede, saldo da autoridade e verificacao do mint TEST.
+      onchain: await devnetStatus(env.SOLANA_RPC_URL || DEVNET_RPC, (u, i) => fetch(u, i)),
       time: new Date(now).toISOString(),
     });
   }

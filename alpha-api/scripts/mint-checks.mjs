@@ -1,4 +1,5 @@
-// Conferencia do mint TEST contra o que o projeto espera. Funcoes puras, sem rede: testadas em alpha-api/test.
+// Conferencia do mint TEST contra o que o projeto espera. Funcoes puras, sem rede.
+// Usado pelo script de mint (Node) e pelo Worker (Cloudflare): so depende de Uint8Array.
 import bs58 from "bs58";
 
 // Programa oficial de tokens SPL (Token Program) na Solana.
@@ -9,8 +10,9 @@ export const MINT_ACCOUNT_SIZE = 82;
 /** Le o layout da conta de mint (82 bytes). Devolve null se o tamanho nao for o de um mint. */
 export function parseMintData(data) {
   if (!data || data.length !== MINT_ACCOUNT_SIZE) return null;
+  const view = new DataView(data.buffer, data.byteOffset, data.byteLength);
   const optionalKey = (offset) =>
-    data.readUInt32LE(offset) === 1 ? bs58.encode(data.subarray(offset + 4, offset + 36)) : null;
+    view.getUint32(offset, true) === 1 ? bs58.encode(data.subarray(offset + 4, offset + 36)) : null;
   return {
     mintAuthority: optionalKey(0),
     decimals: data[44],
@@ -20,7 +22,7 @@ export function parseMintData(data) {
 }
 
 /**
- * Confere a conta do mint. `info` = { owner: base58, data: Buffer } ou null.
+ * Confere a conta do mint. `info` = { owner: base58, data: Uint8Array } ou null.
  * `expected` = { decimals, mintAuthority }. Devolve a lista de problemas (vazia = ok).
  */
 export function validateMintAccount(info, expected) {

@@ -11,6 +11,7 @@ import { makeDB } from "./d1shim.mjs";
 import { handle } from "../src/index";
 import type { Env } from "../src/env";
 import { loginWithWallet, devtestStatus, AlphaApiError, type FetchLike } from "../../client/src/alpha-session";
+import { fakeRpcFetch } from "./rpc-fake";
 
 const here = dirname(fileURLToPath(import.meta.url));
 const MIGRATION = readFileSync(join(here, "../migrations/0001_init.sql"), "utf8");
@@ -48,13 +49,19 @@ test("usuario comum: login ok (admin=false) e DEVTEST recusado com 403", async (
 });
 
 test("administrador: login admin=true e DEVTEST responde com os servicos", async () => {
-  const { f } = setup();
-  const s = await loginWithWallet(BASE, ADMIN_PUB, f, signer(ADMIN));
-  assert.equal(s.admin, true);
-  const st = await devtestStatus(BASE, s, f);
-  assert.equal(st.env, "alpha");
-  assert.equal(st.cluster, "devnet");
-  assert.deepEqual(st.services, { api: "ok", db: "ok" });
+  const realFetch = globalThis.fetch;
+  globalThis.fetch = fakeRpcFetch() as any;
+  try {
+    const { f } = setup();
+    const s = await loginWithWallet(BASE, ADMIN_PUB, f, signer(ADMIN));
+    assert.equal(s.admin, true);
+    const st = await devtestStatus(BASE, s, f);
+    assert.equal(st.env, "alpha");
+    assert.equal(st.cluster, "devnet");
+    assert.deepEqual(st.services, { api: "ok", db: "ok" });
+  } finally {
+    globalThis.fetch = realFetch;
+  }
 });
 
 test("assinatura de outra chave: servidor recusa e o cliente mostra o erro", async () => {

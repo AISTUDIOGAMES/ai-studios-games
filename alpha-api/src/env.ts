@@ -15,4 +15,6 @@ export interface Env {
   VERSION: string;
   ADMIN_WALLETS: string;
   ALLOW_ORIGIN: string;
+  // Opcional: RPC da Devnet. Se ausente, usa o padrao publico (alpha-config).
+  SOLANA_RPC_URL?: string;
 }

@@ -10,6 +10,7 @@ import { makeDB } from "./d1shim.mjs";
 import { handle } from "../src/index";
 import { isWalletAddress, parseWalletList } from "../src/util";
 import type { Env } from "../src/env";
+import { fakeRpcFetch } from "./rpc-fake";
 
 const here = dirname(fileURLToPath(import.meta.url));
 const MIGRATION = readFileSync(join(here, "../migrations/0001_init.sql"), "utf8");
@@ -190,19 +191,27 @@ test("devtest: token inventado e sessao expirada = 401", async () => {
   assert.equal((await handle(req("GET", "/devtest/status", undefined, { token: body.token }), env)).status, 401);
 });
 
-test("devtest: administrador ve o status e o acesso e registrado na auditoria", async () => {
-  const { env, db } = mkEnv();
-  const { body } = await login(env, ADMIN);
-  const r = await handle(req("GET", "/devtest/status", undefined, { token: body.token }), env);
-  assert.equal(r.status, 200);
-  const b = (await r.json()) as any;
-  assert.equal(b.env, "alpha");
-  assert.equal(b.cluster, "devnet");
-  assert.equal(b.services.db, "ok");
-  assert.equal(b.onchain, "pendente"); // nada on-chain e reportado como pronto antes de existir
-  const log = db.raw.prepare("SELECT action, actor FROM audit_log ORDER BY id").all() as any[];
-  assert.deepEqual(log.map((x) => x.action), ["login", "devtest.status"]);
-  assert.equal(log[1].actor, ADMIN.pub);
+test("devtest: administrador ve o status, a Devnet e o mint, e o acesso e registrado na auditoria", async () => {
+  const realFetch = globalThis.fetch;
+  globalThis.fetch = fakeRpcFetch() as any;
+  try {
+    const { env, db } = mkEnv();
+    const { body } = await login(env, ADMIN);
+    const r = await handle(req("GET", "/devtest/status", undefined, { token: body.token }), env);
+    assert.equal(r.status, 200);
+    const b = (await r.json()) as any;
+    assert.equal(b.env, "alpha");
+    assert.equal(b.cluster, "devnet");
+    assert.equal(b.services.db, "ok");
+    assert.equal(b.onchain.network, "devnet");
+    assert.equal(b.onchain.mint.verified, true);
+    assert.ok(Math.abs(b.onchain.authority.sol - 4.9978464) < 1e-9);
+    const log = db.raw.prepare("SELECT action, actor FROM audit_log ORDER BY id").all() as any[];
+    assert.deepEqual(log.map((x) => x.action), ["login", "devtest.status"]);
+    assert.equal(log[1].actor, ADMIN.pub);
+  } finally {
+    globalThis.fetch = realFetch;
+  }
 });
 
 test("devtest: em producao a area nao existe, mesmo para o administrador", async () => {
