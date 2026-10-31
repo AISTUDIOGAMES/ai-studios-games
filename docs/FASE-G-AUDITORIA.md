@@ -166,28 +166,41 @@ Arquivos já modificados no .rar antes desta etapa (`src/art.ts`, `src/scenes/Fa
 
 ## 13. Mint TEST (Devnet): estado oficial
 
+Fonte da verdade: `docs/TEST-MINT.json`. Conferir a qualquer momento com `npm run mint:verify` (somente leitura).
+
 | Item | Valor |
 |---|---|
-| Mint oficial | `2U2pmm7w81kkCX7TZH6rN5AMzt8YFzGtzkcFAsrgjaY2` (registrado em `docs/TEST-MINT.json`) |
-| Mint extra (nao usar) | `JC27wXPFQM3rHxFizuaMhTPP9T8cjz3H2uu9WTxG8xCY`, criado por uma execucao duplicada do script |
-| Autoridade de mint | `HJuS1MkozoAKC4b7CjRrVQHCsyLoU1xxrFGoDEqi3Mpz` (chave publica) |
+| Mint oficial (vigente) | `EcoDXb9NKoNEkdEosi87eodiBCRPCpsLwmH4snEWKzhk` |
+| Autoridade de mint | `8KhUM9PLh1DMaghWfUdTzpuuHHpUWtQDAK9KmnXL7Li6` (chave local `%USERPROFILE%\bomber-mint-v2.json`, fora do repositorio) |
 | Decimais | 6 |
 | Autoridade de congelamento | nenhuma |
-| Chave privada | somente em `%USERPROFILE%\bomber-test-mint.json`, fora do repositorio. Fazer copia de seguranca. |
+| Criado em (registro) | 2026-10-31 22:18 UTC |
+| Carteira admin do DEVTEST | `vCUP1s6iLFyHfsGoRV7VqpRYrUg9QJuPbZWrhe7tdxu` (somente endereco publico) |
+
+**Verificado:** o painel DEVTEST (Worker publicado e ambiente local) mostra `verified: true`, sem problemas, para o mint vigente.
+
+**Descontinuados (nao usar)**
+
+- `2U2pmm7W81kkCX7TZH6rN5AMzt8YFzGtzkcFAsrgjaY2`: mint anterior, com autoridade `HJuS1...`. Registro arquivado em `docs/TEST-MINT-antigo-2U2pmm.json`.
+- `JC27wXPFQM3rHxFizuaMhTPP9T8cjz3H2uu9WTxG8xCY`: mint extra criado por execucao duplicada. Sem uso.
+- Carteira `J1Py...`: antiga carteira admin. A frase de recuperacao apareceu em texto legivel num chat. Tratar como comprometida.
+- Carteira `9y3F...`: frase de recuperacao exposta em imagem. Tratar como comprometida.
 
 **Licoes registradas**
 
-- A primeira versao do script gravava o arquivo sem confirmar a conta na rede, e nao impedia uma segunda criacao. Foi corrigido: agora recusa se `docs/TEST-MINT.json` existir e so grava depois de conferir a conta.
-- Consultas ao RPC publico retornaram "NAO EXISTE" para contas que existiam. Por isso a confirmacao definitiva e feita pelas transacoes de criacao e pelo comando `npm run mint:verify`, nao por uma unica leitura.
-- Saldo da autoridade apos as duas criacoes: 4,9978464 SOL (5 SOL do faucet menos as taxas e o aluguel das duas contas).
+- A primeira versao do script gravava o registro sem confirmar a conta na rede e nao impedia uma segunda criacao. Corrigido: o script recusa se o registro existir e so grava depois de conferir a conta.
+- Consultas ao RPC publico retornaram "NAO EXISTE" para contas que existiam. A confirmacao definitiva e feita pelas transacoes de criacao e pelo `npm run mint:verify`.
+- Enderecos Solana diferenciam maiusculas de minusculas. Enderecos copiados a mao causaram leituras erradas (um `w` no lugar de `W`) e um link de explorador incorreto. Usar sempre o arquivo do registro e `scripts/sync-mint-constants.mjs`.
+- Commits devem descrever exatamente o que contem. Um commit com mensagem de "novo mint" foi feito antes do mint existir (`1bc6271`); o conteudo era apenas um ajuste de constantes.
 
 **Comandos**
 
-- `npm run mint:verify`: confere, somente leitura, o mint registrado (dono, tamanho, decimais, autoridade e ausencia de congelamento).
+- `npm run mint:verify`: confere o mint registrado (dono, tamanho, decimais, autoridade e ausencia de congelamento).
 - `npm run mint:test`: cria um mint somente se `docs/TEST-MINT.json` nao existir.
+- `node scripts/sync-mint-constants.mjs`: copia mint e autoridade do registro para `src/alpha-config.ts`.
 
-**Atualizacao: carteira admin do DEVTEST**
+**Pendencias de seguranca**
 
-- A carteira admin anterior (`J1Py...`) foi descontinuada: a frase de recuperacao foi exposta em um chat e deve ser tratada como comprometida.
-- Nova carteira admin: `vCUP1s6iLFyHfsGoRV7VqpRYrUg9QJuPbZWrhe7tdxu` (somente o endereco publico, configurado em `ADMIN_WALLETS` no `wrangler.toml` e em `ADMIN_WALLET` no `alpha-config.ts`).
-- A autoridade do mint TEST e uma chave separada, gerada localmente, e nao tem relacao com o login admin.
+- Saldo na Mainnet da `J1Py` e da `9y3F`: verificar e mover qualquer valor real para carteira nova.
+- Apagar o arquivo `SEED SITE GAME` e os prints com a frase exposta.
+- Guardar uma copia segura de `bomber-mint-v2.json` (autoridade do mint). Sem ela, nao ha como emitir novos tokens de teste.
