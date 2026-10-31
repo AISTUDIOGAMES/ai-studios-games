@@ -10,12 +10,17 @@ export const RPC_URL: string = (import.meta.env.VITE_RPC_URL as string | undefin
 const alphaUrl = ((import.meta.env.VITE_ALPHA_API_URL as string | undefined) ?? "").trim().replace(/\/+$/, "");
 export const ALPHA_API_URL: string = APP_ENV === "prod" ? "" : alphaUrl;
 
+/** Le o genesis hash do RPC informado. Nao decide nada: so consulta. */
+export async function fetchGenesisHash(rpcUrl: string = RPC_URL): Promise<string> {
+  const { Connection } = await import("@solana/web3.js");
+  return new Connection(rpcUrl, "confirmed").getGenesisHash();
+}
+
 /**
  * Confere no RPC configurado do jogo que a rede e a Devnet.
  * ATENCAO: nao le a rede selecionada na Phantom (a API antiga window.solana nao expoe isso).
  */
 export async function assertRpcIsDevnet(rpcUrl: string = RPC_URL): Promise<void> {
-  const { Connection } = await import("@solana/web3.js");
   const { assertDevnetGenesis } = await import("./env-rules");
-  assertDevnetGenesis(await new Connection(rpcUrl, "confirmed").getGenesisHash());
+  assertDevnetGenesis(await fetchGenesisHash(rpcUrl));
 }

@@ -10,8 +10,9 @@ import { abilitiesOf, abilityStatus, bomberClass, peekRuntime } from "./game/bom
 import { CLASS_INFO, NEUTRAL_MODS } from "./game/bomberConfig";
 import type { Modifiers } from "./game/bomberTypes";
 import { connect, requestClaim, signText } from "./wallet";
-import { TEST_CHEATS, ENV_LABEL, ALPHA_API_URL, assertRpcIsDevnet } from "./env-config";
-import { loginWithWallet, devtestStatus, AlphaSession, FetchLike } from "./alpha-session";
+import { TEST_CHEATS, ENV_LABEL, ALPHA_API_URL, RPC_URL, fetchGenesisHash } from "./env-config";
+import { assertDevnetGenesis } from "./env-rules";
+import { loginWithWallet, devtestStatus, AlphaSession, AlphaApiError, FetchLike } from "./alpha-session";
 import { FX_LABELS, getFxLevel, setFxLevel } from "./game/fxSettings";
 import { audio } from "./audio/audioEngine";
 import { getAudioPrefs, onAudioPrefs, setAudioPrefs, type AudioPrefs } from "./audio/audioSettings";
@@ -346,15 +347,38 @@ let alphaSession: AlphaSession | null = null;
 const httpFetch: FetchLike = (u, i) => fetch(u, i);
 
 async function alphaLogin(addr: string) {
+  // Cada etapa diz qual falhou, porque o navegador so informa "Failed to fetch" para qualquer rede.
+  // Etapa 1: RPC da Devnet (checagem do genesis hash).
+  let genesis: string;
   try {
-    // Confere so o RPC do jogo. A rede da Phantom nao e lida aqui (limitacao da API window.solana).
-    await assertRpcIsDevnet();
-    alphaSession = await loginWithWallet(ALPHA_API_URL, addr, httpFetch, signText);
+    genesis = await fetchGenesisHash();
+  } catch (e) {
+    alphaSession = null;
+    toast(`Etapa 1 falhou: não consegui consultar o RPC ${RPC_URL} (${(e as Error).message})`);
+    return;
+  }
+  try {
+    assertDevnetGenesis(genesis);
+  } catch (e) {
+    alphaSession = null;
+    toast(`Etapa 1 falhou: ${(e as Error).message}`);
+    return;
+  }
+  // Etapas 2 e 3: Worker (desafio e verificacao) e assinatura na Phantom.
+  try {
+    alphaSession = await loginWithWallet(ALPHA_API_URL, addr, httpFetch, (msg) =>
+      signText(msg).catch((e) => {
+        throw new Error(`Etapa 3 falhou: assinatura não concluída na Phantom (${(e as Error).message})`);
+      }),
+    );
     toast(alphaSession.admin ? "Sessão Alpha ativa · administrador" : "Sessão Alpha ativa");
     if (alphaSession.admin) await openDevtest();
   } catch (e) {
     alphaSession = null;
-    toast(`Login Alpha não concluído: ${(e as Error).message}`);
+    const err = e as Error;
+    if (err instanceof AlphaApiError) toast(`Etapa 2 falhou: o Worker recusou (HTTP ${err.status}): ${err.message}`);
+    else if (err.message.startsWith("Etapa 3")) toast(err.message);
+    else toast(`Etapa 2 falhou: não consegui falar com o Worker em ${ALPHA_API_URL} (${err.message})`);
   }
 }
 
