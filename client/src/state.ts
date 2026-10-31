@@ -89,13 +89,29 @@ interface Saved {
 }
 
 const KEY = "bomber-idle:v1"; // mesma chave: saves antigos continuam validos
+const BAK = `${KEY}:bak`; // copia de seguranca (inicio da sessao + a cada BACKUP_EVERY_MS)
+const BAD = `${KEY}:corrupt`; // copia do save ilegivel, guardada antes de qualquer regravacao
+const BACKUP_EVERY_MS = 10 * 60 * 1000;
+/** Saude do salvamento (a interface avisa o jogador): `ok` cai para false quando gravar falha (armazenamento cheio/bloqueado);
+ *  `recovered` diz como o save desta sessao foi obtido quando o principal estava ilegivel. */
+export const saveStatus = { ok: true, failures: 0, recovered: "none" as "none" | "backup" | "fresh" };
+const isObj = (v: unknown): v is Record<string, unknown> => !!v && typeof v === "object" && !Array.isArray(v);
+const parseSave = (raw: string | null): Saved | null => {
+  if (!raw) return null;
+  try { const v: unknown = JSON.parse(raw); return isObj(v) ? (v as unknown as Saved) : null; } catch { return null; }
+};
 function load(): Saved | null {
-  try {
-    const raw = localStorage.getItem(KEY);
-    return raw ? JSON.parse(raw) : null;
-  } catch {
-    return null;
-  }
+  let raw: string | null;
+  try { raw = localStorage.getItem(KEY); } catch { return null; }
+  if (raw === null) return null; // sem save: jogo novo
+  const ok = parseSave(raw);
+  if (ok) { try { localStorage.setItem(BAK, raw); } catch { /* sem espaco: segue sem backup */ } return ok; } // o save que abriu bem vira o backup desta sessao
+  // O save principal existe mas esta ilegivel. NUNCA recomecar em silencio: guarda a copia e tenta o backup.
+  try { localStorage.setItem(BAD, raw); } catch { /* ok */ }
+  let bak: Saved | null = null;
+  try { bak = parseSave(localStorage.getItem(BAK)); } catch { /* ok */ }
+  saveStatus.recovered = bak ? "backup" : "fresh";
+  return bak;
 }
 const saved = load();
 // Dia no fuso do jogador (antes usava UTC: no Brasil as missoes reiniciavam as 21h).
@@ -104,6 +120,12 @@ const today = () => {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 };
 const freshDaily = (): Daily => ({ day: today(), blocks: 0, bombs: 0, chests: 0, maps: [], claimed: [] });
+/** Progresso do dia vindo do save: so vale se for de hoje; contadores viram inteiros seguros e as listas so aceitam texto. */
+const cleanDaily = (d: unknown): Daily => {
+  if (!isObj(d) || d.day !== today()) return freshDaily();
+  const strs = (v: unknown, max: number) => (Array.isArray(v) ? [...new Set(v.filter((x): x is string => typeof x === "string"))].slice(0, max) : []);
+  return { day: d.day as string, blocks: Math.floor(fin(d.blocks, 0, 1e9, 0)), bombs: Math.floor(fin(d.bombs, 0, 1e9, 0)), chests: Math.floor(fin(d.chests, 0, 1e9, 0)), maps: strs(d.maps, 200), claimed: strs(d.claimed, 20) };
+};
 const r2 = (n: number) => Math.round(n * 100) / 100;
 /** Numero finito dentro de [min, max]; qualquer outra coisa (NaN, Infinity, texto, undefined) vira `def`. */
 const fin = (v: unknown, min: number, max: number, def: number) => (typeof v === "number" && Number.isFinite(v) ? Math.min(max, Math.max(min, v)) : def);
@@ -160,7 +182,19 @@ function cleanOp(o: SavedOp): SavedOp | null {
     j: { s: fin(o.j?.s, -3, 3, 0), v: fin(o.j?.v, -0.5, 0.5, 0), l: fin(o.j?.l, 0, 0.5, 0) },
   };
 }
-const savedOps: SavedOp[] = Array.isArray(saved?.owned) ? saved!.owned!.map(cleanOp).filter((o): o is SavedOp => o !== null) : [];
+const savedOpsRaw: SavedOp[] = Array.isArray(saved?.owned) ? saved!.owned!.map(cleanOp).filter((o): o is SavedOp => o !== null) : [];
+/** Dois operadores com o mesmo numero teriam o mesmo id (op<N>) e se misturariam no trabalho/interface: o repetido ganha um numero novo. */
+const savedOps: SavedOp[] = (() => {
+  const seen = new Set<number>();
+  let top = savedOpsRaw.reduce((m, o) => Math.max(m, o.n), 0);
+  return savedOpsRaw.map((o) => {
+    if (!seen.has(o.n)) { seen.add(o.n); return o; }
+    const fixed: SavedOp = { ...o, n: ++top };
+    delete fixed.w; // o repetido volta para a reserva
+    seen.add(fixed.n);
+    return fixed;
+  });
+})();
 
 function initialOwned(): HeroData[] {
   if (savedOps.length)
@@ -197,18 +231,27 @@ export const mapState = {
   resume: saved?.map?.r && validMap({ ...saved.map.r, a: true }) ? { i: saved.map.r.i, n: saved.map.r.n } : (null as { i: number; n: number } | null),
 };
 
+/** Alojamentos do save: inteiros de 0 a MAX_LODGINGS, e o total nunca passa do limite (valores de texto/negativos/gigantes viram 0 ou o teto). */
+function cleanLodging(l: unknown): Record<LodgeKind, number> {
+  const o = isObj(l) ? l : {};
+  const out = { casulo: 0, modulo: 0, torre: 0 } as Record<LodgeKind, number>;
+  let left = MAX_LODGINGS;
+  for (const k of ["torre", "modulo", "casulo"] as LodgeKind[]) { out[k] = Math.min(left, Math.floor(fin(o[k], 0, MAX_LODGINGS, 0))); left -= out[k]; }
+  return out;
+}
+
 export const store = {
   pending: saved ? fin(saved.pending, 0, 1e15, 0) : START_BALANCE, // $BOMBERSI de teste (ainda sem blockchain)
   chests: Math.floor(fin(saved?.chests, 0, 1e12, 0)),
-  serial: Math.max(saved?.serial ?? 0, ...owned.map((o) => o.serial)) + 1, // proximo numero de operador
+  serial: Math.max(Math.floor(fin(saved?.serial, 0, 1e9, 0)), ...owned.map((o) => o.serial)) + 1, // proximo numero de operador
   collection: owned, // tudo o que o jogador possui
   heroes: [] as HeroData[], // os que estao trabalhando agora (ate MAX_WORKING)
-  lodging: { casulo: 0, modulo: 0, torre: 0, ...(saved?.lodging ?? {}) } as Record<LodgeKind, number>,
-  butler: { owned: false, on: true, ...(saved?.butler ?? {}) },
+  lodging: cleanLodging(saved?.lodging),
+  butler: { owned: isObj(saved?.butler) && saved!.butler!.owned === true, on: !(isObj(saved?.butler) && saved!.butler!.on === false) },
   housed: new Map<string, LodgeKind>(), // quem esta descansando em qual alojamento (recalculado a cada segundo)
   version: 0, // sobe quando a colecao muda (a interface se refaz)
   status: {} as Record<string, string>,
-  daily: saved?.daily?.day === today() ? saved.daily : freshDaily(),
+  daily: cleanDaily(saved?.daily),
 };
 
 /** Ordena por raridade (maior primeiro), depois nivel e numero. */
@@ -231,27 +274,45 @@ export function fillSlots(): number {
 }
 if (saved?.wk) syncWorking(); else fillSlots();
 
+let lastBak = Date.now(); // load() ja gravou o backup do inicio da sessao
+let erased = false; // depois de apagar o progresso, NADA mais e gravado nesta pagina (veja eraseSave)
 function persist() {
+  if (erased) return;
   try {
-    localStorage.setItem(KEY, JSON.stringify({
+    const json = JSON.stringify({
       pending: store.pending, chests: store.chests, daily: store.daily, serial: store.serial,
       wk: true, lodging: store.lodging, butler: store.butler,
       owned: store.collection.map((h): SavedOp => ({ r: h.rarity, n: h.serial, xp: h.xp, lv: h.level, up: h.up, j: h.jitter, ...(workingIds.has(h.id) ? { w: 1 as const } : {}), s: r2(h.stamina), st: { ...h.stats } })),
       map: { i: mapState.index, n: mapState.instance, a: mapState.auto, ...(mapState.resume ? { r: mapState.resume } : {}) } as SavedMap,
-    }));
+    });
+    localStorage.setItem(KEY, json);
+    saveStatus.ok = true;
+    if (Date.now() - lastBak > BACKUP_EVERY_MS) { // backup a cada 10 min; se faltar espaco, o save principal tem prioridade
+      lastBak = Date.now();
+      try { localStorage.setItem(BAK, json); } catch { try { localStorage.removeItem(BAK); } catch { /* ok */ } }
+    }
   } catch {
-    /* sem storage: ignora */
+    saveStatus.ok = false; // sem storage / cheio / bloqueado: a interface avisa o jogador
+    saveStatus.failures++;
   }
 }
 persist(); // grava ja no formato novo (migracao)
+/** Apaga o progresso deste navegador (save, backup e copia ilegivel) e congela as gravacoes. Sem o congelamento o "pagehide"
+ *  do recarregamento chamava saveNow() e regravava o progresso antigo: o botao "Apagar progresso" nao apagava nada. Recarregue a pagina depois. */
+export function eraseSave() {
+  erased = true;
+  for (const k of [KEY, BAK, BAD]) { try { localStorage.removeItem(k); } catch { /* ignora */ } }
+}
 /** Salva agora (usado em intervalos e ao fechar/esconder a pagina). */
 export const saveNow = () => persist();
 const ensureDay = () => { if (store.daily.day !== today()) store.daily = freshDaily(); };
 
 /** Bau aberto: soma $BOMBERSI, XP do operador e progresso das missoes. */
+const PENDING_MAX = 1e15; // o mesmo teto que a carga do save aceita: nada que se grave deixa de ser lido de volta
+const credit = (v: number) => { if (Number.isFinite(v) && v > 0) store.pending = Math.min(PENDING_MAX, r2(store.pending + v)); };
 export function addReward(value: number, h: HeroData, chestBase: number) {
   ensureDay();
-  store.pending = r2(store.pending + value);
+  credit(value);
   store.chests += 1;
   store.daily.chests += 1;
   h.xp += 5 + chestBase * 2;
@@ -276,6 +337,7 @@ function rollCapsule(): Rarity {
 }
 /** Compra `count` capsulas. Devolve os operadores novos ou uma mensagem de erro. */
 export function buyCapsule(count: number): HeroData[] | string {
+  if (!Number.isInteger(count) || count < 1 || count > MAX_COLLECTION) return "Quantidade inválida"; // (-5 cápsulas "custaria" -150000 e AUMENTARIA o saldo)
   const cost = CAPSULE_PRICE * count;
   if (store.collection.length + count > MAX_COLLECTION) return `Coleção cheia (máx. ${MAX_COLLECTION} operadores)`;
   if (store.pending < cost) return "$BOMBERSI insuficientes";
@@ -305,6 +367,7 @@ export function workAll(): number { const n = fillSlots(); persist(); return n; 
 export function restAll(): number { const n = workingIds.size; workingIds.clear(); syncWorking(); persist(); return n; }
 export function buyLodging(kind: LodgeKind): string | null {
   const L = LODGING[kind];
+  if (!L) return "Alojamento inválido";
   if (L.price === null) return "Disponível em breve (pago em $ASG)";
   const total = store.lodging.casulo + store.lodging.modulo + store.lodging.torre;
   if (total >= MAX_LODGINGS) return `Limite de ${MAX_LODGINGS} alojamentos`;
@@ -353,8 +416,9 @@ export function economyTick() {
 export const UPGRADE_GROWTH = 1.4; // crescimento do custo por nivel (era 1,5: maximizar 3 atributos de um operador ia de ~3,4 mi para ~2,1 mi)
 export const upgradeCost = (h: HeroData, k: UpKey) => Math.round(100 * REWARD_SCALE * Math.pow(UPGRADE_GROWTH, h.up[k]));
 export function upgrade(h: HeroData, k: UpKey): boolean {
+  if (!Object.prototype.hasOwnProperty.call(h.up, k)) return false;
   const c = upgradeCost(h, k);
-  if (h.up[k] >= UP_MAX || store.pending < c) return false;
+  if (!Number.isFinite(c) || h.up[k] >= UP_MAX || store.pending < c) return false;
   store.pending = r2(store.pending - c);
   h.up[k]++;
   applyStats(h);
@@ -378,7 +442,7 @@ export function claimMission(id: string): boolean {
   const m = MISSIONS.find((x) => x.id === id);
   if (!m || missionClaimed(id) || missionProgress(m) < m.goal) return false;
   store.daily.claimed.push(id);
-  store.pending = r2(store.pending + m.reward);
+  credit(m.reward);
   persist();
   return true;
 }
@@ -390,8 +454,8 @@ export function refillAll() {
 
 /** Recompensa por derrotar um inimigo (bonus fora do fluxo de baus: nao soma em store.chests/missoes). */
 export function addEnemyReward(value: number, h: HeroData) {
-  store.pending = r2(store.pending + value);
-  h.xp += Math.round(3 + value * 0.02);
+  credit(value);
+  h.xp += Math.round(3 + (Number.isFinite(value) && value > 0 ? value : 0) * 0.02);
   while (h.level < MAX_LEVEL && h.xp >= xpNeed(h.level)) { h.xp -= xpNeed(h.level); h.level++; applyStats(h); }
   persist();
 }

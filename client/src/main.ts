@@ -3,7 +3,7 @@ import { FarmScene, GAME_W, GAME_H } from "./scenes/FarmScene";
 import {
   RARITIES, RARITY_ORDER, Rarity, HeroData, store, refillAll, mapState, MISSIONS, missionProgress, missionClaimed, claimMission,
   upgrade, upgradeCost, UP_MAX, xpInfo, UpKey, sortOps, buyCapsule, CAPSULE_PRICE, CAPSULE_ODDS, MAX_COLLECTION, MAX_WORKING,
-  isWorking, setWorking, workAll, restAll, buyLodging, buyButler, toggleButler, economyTick, LODGING, LodgeKind, BUTLER_PRICE, OUTSIDE_RATE, MAX_LODGINGS, saveNow, START_BALANCE,
+  isWorking, setWorking, workAll, restAll, buyLodging, buyButler, toggleButler, economyTick, saveStatus, eraseSave, LODGING, LodgeKind, BUTLER_PRICE, OUTSIDE_RATE, MAX_LODGINGS, saveNow, START_BALANCE,
 } from "./state";
 import { MAPS, INSTANCES_PER_MAP } from "./maps";
 import { abilitiesOf, abilityStatus, bomberClass, peekRuntime } from "./game/bomberAbilities";
@@ -37,6 +37,7 @@ new Phaser.Game({
 const $ = <T extends HTMLElement>(id: string) => document.getElementById(id) as T;
 let wallet = "";
 let liveUpdate: (() => void) | null = null;
+let saveWarned = false;
 const fmt = (n: number) => Math.round(n).toLocaleString("pt-BR");
 
 function toast(msg: string) {
@@ -299,6 +300,9 @@ function render() {
     ref.btn.disabled = done || p < m.goal;
   }
   liveUpdate?.();
+  // avisos de salvamento (uma vez por ocorrência): falha ao gravar e save recuperado
+  if (!saveStatus.ok && !saveWarned) { saveWarned = true; toast("Não foi possível salvar neste navegador (armazenamento cheio ou bloqueado). O progresso desta sessão pode ser perdido."); }
+  else if (saveStatus.ok) saveWarned = false;
   // indicadores do menu inferior: avisam sem poluir a tela (bolinha discreta, não número)
   const capDot = document.querySelector<HTMLElement>('[data-hub="capsules"] .dot');
   if (capDot) capDot.classList.toggle("on", store.pending >= CAPSULE_PRICE && store.collection.length < MAX_COLLECTION);
@@ -314,7 +318,9 @@ document.addEventListener("visibilitychange", () => { if (document.hidden) saveN
 $("work-all").onclick = () => { const n = workAll(); toast(n ? `${n} operador(es) enviados ao trabalho` : "Nenhuma vaga livre ou ninguém com 30%+ de stamina"); };
 $("rest-all").onclick = () => { const n = restAll(); toast(n ? `${n} operador(es) recolhidos para descansar` : "Ninguém estava trabalhando"); };
 
-try {
+if (saveStatus.recovered === "backup") toast("O save principal estava ilegível: recuperei a cópia de segurança. A cópia ilegível ficou guardada neste navegador.");
+else if (saveStatus.recovered === "fresh") toast("O save estava ilegível e não havia backup, então começamos um jogo novo. A cópia ilegível ficou guardada neste navegador.");
+else try {
   if (!localStorage.getItem("bomber-idle:seen")) {
     localStorage.setItem("bomber-idle:seen", "1");
     toast(`Bem-vindo! Você começa com 1 operador e ${fmt(START_BALANCE)} $BOMBERSI: abra suas cápsulas no menu de baixo.`);
@@ -635,7 +641,7 @@ const HUB: Record<string, () => void> = {
     reset.style.marginTop = "14px";
     reset.onclick = () => {
       if (confirm("Isso apaga operadores, níveis, missões e $BOMBERSI de teste salvos neste navegador. Continuar?")) {
-        try { localStorage.removeItem("bomber-idle:v1"); } catch { /* ignora */ }
+        eraseSave(); // apaga save + backup e congela as gravações (o pagehide do reload regravava o progresso antigo)
         location.reload();
       }
     };

@@ -11,7 +11,8 @@ const mem = new Map<string, string>();
 (globalThis as any).localStorage = { getItem: (k: string) => mem.get(k) ?? null, setItem: (k: string, v: string) => void mem.set(k, v), removeItem: (k: string) => void mem.delete(k) };
 const rar = process.env.ONLY ? [process.env.ONLY] : ["common", "uncommon", "rare", "epic", "mythic", "legendary", "super", "ancestral"]; // ONLY=aeon... roda 15 operadores da mesma raridade
 const LVL = Number(process.env.LVL ?? 30);
-mem.set("bomber-idle:v1", JSON.stringify({ pending: 0, chests: 0, wk: true, owned: Array.from({ length: 15 }, (_, i) => ({ r: rar[i % rar.length], n: i + 1, xp: 0, lv: LVL, up: { stamina: 2, speed: 1, luck: 0 }, j: { s: 0, v: 0, l: 0 }, w: 1 })), map: { i: Number(process.env.MAP ?? 0), n: Number(process.env.INST ?? 1), a: true } }));
+const OPS = Number(process.env.OPS ?? 15); // quantos operadores trabalham (1..15)
+mem.set("bomber-idle:v1", JSON.stringify({ pending: 0, chests: 0, wk: true, owned: Array.from({ length: OPS }, (_, i) => ({ r: rar[i % rar.length], n: i + 1, xp: 0, lv: LVL, up: { stamina: 2, speed: 1, luck: 0 }, j: { s: 0, v: 0, l: 0 }, w: 1 })), map: { i: Number(process.env.MAP ?? 0), n: Number(process.env.INST ?? 1), a: true } }));
 
 const P: any = (await import("phaser")).default;
 const st = await import("../../src/state.ts");
@@ -39,7 +40,8 @@ sc.tweens = { add(cfg: any) { P.__stats.tweens++; if (cfg.onStart) timers.push({
 sc.time = { get now() { return nowMs; }, delayedCall(ms: number, cb: () => void) { timers.push({ at: nowMs + ms, cb }); }, addEvent(c: any) { loops.push({ every: c.delay, next: c.delay, cb: c.callback }); } };
 
 sc.create();
-assert.equal(sc.heroes.length, 15, "15 operadores em campo");
+assert.equal(sc.heroes.length, OPS, `${OPS} operadores em campo`);
+const liveAtStart = P.__stats.created - P.__stats.destroyed; // objetos do Phaser vivos logo apos montar o 1o mapa (custo da troca de mapa)
 const frames = Number(process.env.FRAMES ?? 20000), DT = 16;
 let worst = 0, total = 0, maxBombs = 0, mapChanges = 0, lastMap = `${st.mapState.index}/${st.mapState.instance}`;
 const statuses = new Set<string>();
@@ -71,7 +73,7 @@ if (process.env.BRIEF) { const d = st.store.daily; console.log(JSON.stringify({ 
 console.log(JSON.stringify({
   simulatedSeconds: Math.round(frames * DT / 1000), wallMs: Math.round(ms), avgUpdateMs: +(total / frames).toFixed(3), worstUpdateMs: +worst.toFixed(2),
   mapChanges, finalMap: lastMap, pending: st.store.pending, chestsOpened: st.store.chests, chestSpritesCreated: chestsCreated, maxBombs,
-  createdObjects: P.__stats.created, destroyedObjects: P.__stats.destroyed, liveObjects: live, tweens: P.__stats.tweens,
+  liveAtStart, pendingEnd: st.store.pending, createdObjects: P.__stats.created, destroyedObjects: P.__stats.destroyed, liveObjects: live, tweens: P.__stats.tweens,
   fxImagesPooled: sc.fx.allImg.length, fxTextsPooled: sc.fx.allTxt.length, holo: sc.holo.length, statuses: [...statuses].sort(), stats,
 }, null, 1));
 assert.ok(st.store.chests <= chestsCreated, "nenhum bau pago mais de uma vez");

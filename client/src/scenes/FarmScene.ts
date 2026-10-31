@@ -194,10 +194,8 @@ export class FarmScene extends Phaser.Scene {
           this.mapObjs.push(s);
           this.blocksLeft++;
           const maxHp = blockHp(mapState.index, mapState.instance);
-          const barBg = this.add.rectangle(px, py - T / 2 + 3, 22, 4, 0x000000, 0.7).setDepth(6).setVisible(false);
-          const barFg = this.add.rectangle(px - 11, py - T / 2 + 3, 22, 2, 0xff9a4a).setOrigin(0, 0.5).setDepth(7).setVisible(false);
-          this.mapObjs.push(barBg, barFg);
-          this.blocksHp.set(key(x, y), { x, y, hp: maxHp, maxHp, barBg, barFg });
+          // As barras de vida do bloco so nascem no 1o dano (hitBlock): economiza ~2 objetos por bloco a cada troca de mapa.
+          this.blocksHp.set(key(x, y), { x, y, hp: maxHp, maxHp });
         }
       }
     }
@@ -786,11 +784,14 @@ export class FarmScene extends Phaser.Scene {
     if (!b) { this.breakBlock(x, y, luck, owner); return; } // seguranca: sem registro de hp, quebra direto
     b.hp -= dmg;
     if (b.hp <= 0) { this.breakBlock(x, y, luck, owner); return; }
-    if (b.barBg && b.barFg) {
-      b.barBg.setVisible(true);
-      b.barFg.setVisible(true);
-      b.barFg.width = 22 * (b.hp / b.maxHp);
-    }
+    const px = x * T + T / 2, py = y * T + T / 2;
+    const bg: Phaser.GameObjects.Rectangle = b.barBg ?? this.add.rectangle(px, py - T / 2 + 3, 22, 4, 0x000000, 0.7).setDepth(6);
+    const fg: Phaser.GameObjects.Rectangle = b.barFg ?? this.add.rectangle(px - 11, py - T / 2 + 3, 22, 2, 0xff9a4a).setOrigin(0, 0.5).setDepth(7);
+    if (!b.barBg) { b.barBg = bg; this.mapObjs.push(bg); } // criadas no 1o dano; limpas junto com o resto do mapa
+    if (!b.barFg) { b.barFg = fg; this.mapObjs.push(fg); }
+    bg.setVisible(true);
+    fg.setVisible(true);
+    fg.width = 22 * (b.hp / b.maxHp);
     audio.play("blockHit");
     const sprite = this.blockSprites[y][x];
     if (sprite) { sprite.setScale(1); this.tweens.add({ targets: sprite, scale: 1.1, duration: 70, yoyo: true }); }
