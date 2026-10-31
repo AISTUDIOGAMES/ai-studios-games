@@ -2,7 +2,7 @@ import type { Env } from "./env";
 import { isWalletAddress, parseWalletList, randomHex, sha256Hex, hitRateLimit, audit } from "./util";
 import { NONCE_TTL_MS, SESSION_TTL_MS, loginMessage, verifyWalletSignature } from "./auth";
 
-export const VERSION_TAG = "0.1.0";
+const VERSION_TAG = "0.1.0";
 const MAX_BODY_BYTES = 4096;
 
 function corsHeaders(req: Request, env: Env): Record<string, string> {
