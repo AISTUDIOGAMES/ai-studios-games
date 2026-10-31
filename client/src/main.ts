@@ -10,6 +10,7 @@ import { abilitiesOf, abilityStatus, bomberClass, peekRuntime } from "./game/bom
 import { CLASS_INFO, NEUTRAL_MODS } from "./game/bomberConfig";
 import type { Modifiers } from "./game/bomberTypes";
 import { connect, requestClaim } from "./wallet";
+import { TEST_CHEATS, ENV_LABEL } from "./env-config";
 import { FX_LABELS, getFxLevel, setFxLevel } from "./game/fxSettings";
 import { audio } from "./audio/audioEngine";
 import { getAudioPrefs, onAudioPrefs, setAudioPrefs, type AudioPrefs } from "./audio/audioSettings";
@@ -327,7 +328,17 @@ else try {
   }
 } catch { /* sem storage: ignora */ }
 
-$("refill").onclick = () => { refillAll(); toast("Stamina recarregada (modo teste)"); };
+// Atalho de teste (stamina infinita): so existe no DEVTEST local. Em Alpha e producao o botao e removido.
+if (TEST_CHEATS) {
+  $("refill").hidden = false;
+  $("refill").onclick = () => { refillAll(); toast("Stamina recarregada (modo teste)"); };
+} else $("refill").remove();
+
+// Selo de ambiente (DEVTEST / ALPHA · DEVNET). Nada aparece em producao.
+if (ENV_LABEL) {
+  const badge = document.getElementById("env-badge");
+  if (badge) { badge.textContent = ENV_LABEL; badge.hidden = false; }
+}
 
 $("connect").onclick = async () => {
   try {

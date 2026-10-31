@@ -190,7 +190,7 @@
     </style>
   </head>
   <body>
-    <header>
+    <header><span id="env-badge" hidden style="position:fixed;top:4px;left:50%;transform:translateX(-50%);z-index:60;background:#f2c24a;color:#0b1220;font:700 11px/1 system-ui,sans-serif;padding:3px 8px;border-radius:6px;letter-spacing:.06em;pointer-events:none"></span>
       <div class="brand">
         <svg class="emblem" viewBox="0 0 48 48" aria-hidden="true">
           <defs>
@@ -231,7 +231,7 @@
           <div class="maps" style="margin-bottom:6px"><button id="work-all" class="chip">Enviar todos</button><button id="rest-all" class="chip">Recolher todos</button></div>
           <div id="hero-filter" class="maps"></div>
           <ul id="heroes"></ul>
-          <button id="refill" class="ghost">Recarregar stamina de todos (teste)</button>
+          <button id="refill" class="ghost" hidden>Recarregar stamina de todos (teste)</button>
         </section>
         <section id="tab-missions" hidden>
           <ul id="missions"></ul>

@@ -1,0 +1,22 @@
+# Worker do BomberIdle Alpha (separado do Worker do Slither).
+# Antes do primeiro deploy: crie o D1 "bomber-alpha" (npx wrangler d1 create bomber-alpha)
+# e cole o database_id abaixo. Segredos NUNCA entram aqui: use `wrangler secret put`.
+name = "bomber-alpha-api"
+main = "src/index.ts"
+compatibility_date = "2024-09-01"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "bomber-alpha"
+database_id = "COLE_AQUI_O_ID_DO_D1_BOMBER_ALPHA"
+migrations_dir = "migrations"
+
+# Ambiente Alpha: Devnet, DEVTEST desligado por padrao no servidor de producao da API.
+[vars]
+APP_ENV = "alpha"
+SOLANA_CLUSTER = "devnet"
+VERSION = "0.1.0"
+# Carteiras administradoras (endereco publico, separado por virgula). Checado no servidor em toda rota /devtest.
+ADMIN_WALLETS = "J1Py7edvZwQjwvkGvcAVr4VyAG3JGxR6W178gi4DfWUb"
+# Unicas origens que podem chamar a API a partir do navegador.
+ALLOW_ORIGIN = "https://aistudiosgames.vercel.app"

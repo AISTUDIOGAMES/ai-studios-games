@@ -1,0 +1,4 @@
+# Copie para .dev.vars (ja ignorado pelo Git) somente para `wrangler dev`.
+# Nada aqui e segredo de producao. Para o servidor de desenvolvimento local:
+APP_ENV = "dev"
+ALLOW_ORIGIN = "http://localhost:5173"
