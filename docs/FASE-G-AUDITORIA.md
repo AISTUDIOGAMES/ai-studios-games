@@ -161,3 +161,27 @@ Arquivos já modificados no .rar antes desta etapa (`src/art.ts`, `src/scenes/Fa
 3. Carteira Phantom: conectar, checar a rede com `assertRpcIsDevnet`, login por assinatura no cliente, tela DEVTEST.
 4. Economia Alpha no Worker (D1 + livro-caixa), chat no Durable Object, testes E2E.
 5. Programa Anchor: `anchor keys sync` na sua máquina, testes em `tests/` e validação de `max_claim`.
+
+---
+
+## 13. Mint TEST (Devnet): estado oficial
+
+| Item | Valor |
+|---|---|
+| Mint oficial | `2U2pmm7w81kkCX7TZH6rN5AMzt8YFzGtzkcFAsrgjaY2` (registrado em `docs/TEST-MINT.json`) |
+| Mint extra (nao usar) | `JC27wXPFQM3rHxFizuaMhTPP9T8cjz3H2uu9WTxG8xCY`, criado por uma execucao duplicada do script |
+| Autoridade de mint | `HJuS1MkozoAKC4b7CjRrVQHCsyLoU1xxrFGoDEqi3Mpz` (chave publica) |
+| Decimais | 6 |
+| Autoridade de congelamento | nenhuma |
+| Chave privada | somente em `%USERPROFILE%\bomber-test-mint.json`, fora do repositorio. Fazer copia de seguranca. |
+
+**Licoes registradas**
+
+- A primeira versao do script gravava o arquivo sem confirmar a conta na rede, e nao impedia uma segunda criacao. Foi corrigido: agora recusa se `docs/TEST-MINT.json` existir e so grava depois de conferir a conta.
+- Consultas ao RPC publico retornaram "NAO EXISTE" para contas que existiam. Por isso a confirmacao definitiva e feita pelas transacoes de criacao e pelo comando `npm run mint:verify`, nao por uma unica leitura.
+- Saldo da autoridade apos as duas criacoes: 4,9978464 SOL (5 SOL do faucet menos as taxas e o aluguel das duas contas).
+
+**Comandos**
+
+- `npm run mint:verify`: confere, somente leitura, o mint registrado (dono, tamanho, decimais, autoridade e ausencia de congelamento).
+- `npm run mint:test`: cria um mint somente se `docs/TEST-MINT.json` nao existir.
