@@ -2,10 +2,12 @@
 import bs58 from "bs58";
 // @ts-ignore - modulo de script (.mjs), sem tipos
 import { MINT_ACCOUNT_SIZE, TOKEN_PROGRAM_ID } from "../scripts/mint-checks.mjs";
+import { TEST_MINT_AUTHORITY } from "../src/alpha-config";
 
 export const DEVNET_GENESIS = "EtWTRABZaYq6iMfeYKouRu166VU2xqa1wcaWoxPkrZBG";
 export const MAINNET_GENESIS = "5eykt4UsFv8P8NJdTREpY1vzqKqZKvdpKuc147dw2N9d";
-export const OK_AUTHORITY = "HJuS1MkozoAKC4b7CjRrVQHCsyLoU1xxrFGoDEqi3Mpz";
+// A autoridade vem de alpha-config.ts (sincronizada com docs/TEST-MINT.json), nunca fixa aqui.
+export const OK_AUTHORITY = TEST_MINT_AUTHORITY;
 
 /** Conta de mint no layout do SPL Token (82 bytes), igual ao que a rede devolve. */
 export function mintBuf({ decimals = 6, auth = OK_AUTHORITY, freeze = null as string | null, init = 1 } = {}): Buffer {
