@@ -17,6 +17,6 @@ APP_ENV = "alpha"
 SOLANA_CLUSTER = "devnet"
 VERSION = "0.1.0"
 # Carteiras administradoras (endereco publico, separado por virgula). Checado no servidor em toda rota /devtest.
-ADMIN_WALLETS = "J1Py7edvZwQjwvkGvcAVr4VyAG3JGxR6W178gi4DfWUb"
+ADMIN_WALLETS = "vCUP1s6iLFyHfsGoRV7VqpRYrUg9QJuPbZWrhe7tdxu"
 # Unicas origens que podem chamar a API a partir do navegador.
 ALLOW_ORIGIN = "https://aistudiosgames.vercel.app"

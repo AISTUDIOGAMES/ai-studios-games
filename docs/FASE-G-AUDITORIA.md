@@ -185,3 +185,9 @@ Arquivos já modificados no .rar antes desta etapa (`src/art.ts`, `src/scenes/Fa
 
 - `npm run mint:verify`: confere, somente leitura, o mint registrado (dono, tamanho, decimais, autoridade e ausencia de congelamento).
 - `npm run mint:test`: cria um mint somente se `docs/TEST-MINT.json` nao existir.
+
+**Atualizacao: carteira admin do DEVTEST**
+
+- A carteira admin anterior (`J1Py...`) foi descontinuada: a frase de recuperacao foi exposta em um chat e deve ser tratada como comprometida.
+- Nova carteira admin: `vCUP1s6iLFyHfsGoRV7VqpRYrUg9QJuPbZWrhe7tdxu` (somente o endereco publico, configurado em `ADMIN_WALLETS` no `wrangler.toml` e em `ADMIN_WALLET` no `alpha-config.ts`).
+- A autoridade do mint TEST e uma chave separada, gerada localmente, e nao tem relacao com o login admin.

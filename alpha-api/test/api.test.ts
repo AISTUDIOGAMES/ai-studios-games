@@ -11,6 +11,7 @@ import { handle } from "../src/index";
 import { isWalletAddress, parseWalletList } from "../src/util";
 import type { Env } from "../src/env";
 import { fakeRpcFetch } from "./rpc-fake";
+import { ADMIN_WALLET } from "../src/alpha-config";
 
 const here = dirname(fileURLToPath(import.meta.url));
 const MIGRATION = readFileSync(join(here, "../migrations/0001_init.sql"), "utf8");
@@ -55,8 +56,8 @@ async function login(env: Env, w: { kp: nacl.SignKeyPair; pub: string }, now = D
 test("config: endereco de admin do wrangler.toml e valido e a rede e Devnet", () => {
   const toml = readFileSync(join(here, "../wrangler.toml"), "utf8");
   const admins = /ADMIN_WALLETS = "([^"]*)"/.exec(toml)?.[1] ?? "";
-  assert.ok(parseWalletList(admins).has("J1Py7edvZwQjwvkGvcAVr4VyAG3JGxR6W178gi4DfWUb"));
-  assert.ok(isWalletAddress("J1Py7edvZwQjwvkGvcAVr4VyAG3JGxR6W178gi4DfWUb"));
+  assert.ok(parseWalletList(admins).has(ADMIN_WALLET));
+  assert.ok(isWalletAddress(ADMIN_WALLET));
   assert.match(toml, /SOLANA_CLUSTER = "devnet"/);
   assert.match(toml, /APP_ENV = "alpha"/);
   assert.doesNotMatch(toml, /ALLOW_ORIGIN = "\*"/);
