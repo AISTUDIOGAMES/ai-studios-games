@@ -9,8 +9,9 @@ import { MAPS, INSTANCES_PER_MAP } from "./maps";
 import { abilitiesOf, abilityStatus, bomberClass, peekRuntime } from "./game/bomberAbilities";
 import { CLASS_INFO, NEUTRAL_MODS } from "./game/bomberConfig";
 import type { Modifiers } from "./game/bomberTypes";
-import { connect, requestClaim } from "./wallet";
-import { TEST_CHEATS, ENV_LABEL } from "./env-config";
+import { connect, requestClaim, signText } from "./wallet";
+import { TEST_CHEATS, ENV_LABEL, ALPHA_API_URL, assertRpcIsDevnet } from "./env-config";
+import { loginWithWallet, devtestStatus, AlphaSession, FetchLike } from "./alpha-session";
 import { FX_LABELS, getFxLevel, setFxLevel } from "./game/fxSettings";
 import { audio } from "./audio/audioEngine";
 import { getAudioPrefs, onAudioPrefs, setAudioPrefs, type AudioPrefs } from "./audio/audioSettings";
@@ -340,6 +341,41 @@ if (ENV_LABEL) {
   if (badge) { badge.textContent = ENV_LABEL; badge.hidden = false; }
 }
 
+// ---------- Alpha: login por assinatura e painel DEVTEST (so existe quando ALPHA_API_URL esta definido) ----------
+let alphaSession: AlphaSession | null = null;
+const httpFetch: FetchLike = (u, i) => fetch(u, i);
+
+async function alphaLogin(addr: string) {
+  try {
+    // Confere so o RPC do jogo. A rede da Phantom nao e lida aqui (limitacao da API window.solana).
+    await assertRpcIsDevnet();
+    alphaSession = await loginWithWallet(ALPHA_API_URL, addr, httpFetch, signText);
+    toast(alphaSession.admin ? "Sessão Alpha ativa · administrador" : "Sessão Alpha ativa");
+    if (alphaSession.admin) await openDevtest();
+  } catch (e) {
+    alphaSession = null;
+    toast(`Login Alpha não concluído: ${(e as Error).message}`);
+  }
+}
+
+async function openDevtest() {
+  const panel = document.getElementById("devtest-panel");
+  const body = document.getElementById("devtest-body");
+  if (!panel || !body || !alphaSession) return;
+  panel.hidden = false;
+  body.textContent = "Consultando…";
+  try {
+    body.textContent = JSON.stringify(await devtestStatus(ALPHA_API_URL, alphaSession, httpFetch), null, 2);
+  } catch (e) {
+    body.textContent = `Erro: ${(e as Error).message}`;
+  }
+}
+document.getElementById("devtest-refresh")?.addEventListener("click", () => void openDevtest());
+document.getElementById("devtest-close")?.addEventListener("click", () => {
+  const p = document.getElementById("devtest-panel");
+  if (p) p.hidden = true;
+});
+
 $("connect").onclick = async () => {
   try {
     wallet = await connect();
@@ -347,7 +383,9 @@ $("connect").onclick = async () => {
     ($("claim") as HTMLButtonElement).disabled = false;
   } catch (e) {
     toast((e as Error).message);
+    return;
   }
+  if (ALPHA_API_URL) await alphaLogin(wallet);
 };
 
 $("claim").onclick = async () => {
