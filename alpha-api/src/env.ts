@@ -7,6 +7,8 @@ export interface D1PreparedStatement {
 }
 export interface D1Database {
   prepare(sql: string): D1PreparedStatement;
+  // Lote atomico do D1 (usado em withdraw.ts). Cada item do resultado traz o meta da instrucao.
+  batch(statements: D1PreparedStatement[]): Promise<unknown[]>;
 }
 export interface Env {
   DB: D1Database;
