@@ -190,7 +190,7 @@
     </style>
   </head>
   <body>
-    <header>
+    <header><span id="env-badge" hidden style="position:fixed;top:4px;left:50%;transform:translateX(-50%);z-index:60;background:#f2c24a;color:#0b1220;font:700 11px/1 system-ui,sans-serif;padding:3px 8px;border-radius:6px;letter-spacing:.06em;pointer-events:none"></span>
       <div class="brand">
         <svg class="emblem" viewBox="0 0 48 48" aria-hidden="true">
           <defs>
@@ -218,6 +218,13 @@
       <button id="connect">Conectar carteira</button>
       <button id="claim" disabled>Cofre · Sacar</button>
     </header>
+    <div id="devtest-panel" hidden style="position:fixed;right:12px;bottom:12px;z-index:70;max-width:340px;max-height:60vh;overflow:auto;background:#0b1220;color:#f2e7c4;border:1px solid #d4a537;border-radius:10px;padding:10px;font:12px/1.4 ui-monospace,Consolas,monospace">
+      <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:6px">
+        <b>DEVTEST · administração</b>
+        <span><button id="devtest-refresh" type="button">Atualizar</button> <button id="devtest-close" type="button">Fechar</button></span>
+      </div>
+      <pre id="devtest-body" style="margin:0;white-space:pre-wrap;word-break:break-word"></pre>
+    </div>
     <main>
       <div id="game"></div>
       <aside>
@@ -231,7 +238,7 @@
           <div class="maps" style="margin-bottom:6px"><button id="work-all" class="chip">Enviar todos</button><button id="rest-all" class="chip">Recolher todos</button></div>
           <div id="hero-filter" class="maps"></div>
           <ul id="heroes"></ul>
-          <button id="refill" class="ghost">Recarregar stamina de todos (teste)</button>
+          <button id="refill" class="ghost" hidden>Recarregar stamina de todos (teste)</button>
         </section>
         <section id="tab-missions" hidden>
           <ul id="missions"></ul>

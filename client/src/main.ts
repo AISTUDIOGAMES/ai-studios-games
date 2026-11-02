@@ -9,7 +9,10 @@ import { MAPS, INSTANCES_PER_MAP } from "./maps";
 import { abilitiesOf, abilityStatus, bomberClass, peekRuntime } from "./game/bomberAbilities";
 import { CLASS_INFO, NEUTRAL_MODS } from "./game/bomberConfig";
 import type { Modifiers } from "./game/bomberTypes";
-import { connect, requestClaim } from "./wallet";
+import { connect, requestClaim, signText } from "./wallet";
+import { TEST_CHEATS, ENV_LABEL, ALPHA_API_URL, RPC_URL, fetchGenesisHash } from "./env-config";
+import { assertDevnetGenesis } from "./env-rules";
+import { loginWithWallet, devtestStatus, AlphaSession, AlphaApiError, FetchLike } from "./alpha-session";
 import { FX_LABELS, getFxLevel, setFxLevel } from "./game/fxSettings";
 import { audio } from "./audio/audioEngine";
 import { getAudioPrefs, onAudioPrefs, setAudioPrefs, type AudioPrefs } from "./audio/audioSettings";
@@ -327,7 +330,75 @@ else try {
   }
 } catch { /* sem storage: ignora */ }
 
-$("refill").onclick = () => { refillAll(); toast("Stamina recarregada (modo teste)"); };
+// Atalho de teste (stamina infinita): so existe no DEVTEST local. Em Alpha e producao o botao e removido.
+if (TEST_CHEATS) {
+  $("refill").hidden = false;
+  $("refill").onclick = () => { refillAll(); toast("Stamina recarregada (modo teste)"); };
+} else $("refill").remove();
+
+// Selo de ambiente (DEVTEST / ALPHA · DEVNET). Nada aparece em producao.
+if (ENV_LABEL) {
+  const badge = document.getElementById("env-badge");
+  if (badge) { badge.textContent = ENV_LABEL; badge.hidden = false; }
+}
+
+// ---------- Alpha: login por assinatura e painel DEVTEST (so existe quando ALPHA_API_URL esta definido) ----------
+let alphaSession: AlphaSession | null = null;
+const httpFetch: FetchLike = (u, i) => fetch(u, i);
+
+async function alphaLogin(addr: string) {
+  // Cada etapa diz qual falhou, porque o navegador so informa "Failed to fetch" para qualquer rede.
+  // Etapa 1: RPC da Devnet (checagem do genesis hash).
+  let genesis: string;
+  try {
+    genesis = await fetchGenesisHash();
+  } catch (e) {
+    alphaSession = null;
+    toast(`Etapa 1 falhou: não consegui consultar o RPC ${RPC_URL} (${(e as Error).message})`);
+    return;
+  }
+  try {
+    assertDevnetGenesis(genesis);
+  } catch (e) {
+    alphaSession = null;
+    toast(`Etapa 1 falhou: ${(e as Error).message}`);
+    return;
+  }
+  // Etapas 2 e 3: Worker (desafio e verificacao) e assinatura na Phantom.
+  try {
+    alphaSession = await loginWithWallet(ALPHA_API_URL, addr, httpFetch, (msg) =>
+      signText(msg).catch((e) => {
+        throw new Error(`Etapa 3 falhou: assinatura não concluída na Phantom (${(e as Error).message})`);
+      }),
+    );
+    toast(alphaSession.admin ? "Sessão Alpha ativa · administrador" : "Sessão Alpha ativa");
+    if (alphaSession.admin) await openDevtest();
+  } catch (e) {
+    alphaSession = null;
+    const err = e as Error;
+    if (err instanceof AlphaApiError) toast(`Etapa 2 falhou: o Worker recusou (HTTP ${err.status}): ${err.message}`);
+    else if (err.message.startsWith("Etapa 3")) toast(err.message);
+    else toast(`Etapa 2 falhou: não consegui falar com o Worker em ${ALPHA_API_URL} (${err.message})`);
+  }
+}
+
+async function openDevtest() {
+  const panel = document.getElementById("devtest-panel");
+  const body = document.getElementById("devtest-body");
+  if (!panel || !body || !alphaSession) return;
+  panel.hidden = false;
+  body.textContent = "Consultando…";
+  try {
+    body.textContent = JSON.stringify(await devtestStatus(ALPHA_API_URL, alphaSession, httpFetch), null, 2);
+  } catch (e) {
+    body.textContent = `Erro: ${(e as Error).message}`;
+  }
+}
+document.getElementById("devtest-refresh")?.addEventListener("click", () => void openDevtest());
+document.getElementById("devtest-close")?.addEventListener("click", () => {
+  const p = document.getElementById("devtest-panel");
+  if (p) p.hidden = true;
+});
 
 $("connect").onclick = async () => {
   try {
@@ -336,7 +407,9 @@ $("connect").onclick = async () => {
     ($("claim") as HTMLButtonElement).disabled = false;
   } catch (e) {
     toast((e as Error).message);
+    return;
   }
+  if (ALPHA_API_URL) await alphaLogin(wallet);
 };
 
 $("claim").onclick = async () => {

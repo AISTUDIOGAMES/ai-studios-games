@@ -1,0 +1,3 @@
+# Modelo do alpha-api/.dev.vars (formato CHAVE=valor, sem aspas). Lido so pelo `wrangler dev`.
+APP_ENV=dev
+ALLOW_ORIGIN=http://localhost:5173
