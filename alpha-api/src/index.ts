@@ -3,6 +3,9 @@ import { isWalletAddress, parseWalletList, randomHex, sha256Hex, hitRateLimit, a
 import { NONCE_TTL_MS, SESSION_TTL_MS, loginMessage, verifyWalletSignature } from "./auth";
 import { devnetStatus } from "./solana";
 import { DEVNET_RPC } from "./alpha-config";
+import { adminPayouts } from "./payouts";
+import { adminCredit } from "./ledger";
+import { requestWithdraw } from "./withdraw";
 
 const VERSION_TAG = "0.1.0";
 const MAX_BODY_BYTES = 4096;
@@ -111,6 +114,24 @@ export async function handle(req: Request, env: Env, now: number = Date.now()): 
       onchain: await devnetStatus(env.SOLANA_RPC_URL || DEVNET_RPC, (u, i) => fetch(u, i)),
       time: new Date(now).toISOString(),
     });
+  }
+
+  // Pedido de saque do jogador (alpha). Debita o saldo e entra na fila em pending.
+  if (req.method === "POST" && path === "/withdraw") {
+    const r = await requestWithdraw(req, env, now);
+    return json(req, env, r.status, r.body);
+  }
+
+  // Credito de saldo de teste: so administrador logado com a carteira. Inativo em producao.
+  if (req.method === "POST" && path === "/admin/credit") {
+    const r = await adminCredit(req, env, now);
+    return json(req, env, r.status, r.body);
+  }
+
+  // Fila de saques do BOMBERI (payout.mjs). Protegida por X-Admin-Key; inativa em producao.
+  if (path.startsWith("/admin/")) {
+    const r = await adminPayouts(req, env, path, now);
+    if (r) return json(req, env, r.status, r.body);
   }
 
   return json(req, env, 404, { error: "not found" });
