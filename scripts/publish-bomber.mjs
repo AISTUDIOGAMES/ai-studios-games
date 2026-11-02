@@ -23,7 +23,7 @@ const ok = (msg) => console.log(`✔ ${msg}`);
 if (!skipBuild) {
   if (!existsSync(join(CLIENT, "node_modules"))) { console.log("Instalando dependências do client…"); execSync("npm install", { cwd: CLIENT, stdio: "inherit" }); }
   console.log("Compilando (tsc --noEmit + vite build)…");
-  try { execSync("npm run build", { cwd: CLIENT, stdio: "inherit", env: { ...process.env, VITE_BASE: BASE } }); }
+  try { execSync("npm run build", { cwd: CLIENT, stdio: "inherit", env: { ...process.env, VITE_BASE: BASE, VITE_ENV: process.env.VITE_ENV ?? "prod" } }); }
   catch { fail("A build falhou. Nada foi publicado e public/bomber-idle/ continua intacto."); }
 }
 if (!existsSync(join(DIST, "index.html"))) fail("client/dist/index.html não existe. Rode sem --skip-build.");
