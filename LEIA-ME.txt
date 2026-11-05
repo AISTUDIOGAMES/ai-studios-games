@@ -7,8 +7,8 @@ ATUALIZACAO DO SITE: TRAILER NA HOME E NA ABA /trailer/
    public\trailer\AI Studios Games_ trailer.html
    (o public\trailer\index.html ja foi substituido por uma pagina nova com o video)
 
-3) Se tiver exportado a versao FINAL do trailer no CapCut, comprima e troque o arquivo:
-   public\trailer\trailer.mp4   (e, se quiser, a capa: public\trailer\poster.jpg)
+3) O trailer deste zip ja e a versao FINAL (TRAILLER_AI_WORLD_OWL_FINAL.mp4, 54s), comprimida para web.
+   Para trocar a capa do video, substitua public\trailer\poster.jpg.
 
 4) No terminal, dentro da pasta do repositorio:
    git add -A
