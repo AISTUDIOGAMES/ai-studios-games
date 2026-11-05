@@ -8,6 +8,7 @@ import { SITE_URL, SOCIALS, WAITLIST_ENDPOINT } from "./config";
 import { FAQ, NEWS } from "./content";
 import { initAnalytics, track } from "./analytics";
 import { CHARACTERS, GROUP_LABEL, PROLOGUE, UNIVERSE, type Character } from "./lore";
+import { COMIC_VOLUME, COMIC_STATUS_LABEL, NEXT_VOLUME, type ComicEpisode } from "./comic";
 
 /** Images live in /public/images and respect the Vite base path. */
 const img = (file: string) => `${import.meta.env.BASE_URL}images/${file}`;
@@ -158,6 +159,9 @@ const officialLinks = [
 /** The trailer video lives in /public/trailer and respects the Vite base path. */
 const trailerUrl = (file: string) => `${import.meta.env.BASE_URL}trailer/${file}`;
 
+/** The YouTube channel comes from SOCIALS in config.ts, so there is only one place to edit. */
+const youtubeUrl = safeUrl(SOCIALS.find((x) => x.id === "youtube")?.url ?? "");
+
 const trailerSection = `
       <section class="trailer-section" id="trailer">
         <div class="section-heading"><div><div class="eyebrow"><span class="eyebrow-line"></span> OFFICIAL TRAILER</div><h2>WATCH THE <span>TRAILER</span></h2></div><div class="section-note">AI WORLD OWL<br/>VOL. 01 // THE OBSIDIAN SANCTUM</div></div>
@@ -168,7 +172,40 @@ const trailerSection = `
           </video>
           <i class="art-corner corner-a"></i><i class="art-corner corner-b"></i>
         </div>
-        <div class="trailer-actions"><a class="button button-ghost" href="/trailer/" target="_blank" rel="noopener noreferrer"><span class="play-icon">▶</span> OPEN FULL PAGE <span>↗</span></a></div>
+        <div class="trailer-actions"><a class="button button-ghost" href="/trailer/" target="_blank" rel="noopener noreferrer"><span class="play-icon">▶</span> OPEN FULL PAGE <span>↗</span></a>${youtubeUrl ? `<a class="button button-primary" href="${esc(youtubeUrl)}" target="_blank" rel="noopener noreferrer" data-social="youtube"><span class="play-icon yt">▶</span> SUBSCRIBE ON YOUTUBE <span>↗</span></a>` : ""}</div>
+      </section>`;
+
+function comicEpisodeRow(ep: ComicEpisode): string {
+  const href = ep.status === "live" && ep.url ? safeUrl(ep.url) : null;
+  const pill = `<span class="status-pill ${ep.status === "live" ? "is-live" : "is-soon"}"><i></i> ${COMIC_STATUS_LABEL[ep.status]}</span>`;
+  const inner = `<span class="ep-num">EP ${esc(ep.number)}</span><span class="ep-body"><b>${esc(ep.title)}</b><em>${esc(ep.tagline)}</em></span>${pill}`;
+  return href
+    ? `<li><a class="ep-row is-live" href="${esc(href)}" target="_blank" rel="noopener noreferrer">${inner}</a></li>`
+    : `<li><div class="ep-row">${inner}</div></li>`;
+}
+
+const comicSection = `
+      <section class="comic-section" id="comic">
+        <div class="section-heading"><div><div class="eyebrow"><span class="eyebrow-line"></span> THE GRAPHIC NOVEL</div><h2>THE <span>SAGA</span></h2></div><div class="section-note">AI WORLD OWL<br/>EVERY CHOICE IS A THREAD.</div></div>
+        <div class="comic-grid">
+          <figure class="comic-cover">
+            <img src="${img(COMIC_VOLUME.cover)}" alt="${esc(COMIC_VOLUME.coverAlt)}" width="687" height="1024" loading="lazy" decoding="async" />
+            <i class="art-corner corner-a"></i><i class="art-corner corner-b"></i>
+          </figure>
+          <div class="comic-info">
+            <div class="comic-kicker">VOLUME ${esc(COMIC_VOLUME.number)} <span>/</span> EPISODES 001 - 004</div>
+            <h3>${esc(COMIC_VOLUME.title)}</h3>
+            <p class="comic-blurb">${esc(COMIC_VOLUME.blurb)}</p>
+            <ul class="comic-episodes" aria-label="Episodes of Volume ${esc(COMIC_VOLUME.number)}">
+              ${COMIC_VOLUME.episodes.map(comicEpisodeRow).join("")}
+              <li><div class="ep-row ep-next"><span class="ep-num">VOL ${esc(NEXT_VOLUME.number)}</span><span class="ep-body"><b>THE SAGA CONTINUES</b><em>The threads are still being pulled.</em></span><span class="status-pill is-soon"><i></i> ${esc(NEXT_VOLUME.label)}</span></div></li>
+            </ul>
+            <div class="comic-actions">
+              <a class="button button-primary" href="#join">GET NOTIFIED <span>↗</span></a>
+              <a class="button button-ghost" href="#lore"><span class="play-icon">▶</span> MEET THE LEGENDS</a>
+            </div>
+          </div>
+        </div>
       </section>`;
 
 const logSection = `
@@ -220,7 +257,7 @@ document.querySelector<HTMLDivElement>("#app")!.innerHTML = `
         <span class="brand-type">AI STUDIOS <b>GAMES</b><small>PLAY BEYOND THE GRID</small></span>
       </a>
       <nav class="nav-links" aria-label="Main navigation">
-        <a href="#trailer">TRAILER</a><a href="#lore">LORE</a><a href="#games">GAMES</a><a href="#nfts">NFTS</a><a href="#about">THE STUDIO</a><a href="#token">$ASG</a><a href="#roadmap">ROADMAP</a><a href="#join">JOIN</a>
+        <a href="#trailer">TRAILER</a><a href="#comic">COMIC</a><a href="#lore">LORE</a><a href="#games">GAMES</a><a href="#nfts">NFTS</a><a href="#about">THE STUDIO</a><a href="#token">$ASG</a><a href="#roadmap">ROADMAP</a><a href="#join">JOIN</a>
       </nav>
       <button class="wallet-btn" id="walletBtn"><span class="wallet-dot"></span><span id="walletLabel">CONNECT WALLET</span></button>
       <button class="menu-toggle" id="menuToggle" aria-label="Toggle navigation">☰</button>
@@ -264,6 +301,8 @@ document.querySelector<HTMLDivElement>("#app")!.innerHTML = `
       </section>
 
       ${trailerSection}
+
+      ${comicSection}
 
       <section class="lore-section" id="lore">
         <div class="section-heading"><div><div class="eyebrow"><span class="eyebrow-line"></span> THE UNIVERSE</div><h2>AI WORLD <span>OWL</span></h2></div><div class="section-note">ONE GRID.<br/>EIGHT LEGENDS.</div></div>

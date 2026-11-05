@@ -1,4 +1,4 @@
-ATUALIZACAO DO SITE: TRAILER NA HOME E NA ABA /trailer/
+ATUALIZACAO DO SITE: TRAILER (home + /trailer/) E SECAO "THE SAGA" (HQ AI WORLD OWL)
 
 1) Copie as pastas "src" e "public" deste zip para dentro da pasta do repositorio
    (Desktop\AI STUDIOS GAME\Site Oficial\ai-studios-games-repo), aceitando substituir os arquivos.
@@ -7,12 +7,22 @@ ATUALIZACAO DO SITE: TRAILER NA HOME E NA ABA /trailer/
    public\trailer\AI Studios Games_ trailer.html
    (o public\trailer\index.html ja foi substituido por uma pagina nova com o video)
 
-3) O trailer deste zip ja e a versao FINAL (TRAILLER_AI_WORLD_OWL_FINAL.mp4, 54s), comprimida para web.
-   Para trocar a capa do video, substitua public\trailer\poster.jpg.
-
-4) No terminal, dentro da pasta do repositorio:
+3) No terminal, dentro da pasta do repositorio:
    git add -A
-   git commit -m "Trailer em video na home e na pagina /trailer/"
+   git commit -m "Trailer, secao HQ e canal do YouTube"
    git push
 
    A Vercel publica sozinha em poucos minutos.
+
+ARQUIVOS NOVOS/ALTERADOS
+- src/comic.ts ......... dados da HQ (volume, episodios, status)
+- src/config.ts ........ canal do YouTube adicionado em SOCIALS
+- src/main.ts .......... secao do trailer + secao da HQ + links TRAILER e COMIC no menu
+- src/style.css ........ estilos das duas secoes
+- public/images/hq-vol01-cover.webp ... capa do Vol. 01
+- public/trailer/ ...... pagina /trailer/, trailer.mp4 e poster.jpg
+
+QUANDO UM EPISODIO FOR LANCADO
+Abra src/comic.ts, troque  status: "soon"  por  status: "live"  no episodio
+e acrescente  url: "https://..."  com o link de leitura. O texto "COMING SOON"
+vira "READ NOW" e a linha passa a ser clicavel.

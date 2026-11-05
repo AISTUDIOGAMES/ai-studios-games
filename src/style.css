@@ -294,6 +294,32 @@ img.brand-mark{border-radius:50%;object-fit:cover;background:#141a2b;filter:none
 .trailer-frame{position:relative;border:1px solid #2d3340;background:#05060a;padding:10px;box-shadow:0 18px 60px #0009,0 0 40px #8a72ff14}
 .trailer-video{display:block;width:100%;aspect-ratio:16/9;background:#000;object-fit:contain}
 .trailer-frame .art-corner{pointer-events:none}
-.trailer-actions{display:flex;justify-content:flex-end;margin-top:18px}
+.trailer-actions{display:flex;justify-content:flex-end;gap:12px;flex-wrap:wrap;margin-top:18px}.button-primary .play-icon.yt{color:#11160a}
 @media(max-width:950px){.trailer-section{padding:72px 6% 64px}}
 @media(max-width:700px){.trailer-section{padding:60px 5% 54px}.trailer-frame{padding:6px}.trailer-actions{justify-content:stretch}.trailer-actions .button{width:100%}}
+
+/* ===== Comic / saga section (home) ===== */
+.comic-section{padding:90px 5.4% 80px;border-top:1px solid var(--line);background:radial-gradient(800px 460px at 90% 15%,#b6ff3b0b,transparent 70%),radial-gradient(900px 480px at 5% 85%,#8a72ff14,transparent 70%)}
+.comic-section>*{max-width:1240px;margin-left:auto;margin-right:auto}
+.comic-grid{display:grid;grid-template-columns:minmax(260px,.8fr) 1.2fr;gap:44px;align-items:center}
+.comic-cover{position:relative;margin:0;border:1px solid #2d3340;background:#05060a;padding:10px;box-shadow:0 18px 60px #0009,0 0 40px #8a72ff1f;justify-self:center;width:100%;max-width:420px;transition:transform .3s,box-shadow .3s}
+.comic-cover:hover{transform:translateY(-4px) rotate(-.4deg);box-shadow:0 22px 70px #000a,0 0 56px #8a72ff33}
+.comic-cover img{display:block;width:100%;height:auto;aspect-ratio:687/1024;object-fit:cover}
+.comic-cover .art-corner{pointer-events:none}
+.comic-kicker{font-size:9px;letter-spacing:1.4px;color:var(--purple);font-weight:700}
+.comic-kicker span{color:var(--green);margin:0 6px}
+.comic-info h3{font:900 clamp(38px,4.6vw,64px)/.92 'Barlow Condensed',sans-serif;letter-spacing:-.4px;margin:14px 0 18px;color:#f1f1f4}
+.comic-blurb{font-size:11px;line-height:1.95;color:#a4a8b4;max-width:560px;margin:0 0 26px}
+.comic-episodes{list-style:none;margin:0;padding:0;border-top:1px solid #292e38}
+.ep-row{display:grid;grid-template-columns:62px 1fr auto;align-items:center;gap:16px;padding:16px 4px;border-bottom:1px solid #292e38;transition:background .2s,border-color .2s}
+.ep-num{font:800 22px 'Barlow Condensed',sans-serif;letter-spacing:.8px;color:#4f5564}
+.ep-body{display:flex;flex-direction:column;gap:5px;min-width:0}
+.ep-body b{font:700 20px 'Barlow Condensed',sans-serif;letter-spacing:.8px;color:#e9eaf0}
+.ep-body em{font-style:normal;font-size:9px;letter-spacing:.5px;color:#858b99}
+.ep-row.ep-next .ep-body b{color:#9c8cff}
+a.ep-row.is-live:hover{background:#b6ff3b0d}
+a.ep-row.is-live .ep-num{color:var(--green)}
+.status-pill.is-live{border-color:#485b2b;color:var(--green)}
+.comic-actions{display:flex;gap:12px;flex-wrap:wrap;margin-top:28px}
+@media(max-width:950px){.comic-section{padding:72px 6% 64px}.comic-grid{gap:30px}}
+@media(max-width:700px){.comic-section{padding:60px 5% 54px}.comic-grid{grid-template-columns:1fr}.comic-cover{max-width:340px}.ep-row{grid-template-columns:50px 1fr;gap:8px 12px}.ep-row .status-pill{grid-column:2;justify-self:start}.ep-body b{font-size:18px}.comic-actions .button{width:100%}}
