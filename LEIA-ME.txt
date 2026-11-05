@@ -1,0 +1,18 @@
+ATUALIZACAO DO SITE: TRAILER NA HOME E NA ABA /trailer/
+
+1) Copie as pastas "src" e "public" deste zip para dentro da pasta do repositorio
+   (Desktop\AI STUDIOS GAME\Site Oficial\ai-studios-games-repo), aceitando substituir os arquivos.
+
+2) APAGUE o trailer antigo feito em codigo:
+   public\trailer\AI Studios Games_ trailer.html
+   (o public\trailer\index.html ja foi substituido por uma pagina nova com o video)
+
+3) Se tiver exportado a versao FINAL do trailer no CapCut, comprima e troque o arquivo:
+   public\trailer\trailer.mp4   (e, se quiser, a capa: public\trailer\poster.jpg)
+
+4) No terminal, dentro da pasta do repositorio:
+   git add -A
+   git commit -m "Trailer em video na home e na pagina /trailer/"
+   git push
+
+   A Vercel publica sozinha em poucos minutos.

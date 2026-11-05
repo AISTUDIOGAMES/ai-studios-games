@@ -155,6 +155,22 @@ const officialLinks = [
   ...liveSocials.map((s) => ({ label: s.label, url: s.url })),
 ];
 
+/** The trailer video lives in /public/trailer and respects the Vite base path. */
+const trailerUrl = (file: string) => `${import.meta.env.BASE_URL}trailer/${file}`;
+
+const trailerSection = `
+      <section class="trailer-section" id="trailer">
+        <div class="section-heading"><div><div class="eyebrow"><span class="eyebrow-line"></span> OFFICIAL TRAILER</div><h2>WATCH THE <span>TRAILER</span></h2></div><div class="section-note">AI WORLD OWL<br/>VOL. 01 // THE OBSIDIAN SANCTUM</div></div>
+        <div class="trailer-frame">
+          <video id="trailerVideo" class="trailer-video" controls playsinline preload="none" poster="${trailerUrl("poster.jpg")}" aria-label="AI World Owl official trailer">
+            <source src="${trailerUrl("trailer.mp4")}" type="video/mp4" />
+            Your browser does not support the video tag. <a href="${trailerUrl("trailer.mp4")}">Download the trailer</a>.
+          </video>
+          <i class="art-corner corner-a"></i><i class="art-corner corner-b"></i>
+        </div>
+        <div class="trailer-actions"><a class="button button-ghost" href="/trailer/" target="_blank" rel="noopener noreferrer"><span class="play-icon">▶</span> OPEN FULL PAGE <span>↗</span></a></div>
+      </section>`;
+
 const logSection = `
       <section class="log-section" id="log">
         <div class="section-heading"><div><div class="eyebrow"><span class="eyebrow-line"></span> WHAT'S NEW</div><h2>THE STUDIO <span>LOG</span></h2></div><div class="section-note">SHIPPING<br/>IN PUBLIC.</div></div>
@@ -204,7 +220,7 @@ document.querySelector<HTMLDivElement>("#app")!.innerHTML = `
         <span class="brand-type">AI STUDIOS <b>GAMES</b><small>PLAY BEYOND THE GRID</small></span>
       </a>
       <nav class="nav-links" aria-label="Main navigation">
-        <a href="#lore">LORE</a><a href="#games">GAMES</a><a href="#nfts">NFTS</a><a href="#about">THE STUDIO</a><a href="#token">$ASG</a><a href="#roadmap">ROADMAP</a><a href="#join">JOIN</a>
+        <a href="#trailer">TRAILER</a><a href="#lore">LORE</a><a href="#games">GAMES</a><a href="#nfts">NFTS</a><a href="#about">THE STUDIO</a><a href="#token">$ASG</a><a href="#roadmap">ROADMAP</a><a href="#join">JOIN</a>
       </nav>
       <button class="wallet-btn" id="walletBtn"><span class="wallet-dot"></span><span id="walletLabel">CONNECT WALLET</span></button>
       <button class="menu-toggle" id="menuToggle" aria-label="Toggle navigation">☰</button>
@@ -246,6 +262,8 @@ document.querySelector<HTMLDivElement>("#app")!.innerHTML = `
         </div>
         <div class="hero-bottomline"><span>SCROLL TO ENTER</span><span class="scroll-mark">↓</span><span class="bottom-right">EST. 2026 <b>///</b> DIGITAL WORLDS, REAL OWNERSHIP</span></div>
       </section>
+
+      ${trailerSection}
 
       <section class="lore-section" id="lore">
         <div class="section-heading"><div><div class="eyebrow"><span class="eyebrow-line"></span> THE UNIVERSE</div><h2>AI WORLD <span>OWL</span></h2></div><div class="section-note">ONE GRID.<br/>EIGHT LEGENDS.</div></div>
@@ -305,6 +323,7 @@ function initGrowth(): void {
     const social = t.closest<HTMLElement>("[data-social]");
     if (social?.dataset.social) track("Social Click", { network: social.dataset.social });
   });
+  document.querySelector<HTMLVideoElement>("#trailerVideo")?.addEventListener("play", () => track("Trailer Play"), { once: true });
   initWaitlist();
   injectFaqSchema();
 }

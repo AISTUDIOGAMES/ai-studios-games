@@ -287,3 +287,13 @@ img.brand-mark{border-radius:50%;object-fit:cover;background:#141a2b;filter:none
 }
 
 .footer-socials{display:flex;gap:20px;flex-wrap:wrap}.footer-socials a{font-size:8px;letter-spacing:.9px;color:#a4a8b4;transition:color .2s}.footer-socials a:hover{color:var(--green)}@media(max-width:700px){.footer-socials{order:5;width:100%;gap:16px}}
+
+/* ===== Official trailer section (home) ===== */
+.trailer-section{padding:90px 5.4% 80px;border-top:1px solid var(--line);background:radial-gradient(900px 420px at 15% 10%,#8a72ff14,transparent 70%)}
+.trailer-section>*{max-width:1240px;margin-left:auto;margin-right:auto}
+.trailer-frame{position:relative;border:1px solid #2d3340;background:#05060a;padding:10px;box-shadow:0 18px 60px #0009,0 0 40px #8a72ff14}
+.trailer-video{display:block;width:100%;aspect-ratio:16/9;background:#000;object-fit:contain}
+.trailer-frame .art-corner{pointer-events:none}
+.trailer-actions{display:flex;justify-content:flex-end;margin-top:18px}
+@media(max-width:950px){.trailer-section{padding:72px 6% 64px}}
+@media(max-width:700px){.trailer-section{padding:60px 5% 54px}.trailer-frame{padding:6px}.trailer-actions{justify-content:stretch}.trailer-actions .button{width:100%}}
