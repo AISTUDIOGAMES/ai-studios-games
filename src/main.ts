@@ -5,6 +5,7 @@ import { GAMES, STATUS_LABEL, safeUrl, type Game } from "./games";
 import { NFTS } from "./nfts";
 import { initHeroBanner } from "./heroFx";
 import { initHeroKey } from "./heroKey";
+import { initMusic } from "./music";
 import { SITE_URL, SOCIALS, WAITLIST_ENDPOINT } from "./config";
 import { FAQ, NEWS } from "./content";
 import { initAnalytics, track } from "./analytics";
@@ -367,6 +368,7 @@ renderGames();
 renderLore();
 initHeroBanner();
 initHeroKey();
+initMusic();
 initAnalytics();
 initGrowth();
 

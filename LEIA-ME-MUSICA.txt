@@ -1,0 +1,28 @@
+ATUALIZACAO: MUSICA DE FUNDO NO SITE (4 FAIXAS EM LOOP)
+
+1) Copie as pastas "src" e "public" deste zip para dentro da pasta do repositorio, aceitando substituir.
+
+2) No terminal, dentro da pasta do repositorio:
+   git add -A
+   git commit -m "Musica de fundo em loop"
+   git push
+
+ARQUIVOS
+- src/music.ts ......................... o player (novo)
+- src/main.ts .......................... so 2 linhas novas: import { initMusic } e a chamada initMusic();
+- src/style.css ........................ estilos do botao flutuante (no final do arquivo)
+- public/audio/the-golden-beam.mp3
+- public/audio/the-golden-strike.mp3
+- public/audio/solfeggio-sutra.mp3
+- public/audio/dunes-last-stand.mp3
+
+COMO FUNCIONA
+- Toca em sequencia: Golden Beam > Golden Strike > Solfeggio Sutra > Dune's Last Stand > volta para a primeira, sem parar.
+- Navegadores bloqueiam som automatico: a musica comeca no primeiro clique/toque/tecla do visitante.
+  Enquanto isso, o botao no canto inferior esquerdo pulsa.
+- Botao: pausar/tocar e pular faixa. Quem pausa nao e "religado" sozinho. A escolha fica salva no aparelho.
+- Pausa quando a aba fica escondida e retoma ao voltar.
+
+AJUSTES (em src/music.ts)
+- Volume: constante VOLUME (0 a 1, hoje 0.35).
+- Ordem/lista: array TRACKS no topo do arquivo.

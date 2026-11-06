@@ -349,3 +349,19 @@ a.ep-row.is-live .ep-num{color:var(--green)}
 @media(max-width:950px){.hero-art.hero-key{width:100%;opacity:1}}
 @media(max-width:700px){.hero.hero-has-key{min-height:900px;padding-bottom:430px}.hero-art.hero-key{top:auto;bottom:0;height:430px;width:100%;opacity:1}.hero-art.hero-key:before{background:linear-gradient(180deg,#090b10 0,#090b10cc 14%,transparent 42%),linear-gradient(0deg,#090b10 0,transparent 20%)}.key-tag{left:5%;right:5%;bottom:16px;justify-content:center;font-size:7px}.hero-has-key .hero-bottomline{display:none}}
 @media(prefers-reduced-motion:reduce){.hero-key .key-zoom,.key-threads .th-pulse,.key-node{animation:none}.key-dust{display:none}.key-threads .th-pulse{opacity:0}}
+
+/* ===== Trilha de fundo (src/music.ts) ===== */
+.music-player{position:fixed;left:20px;bottom:20px;z-index:9;display:flex;align-items:center;gap:10px;padding:8px 12px 8px 8px;background:#10131bf2;border:1px solid #2b303b;border-radius:999px;box-shadow:0 10px 30px #0009;backdrop-filter:blur(6px)}
+.music-btn{width:38px;height:38px;border-radius:50%;border:1px solid #41474e;background:#0d1017;color:var(--green);display:grid;place-items:center;padding:0;font-size:13px;transition:border-color .2s,box-shadow .2s}
+.music-btn:hover{border-color:var(--green)}
+.music-icon{width:0;height:0;border-left:11px solid currentColor;border-top:7px solid transparent;border-bottom:7px solid transparent;margin-left:3px}
+.music-player.is-playing .music-icon{width:12px;height:14px;border:0;margin:0;background:linear-gradient(90deg,currentColor 0 35%,transparent 35% 65%,currentColor 65%)}
+.music-player.is-playing .music-toggle{box-shadow:0 0 14px #b6ff3b40;border-color:#4a6b1d}
+.music-player.is-waiting .music-toggle{animation:musicPulse 1.8s ease-in-out infinite}
+@keyframes musicPulse{0%,100%{box-shadow:0 0 0 0 #b6ff3b55}50%{box-shadow:0 0 0 8px #b6ff3b00}}
+.music-meta{display:flex;flex-direction:column;gap:3px;min-width:0;max-width:150px}
+.music-meta small{font-size:7px;letter-spacing:1.2px;color:var(--muted)}
+.music-meta b{font:700 14px 'Barlow Condensed',sans-serif;letter-spacing:.8px;color:#e9eaf0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.music-player.is-error .music-btn{opacity:.4;pointer-events:none}
+@media(max-width:700px){.music-player{left:12px;bottom:12px;padding:6px 10px 6px 6px}.music-meta{max-width:110px}.music-btn{width:34px;height:34px}}
+@media(prefers-reduced-motion:reduce){.music-player.is-waiting .music-toggle{animation:none}}
