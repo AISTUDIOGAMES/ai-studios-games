@@ -323,3 +323,29 @@ a.ep-row.is-live .ep-num{color:var(--green)}
 .comic-actions{display:flex;gap:12px;flex-wrap:wrap;margin-top:28px}
 @media(max-width:950px){.comic-section{padding:72px 6% 64px}.comic-grid{gap:30px}}
 @media(max-width:700px){.comic-section{padding:60px 5% 54px}.comic-grid{grid-template-columns:1fr}.comic-cover{max-width:340px}.ep-row{grid-template-columns:50px 1fr;gap:8px 12px}.ep-row .status-pill{grid-column:2;justify-self:start}.ep-body b{font-size:18px}.comic-actions .button{width:100%}}
+
+/* ===== Hero key art (cinematic, full width) ===== */
+.hero.hero-has-key{min-height:720px}
+.hero-art.hero-key{position:absolute;inset:0;width:100%;height:auto;opacity:1;clip-path:none;border-left:0;background:#0a0816;container-type:size;z-index:0}
+.hero-key .key-stage{position:absolute;right:0;top:50%;width:max(100%,calc(100cqh * 1024 / 572));height:max(100%,calc(100cqw * 572 / 1024));transform:translate3d(var(--px,0px),calc(-50% + var(--py,0px)),0);will-change:transform}
+.hero-key .key-zoom{position:absolute;inset:0;transform-origin:78% 60%;animation:keyKen 28s ease-in-out infinite alternate;will-change:transform}
+.hero-key .key-img,.hero-key .key-svg{position:absolute;inset:0;width:100%;height:100%;display:block}
+.hero-key .key-svg{pointer-events:none}
+@keyframes keyKen{from{transform:scale(1)}to{transform:scale(1.08)}}
+.hero-art.hero-key:before{content:"";position:absolute;inset:0;z-index:2;pointer-events:none;background:linear-gradient(90deg,#090b10 0,#090b10ee 18%,#090b10aa 34%,#090b1040 50%,transparent 66%),linear-gradient(0deg,#090b10 0,#090b1099 10%,transparent 26%),linear-gradient(180deg,#090b1080 0,transparent 14%)}
+.key-threads .th-glow{fill:none;stroke:#ffcf6b;stroke-width:6;stroke-linecap:round;opacity:.13}
+.key-threads .th-base{fill:none;stroke:url(#thGold);stroke-width:1.2;stroke-linecap:round;opacity:.5}
+.key-threads .th-pulse{fill:none;stroke:#fff1c2;stroke-width:2.4;stroke-linecap:round;stroke-dasharray:7 93;stroke-dashoffset:100;animation:thRun 3.4s linear infinite}
+@keyframes thRun{from{stroke-dashoffset:100}to{stroke-dashoffset:0}}
+.key-node{fill:#ffe9a8;transform-box:fill-box;transform-origin:center;animation:nodePulse 2.6s ease-in-out infinite}
+@keyframes nodePulse{0%,100%{opacity:.35;transform:scale(.7)}50%{opacity:1;transform:scale(1.6)}}
+.key-dust{position:absolute;inset:0;z-index:3;pointer-events:none;overflow:hidden}
+.key-dust i{position:absolute;bottom:-10px;border-radius:50%;background:#ffd98a;box-shadow:0 0 8px 2px #ffb94d66;opacity:0;animation:dustUp linear infinite}
+@keyframes dustUp{0%{transform:translate3d(0,0,0);opacity:0}12%{opacity:.9}88%{opacity:.55}100%{transform:translate3d(var(--dx,20px),-105cqh,0);opacity:0}}
+.key-tag{position:absolute;right:5.4%;bottom:46px;z-index:5;display:flex;align-items:center;gap:10px;padding:10px 14px;border:1px solid #4d456e99;background:#0b0d14cc;color:#d9d3ff;font-size:8px;letter-spacing:1.2px;font-weight:700;backdrop-filter:blur(6px);transition:border-color .2s,color .2s,transform .2s}
+.key-tag:hover{border-color:var(--green);color:var(--green);transform:translateY(-2px)}
+.key-tag i{width:6px;height:6px;border-radius:50%;background:var(--green);box-shadow:0 0 8px var(--green)}
+.key-tag span{color:var(--green)}
+@media(max-width:950px){.hero-art.hero-key{width:100%;opacity:1}}
+@media(max-width:700px){.hero.hero-has-key{min-height:900px;padding-bottom:430px}.hero-art.hero-key{top:auto;bottom:0;height:430px;width:100%;opacity:1}.hero-art.hero-key:before{background:linear-gradient(180deg,#090b10 0,#090b10cc 14%,transparent 42%),linear-gradient(0deg,#090b10 0,transparent 20%)}.key-tag{left:5%;right:5%;bottom:16px;justify-content:center;font-size:7px}.hero-has-key .hero-bottomline{display:none}}
+@media(prefers-reduced-motion:reduce){.hero-key .key-zoom,.key-threads .th-pulse,.key-node{animation:none}.key-dust{display:none}.key-threads .th-pulse{opacity:0}}

@@ -4,6 +4,7 @@ import "./style.css";
 import { GAMES, STATUS_LABEL, safeUrl, type Game } from "./games";
 import { NFTS } from "./nfts";
 import { initHeroBanner } from "./heroFx";
+import { initHeroKey } from "./heroKey";
 import { SITE_URL, SOCIALS, WAITLIST_ENDPOINT } from "./config";
 import { FAQ, NEWS } from "./content";
 import { initAnalytics, track } from "./analytics";
@@ -156,6 +157,23 @@ const officialLinks = [
   ...liveSocials.map((s) => ({ label: s.label, url: s.url })),
 ];
 
+/** Golden threads over the hero key art, in the art's own 1024x572 coordinates. */
+const KEY_THREADS = [
+  { d: "M880 142 Q822 150 773 171", delay: 0 },
+  { d: "M880 142 Q832 172 790 208", delay: 0.5 },
+  { d: "M880 142 Q790 215 681 313", delay: 1 },
+  { d: "M910 230 Q955 292 960 360", delay: 1.5 },
+  { d: "M713 340 Q785 372 838 392", delay: 2 },
+];
+const KEY_NODES: [number, number][] = [[880, 142], [773, 171], [790, 208], [681, 313], [960, 360], [713, 340], [838, 392]];
+const KEY_DUST = Array.from({ length: 18 }, (_, i) => ({
+  left: 8 + ((i * 53) % 88),
+  size: 2 + (i % 3),
+  dur: 9 + ((i * 7) % 9),
+  delay: -((i * 5) % 13),
+  dx: ((i % 2 ? 1 : -1) * (14 + ((i * 11) % 36))),
+}));
+
 /** The trailer video lives in /public/trailer and respects the Vite base path. */
 const trailerUrl = (file: string) => `${import.meta.env.BASE_URL}trailer/${file}`;
 
@@ -264,7 +282,7 @@ document.querySelector<HTMLDivElement>("#app")!.innerHTML = `
     </header>
 
     <main id="top">
-      <section class="hero">
+      <section class="hero hero-has-key">
         <div class="hero-grid"></div><div class="hero-glow"></div>
         <div class="hero-copy">
           <div class="eyebrow"><span class="eyebrow-line"></span> INDEPENDENT GAME LAB <span class="eyebrow-tag">WEB3 / SOLANA-READY</span></div>
@@ -279,23 +297,22 @@ document.querySelector<HTMLDivElement>("#app")!.innerHTML = `
             <i></i><div><strong class="green">◎</strong><span>SOLANA-READY VISION</span></div>
           </div>
         </div>
-        <div class="hero-art" id="heroArt" aria-label="Cyberpunk neon city artwork">
-          <div class="hb-cover">
-            <div class="hb-stage">
-              <div class="hb-center"><div class="hb-media">
-                <img class="hero-img" src="${img("hero-banner-live.webp")}" alt="AI Studios Games — Vex, Kira and Titan standing in a neon cyber-city under the owl emblem" width="1584" height="672" fetchpriority="high" decoding="async" />
-                <i class="hb-glow"></i><i class="hb-eye hb-eye-blue"></i><i class="hb-eye hb-eye-purple"></i>
-                <div class="hb-glitch hb-g1" style="background-image:url(${img("hero-banner-live.webp")})"></div>
-                <div class="hb-glitch hb-g2" style="background-image:url(${img("hero-banner-live.webp")})"></div>
-              </div>
-              </div>
+        <div class="hero-art hero-key" id="heroArt" aria-label="AI World Owl key art">
+          <div class="key-stage">
+            <div class="key-zoom">
+              <img class="key-img" src="${img("hero-keyart.webp")}" alt="Jax, Kira, Lyra and Kai leap into action across a ruined desert, linked by golden threads, under a cracked violet sphere and a colossal golden serpent." width="2048" height="1144" fetchpriority="high" decoding="async" />
+              <svg class="key-svg" viewBox="0 0 1024 572" preserveAspectRatio="none" aria-hidden="true" focusable="false">
+                <defs><linearGradient id="thGold" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#ffeab0"/><stop offset="1" stop-color="#ffb94d"/></linearGradient></defs>
+                <g class="key-threads">
+                  ${KEY_THREADS.map((t) => `<path class="th-glow" d="${t.d}"/><path class="th-base" d="${t.d}"/><path class="th-pulse" d="${t.d}" pathLength="100" style="animation-delay:${t.delay}s"/>`).join("")}
+                  ${KEY_NODES.map(([x, y], i) => `<circle class="key-node" cx="${x}" cy="${y}" r="2.6" style="animation-delay:${(i * 0.37).toFixed(2)}s"/>`).join("")}
+                </g>
+              </svg>
             </div>
-            <canvas class="hb-fx" aria-hidden="true"></canvas>
           </div>
-          <div class="hb-sweep"></div><div class="hb-scanbar"></div><div class="art-scan"></div>
-          <div class="hb-hud"><span class="hb-live"><i></i>LIVE FEED</span><span>GRID-01 // SIGNAL STABLE</span><span id="hbClock">00:00:00</span></div>
-          <div class="art-coordinate">34°03' N<br/>118°15' W</div>
-          <div class="art-corner corner-a"></div><div class="art-corner corner-b"></div>
+          <div class="key-dust" aria-hidden="true">${KEY_DUST.map((d) => `<i style="left:${d.left}%;width:${d.size}px;height:${d.size}px;animation-duration:${d.dur}s;animation-delay:${d.delay}s;--dx:${d.dx}px"></i>`).join("")}</div>
+          <div class="art-scan"></div>
+          <a class="key-tag" href="#comic"><i></i> AI WORLD OWL <span>/</span> VOL. 01 <span>/</span> READ THE SAGA ↗</a>
         </div>
         <div class="hero-bottomline"><span>SCROLL TO ENTER</span><span class="scroll-mark">↓</span><span class="bottom-right">EST. 2026 <b>///</b> DIGITAL WORLDS, REAL OWNERSHIP</span></div>
       </section>
@@ -349,6 +366,7 @@ ${faqSection}
 renderGames();
 renderLore();
 initHeroBanner();
+initHeroKey();
 initAnalytics();
 initGrowth();
 

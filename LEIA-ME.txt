@@ -1,28 +1,21 @@
-ATUALIZACAO DO SITE: TRAILER (home + /trailer/) E SECAO "THE SAGA" (HQ AI WORLD OWL)
+ATUALIZACAO: NOVO HERO (ARTE CINEMATOGRAFICA DOS 4 PERSONAGENS)
 
-1) Copie as pastas "src" e "public" deste zip para dentro da pasta do repositorio
-   (Desktop\AI STUDIOS GAME\Site Oficial\ai-studios-games-repo), aceitando substituir os arquivos.
+Este pacote vem DEPOIS do pacote anterior (trailer, HQ e YouTube). Se ja aplicou aquele, aplique este por cima.
 
-2) APAGUE o trailer antigo feito em codigo:
-   public\trailer\AI Studios Games_ trailer.html
-   (o public\trailer\index.html ja foi substituido por uma pagina nova com o video)
+1) Copie as pastas "src" e "public" deste zip para dentro da pasta do repositorio, aceitando substituir.
+   (src\main.ts e src\style.css ja incluem tudo das atualizacoes anteriores.)
 
-3) No terminal, dentro da pasta do repositorio:
+2) No terminal, dentro da pasta do repositorio:
    git add -A
-   git commit -m "Trailer, secao HQ e canal do YouTube"
+   git commit -m "Novo hero com arte dos personagens"
    git push
 
-   A Vercel publica sozinha em poucos minutos.
+ARQUIVOS
+- src/heroKey.ts ....................... paralaxe suave e pausa das animacoes fora da tela
+- src/main.ts .......................... novo codigo do hero
+- src/style.css ........................ estilos do hero (zoom lento, fios dourados, poeira)
+- public/images/hero-keyart.webp ....... a arte nova (2048 x 1144)
 
-ARQUIVOS NOVOS/ALTERADOS
-- src/comic.ts ......... dados da HQ (volume, episodios, status)
-- src/config.ts ........ canal do YouTube adicionado em SOCIALS
-- src/main.ts .......... secao do trailer + secao da HQ + links TRAILER e COMIC no menu
-- src/style.css ........ estilos das duas secoes
-- public/images/hq-vol01-cover.webp ... capa do Vol. 01
-- public/trailer/ ...... pagina /trailer/, trailer.mp4 e poster.jpg
-
-QUANDO UM EPISODIO FOR LANCADO
-Abra src/comic.ts, troque  status: "soon"  por  status: "live"  no episodio
-e acrescente  url: "https://..."  com o link de leitura. O texto "COMING SOON"
-vira "READ NOW" e a linha passa a ser clicavel.
+COMO TROCAR A ARTE NO FUTURO
+Substitua public/images/hero-keyart.webp por outra imagem 16:9. Se os personagens mudarem de lugar,
+ajuste os fios dourados em src/main.ts (listas KEY_THREADS e KEY_NODES, em coordenadas 1024 x 572).
