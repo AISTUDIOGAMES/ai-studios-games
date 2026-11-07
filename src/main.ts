@@ -1,15 +1,16 @@
 import { tokenSection } from "./tokenomics";
 import { initWallet } from "./wallet";
 import "./style.css";
+import "./comic-reader.css";
 import { GAMES, STATUS_LABEL, safeUrl, type Game } from "./games";
 import { NFTS } from "./nfts";
 import { initHeroBanner } from "./heroFx";
 import { initHeroKey } from "./heroKey";
-import { initMusic } from "./music";
 import { SITE_URL, SOCIALS, WAITLIST_ENDPOINT } from "./config";
 import { FAQ, NEWS } from "./content";
 import { initAnalytics, track } from "./analytics";
 import { CHARACTERS, GROUP_LABEL, PROLOGUE, UNIVERSE, type Character } from "./lore";
+import { initComicReader } from "./comicReader";
 import { COMIC_VOLUME, COMIC_STATUS_LABEL, NEXT_VOLUME, type ComicEpisode } from "./comic";
 
 /** Images live in /public/images and respect the Vite base path. */
@@ -195,9 +196,10 @@ const trailerSection = `
       </section>`;
 
 function comicEpisodeRow(ep: ComicEpisode): string {
-  const href = ep.status === "live" && ep.url ? safeUrl(ep.url) : null;
   const pill = `<span class="status-pill ${ep.status === "live" ? "is-live" : "is-soon"}"><i></i> ${COMIC_STATUS_LABEL[ep.status]}</span>`;
   const inner = `<span class="ep-num">EP ${esc(ep.number)}</span><span class="ep-body"><b>${esc(ep.title)}</b><em>${esc(ep.tagline)}</em></span>${pill}`;
+  if (ep.status === "live" && ep.page !== undefined) return `<li><button type="button" class="ep-row is-live" data-read="${ep.page}">${inner}</button></li>`;
+  const href = ep.status === "live" && ep.url ? safeUrl(ep.url) : null;
   return href
     ? `<li><a class="ep-row is-live" href="${esc(href)}" target="_blank" rel="noopener noreferrer">${inner}</a></li>`
     : `<li><div class="ep-row">${inner}</div></li>`;
@@ -207,7 +209,7 @@ const comicSection = `
       <section class="comic-section" id="comic">
         <div class="section-heading"><div><div class="eyebrow"><span class="eyebrow-line"></span> THE GRAPHIC NOVEL</div><h2>THE <span>SAGA</span></h2></div><div class="section-note">AI WORLD OWL<br/>EVERY CHOICE IS A THREAD.</div></div>
         <div class="comic-grid">
-          <figure class="comic-cover">
+          <figure class="comic-cover" data-read="0" title="Read Vol. 01">
             <img src="${img(COMIC_VOLUME.cover)}" alt="${esc(COMIC_VOLUME.coverAlt)}" width="687" height="1024" loading="lazy" decoding="async" />
             <i class="art-corner corner-a"></i><i class="art-corner corner-b"></i>
           </figure>
@@ -220,7 +222,8 @@ const comicSection = `
               <li><div class="ep-row ep-next"><span class="ep-num">VOL ${esc(NEXT_VOLUME.number)}</span><span class="ep-body"><b>THE SAGA CONTINUES</b><em>The threads are still being pulled.</em></span><span class="status-pill is-soon"><i></i> ${esc(NEXT_VOLUME.label)}</span></div></li>
             </ul>
             <div class="comic-actions">
-              <a class="button button-primary" href="#join">GET NOTIFIED <span>↗</span></a>
+              <button type="button" class="button button-primary" data-read="0">READ VOL. 01 <span>→</span></button>
+              <a class="button button-ghost" href="#join">GET NOTIFIED ON VOL. 02 <span>↗</span></a>
               <a class="button button-ghost" href="#lore"><span class="play-icon">▶</span> MEET THE LEGENDS</a>
             </div>
           </div>
@@ -368,7 +371,7 @@ renderGames();
 renderLore();
 initHeroBanner();
 initHeroKey();
-initMusic();
+initComicReader(img);
 initAnalytics();
 initGrowth();
 
