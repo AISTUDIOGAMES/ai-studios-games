@@ -1,0 +1,9 @@
+{
+  "cluster": "devnet",
+  "mint": "2U2pmm7W81kkCX7TZH6rN5AMzt8YFzGtzkcFAsrgjaY2",
+  "decimals": 6,
+  "mintAuthority": "HJuS1MkozoAKC4b7CjRrVQHCsyLoU1xxrFGoDEqi3Mpz",
+  "freezeAuthority": null,
+  "createdAt": "2026-10-31T13:21:00.214Z",
+  "note": "Token TEST do Alpha. Sem valor financeiro. Nao e ativo da Mainnet."
+}
