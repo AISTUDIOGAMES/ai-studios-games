@@ -25,10 +25,10 @@ img.brand-mark{border-radius:50%;object-fit:cover;background:#141a2b;filter:none
 .nft-section{position:relative;padding:90px 5.4% 80px;border-top:1px solid var(--line);isolation:isolate;overflow:hidden}
 .nft-bg{position:absolute;inset:0;z-index:-1;background-size:cover;background-position:center;opacity:.3}
 .nft-bg:after{content:"";position:absolute;inset:0;background:linear-gradient(180deg,#090b10 0,#090b1000 28%,#090b1000 68%,#090b10 100%)}
-.nft-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:24px;max-width:1240px;margin:0 auto}
+.nft-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:40px;max-width:900px;margin:0 auto}
 .nft-card{background:#10131bf0;border:1px solid #2b303b;padding:14px;transition:transform .25s,border-color .25s,box-shadow .25s}
 .nft-card:hover{transform:translateY(-6px);border-color:var(--purple);box-shadow:0 16px 44px #8a72ff26}
-.nft-frame{aspect-ratio:720/1000;border-radius:14px;overflow:hidden;background:#0b0e16}
+.nft-frame{position:relative;aspect-ratio:1084/1451;border-radius:14px;overflow:hidden;background:#0b0e16;transition:transform .15s ease-out;will-change:transform}
 .nft-frame img{display:block;width:100%;height:100%;object-fit:cover}
 .nft-info{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:16px 4px 4px}
 .nft-info h3{font:800 24px 'Barlow Condensed',sans-serif;letter-spacing:1.2px;margin:6px 0 0}
@@ -41,9 +41,9 @@ img.brand-mark{border-radius:50%;object-fit:cover;background:#141a2b;filter:none
 .manifesto-coin figcaption{margin-top:14px;color:#9b8cff;font:700 12px/1.4 'Barlow Condensed',sans-serif;letter-spacing:1px}
 .manifesto-coin figcaption b{color:var(--green)}
 
-@media(max-width:1100px){.nft-grid{grid-template-columns:repeat(2,1fr);gap:20px;max-width:720px}}
+@media(max-width:1100px){.nft-grid{gap:28px;max-width:760px}}
 @media(max-width:950px){.nft-grid{gap:14px}.nft-info{flex-direction:column;align-items:flex-start}.manifesto-coin img{width:130px;height:130px}}
-@media(max-width:700px){.nft-section{padding:64px 6% 56px}.nft-grid{grid-template-columns:1fr;max-width:340px;gap:18px}.nft-info{flex-direction:row;align-items:center}.manifesto-coin img{width:120px;height:120px}}
+@media(max-width:700px){.nft-section{padding:64px 6% 56px}.nft-grid{grid-template-columns:1fr;max-width:360px;gap:24px}.nft-info{flex-direction:row;align-items:center}.manifesto-coin img{width:120px;height:120px}}
 @media(max-width:700px){.hero{padding-bottom:300px}.hero-art{opacity:1}.hero-img{object-position:50% 50%}}
 
 .game-cover img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:50% 45%}
@@ -365,3 +365,23 @@ a.ep-row.is-live .ep-num{color:var(--green)}
 .music-player.is-error .music-btn{opacity:.4;pointer-events:none}
 @media(max-width:700px){.music-player{left:12px;bottom:12px;padding:6px 10px 6px 6px}.music-meta{max-width:110px}.music-btn{width:34px;height:34px}}
 @media(prefers-reduced-motion:reduce){.music-player.is-waiting .music-toggle{animation:none}}
+
+/* --- NFT cards: glare, actions and 3D viewer --- */
+.nft-glare{position:absolute;inset:0;pointer-events:none;mix-blend-mode:overlay;border-radius:inherit}
+.nft-actions{display:flex;gap:10px;margin-top:12px}
+.nft-actions .button{flex:1;margin-top:0;min-height:40px;font-size:8px;justify-content:center}
+.nft-modal{position:fixed;inset:0;z-index:1000;display:flex;align-items:center;justify-content:center;padding:20px;background:#05070dee;backdrop-filter:blur(8px)}
+.nft-modal[hidden]{display:none}
+.nft-modal-box{width:100%;max-width:680px;background:#10131b;border:1px solid #6b5a2b;box-shadow:0 0 50px #c9a24b26;display:flex;flex-direction:column}
+.nft-modal-head{display:flex;justify-content:space-between;align-items:center;padding:14px 18px;border-bottom:1px solid var(--line)}
+.nft-modal-head h3{margin:0;font:800 20px 'Barlow Condensed',sans-serif;letter-spacing:1.4px;color:#f0cf7a}
+.nft-modal-close{background:none;border:0;color:#e9eaf0;font-size:28px;line-height:1;padding:0 6px}
+.nft-modal-close:hover{color:var(--green)}
+.nft-modal-close:focus-visible,.nft-3d:focus-visible,.nft-modal model-viewer:focus-visible{outline:2px solid var(--green);outline-offset:2px}
+.nft-modal-stage{position:relative;height:min(62vh,520px)}
+.nft-modal-stage model-viewer{width:100%;height:100%;background:radial-gradient(circle at 50% 40%,#1a2233,#0b0e16 70%);--poster-color:transparent}
+.nft-modal-status{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;margin:0;font-size:9px;letter-spacing:1.4px;color:#8b90a0;pointer-events:none;z-index:1}
+.nft-modal-status[hidden]{display:none}
+.nft-modal-hint{margin:0;padding:10px;text-align:center;font-size:8px;letter-spacing:1.2px;color:#737987;border-top:1px solid var(--line)}
+body.nft-modal-open{overflow:hidden}
+@media(prefers-reduced-motion:reduce){.nft-frame{transition:none}}

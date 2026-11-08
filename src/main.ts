@@ -6,6 +6,7 @@ import { GAMES, STATUS_LABEL, safeUrl, type Game } from "./games";
 import { NFTS } from "./nfts";
 import { initHeroBanner } from "./heroFx";
 import { initHeroKey } from "./heroKey";
+import { initNftCards } from "./nftFx";
 import { SITE_URL, SOCIALS, WAITLIST_ENDPOINT } from "./config";
 import { FAQ, NEWS } from "./content";
 import { initAnalytics, track } from "./analytics";
@@ -337,12 +338,12 @@ document.querySelector<HTMLDivElement>("#app")!.innerHTML = `
 
       <section class="nft-section" id="nfts">
         <div class="nft-bg" style="background-image:url(${img("banner-glow.webp")})"></div>
-        <div class="section-heading"><div><div class="eyebrow"><span class="eyebrow-line"></span> THE CREW</div><h2>MEET THE <span>OPERATORS</span></h2></div><div class="section-note">EIGHT OPERATORS.<br/>ONE GRID.</div></div>
+        <div class="section-heading"><div><div class="eyebrow"><span class="eyebrow-line"></span> THE VAULT</div><h2>THE <span>DIVINE</span> CARDS</h2></div><div class="section-note">TWO CARDS.<br/>ONE GRID.</div></div>
         <div class="nft-grid">
           ${NFTS.map((n) => `<article class="nft-card${n.accent ? " nft-" + n.accent : ""}" id="nft-${esc(n.id)}">
-            <div class="nft-frame"><img src="${img(n.image)}" alt="${esc(n.alt)}" loading="lazy" decoding="async" width="620" height="871" /></div>
+            <div class="nft-frame" data-tilt><img src="${img(n.image)}" alt="${esc(n.alt)}" loading="lazy" decoding="async" width="1084" height="1451" /><span class="nft-glare" aria-hidden="true"></span></div>
             <div class="nft-info"><div><div class="game-kicker">${esc(n.kicker)}</div><h3>${esc(n.name)}</h3><small>${esc(n.role)}</small></div><span class="nft-price">${esc(n.price)}</span></div>
-            <a class="button button-ghost nft-bio" href="#lore" data-bio="${esc(n.id)}">READ BIO <span>→</span></a>
+            <div class="nft-actions"><button class="button button-primary nft-3d" type="button" data-3d="${esc(n.id)}">VIEW IN 3D <span>◆</span></button><a class="button button-ghost nft-bio" href="#lore" data-bio="${esc(n.id)}">READ BIO <span>→</span></a></div>
           </article>`).join("")}
         </div>
         <p class="nft-note">CONCEPT ART // PREVIEW ONLY // MINTING IS NOT LIVE</p>
@@ -371,6 +372,7 @@ renderGames();
 renderLore();
 initHeroBanner();
 initHeroKey();
+initNftCards();
 initComicReader(img);
 initAnalytics();
 initGrowth();

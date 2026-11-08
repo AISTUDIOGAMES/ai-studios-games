@@ -11,6 +11,7 @@
     "publish:bomber": "node scripts/publish-bomber.mjs"
   },
   "dependencies": {
+    "@google/model-viewer": "^3.5.0",
     "@wallet-standard/app": "^1.1.0",
     "@wallet-standard/base": "^1.1.0"
   },

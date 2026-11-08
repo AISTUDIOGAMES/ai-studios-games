@@ -1,0 +1,36 @@
+ATUALIZACAO: CARTAS NFT (SO ORION E AEON) + VISUALIZADOR 3D
+
+Este pacote vem por cima do repositorio atual (ai-studios-games).
+
+1) Copie as pastas "src", "public" e "images" e os arquivos package.json e package-lock.json deste zip
+   para dentro da pasta do repositorio, aceitando substituir.
+
+2) Apague as cartas antigas (nao sao mais usadas em lugar nenhum do site):
+   git rm public/images/nft-lyra.webp public/images/nft-titan.webp public/images/nft-kai.webp public/images/nft-vex.webp public/images/nft-kira.webp public/images/nft-jax.webp
+   git rm images/nft-lyra.webp images/nft-titan.webp images/nft-kai.webp images/nft-vex.webp images/nft-kira.webp images/nft-jax.webp
+
+3) Instale a nova dependencia e teste:
+   npm install
+   npx vite build        (ou npm run dev para ver no navegador)
+
+4) Publique:
+   git add -A
+   git commit -m "Cartas ORION e AEON atualizadas com visualizador 3D"
+   git push
+
+O QUE MUDOU
+- src/nfts.ts ............ so ORION e AEON, com o arquivo do modelo 3D de cada uma
+- src/nftFx.ts ........... NOVO: inclinacao 3D da carta com brilho e janela "VIEW IN 3D"
+- src/main.ts ............ secao das cartas (titulo, botoes VIEW IN 3D e READ BIO)
+- src/style.css .......... grade de 2 cartas, brilho, botoes e janela do visualizador
+- public/images/nft-orion.webp e nft-aeon.webp .... as cartas novas do RAR (1084 x 1451)
+- public/models/orion.glb e aeon.glb .............. modelos 3D do RAR, comprimidos (23 MB -> 3,3 MB cada)
+- public/vendor/meshopt_decoder.js ................ decodificador dos modelos (MIT), hospedado no proprio site
+- package.json / package-lock.json ................ + @google/model-viewer
+
+NOTAS
+- O visualizador 3D so baixa a biblioteca e o modelo quando alguem clica em VIEW IN 3D.
+- O botao "Mint Card" do carta.html NAO foi levado para o site: o texto do site diz que o mint nao esta ativo.
+- Os personagens (Lyra, Titan, Kai, Vex, Kira, Jax) continuam no dossie (LORE), no RPG e no Bomber Idle.
+  Foram removidas apenas as cartas NFT da secao do site.
+- Os arquivos nft/ dentro de client/ e public/bomber-idle/ sao do jogo Bomber Idle e nao foram alterados.
