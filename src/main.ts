@@ -4,8 +4,7 @@ import "./style.css";
 import "./comic-reader.css";
 import { GAMES, STATUS_LABEL, safeUrl, type Game } from "./games";
 import { NFTS } from "./nfts";
-import { initHeroBanner } from "./heroFx";
-import { initHeroKey } from "./heroKey";
+import { spotlightMarkup, initSpotlight } from "./spotlight";
 import { initNftCards } from "./nftFx";
 import { SITE_URL, SOCIALS, WAITLIST_ENDPOINT } from "./config";
 import { FAQ, NEWS } from "./content";
@@ -144,14 +143,6 @@ function renderGames(): void {
 const featured = [...GAMES].reverse().find((g) => g.home && safeUrl(g.url));
 const featuredHref = featured ? safeUrl(featured.url) : null;
 
-const heroActions = featured && featuredHref
-  ? `<a class="button button-primary" href="${esc(featuredHref)}" target="_blank" rel="noopener noreferrer" data-play="${esc(featured.id)}">PLAY ${esc(featured.title)} <span>↗</span></a>
-            <a class="button button-ghost" href="#arcade"><span class="play-icon">▶</span> EXPLORE GAMES</a>
-            <a class="button button-ghost" href="/trailer/" target="_blank" rel="noopener noreferrer"><span class="play-icon">▶</span> WATCH TRAILER</a>`
-  : `<a class="button button-primary" href="#arcade">EXPLORE GAMES <span>↗</span></a>
-            <a class="button button-ghost" href="#about"><span class="play-icon">▶</span> MEET THE STUDIO</a>
-            <a class="button button-ghost" href="/trailer/" target="_blank" rel="noopener noreferrer"><span class="play-icon">▶</span> WATCH TRAILER</a>`;
-
 const announceLink = featured && featuredHref
   ? `<span class="announcement-divider">/</span> <a class="announce-link" href="${esc(featuredHref)}" target="_blank" rel="noopener noreferrer" data-play="${esc(featured.id)}">NEW: PLAY ${esc(featured.title)} ↗</a>`
   : "";
@@ -163,23 +154,6 @@ const officialLinks = [
   ...GAMES.filter((g) => safeUrl(g.url)).map((g) => ({ label: g.title, url: g.url.startsWith("/") ? SITE_URL + g.url : g.url })),
   ...liveSocials.map((s) => ({ label: s.label, url: s.url })),
 ];
-
-/** Golden threads over the hero key art, in the art's own 1024x572 coordinates. */
-const KEY_THREADS = [
-  { d: "M880 142 Q822 150 773 171", delay: 0 },
-  { d: "M880 142 Q832 172 790 208", delay: 0.5 },
-  { d: "M880 142 Q790 215 681 313", delay: 1 },
-  { d: "M910 230 Q955 292 960 360", delay: 1.5 },
-  { d: "M713 340 Q785 372 838 392", delay: 2 },
-];
-const KEY_NODES: [number, number][] = [[880, 142], [773, 171], [790, 208], [681, 313], [960, 360], [713, 340], [838, 392]];
-const KEY_DUST = Array.from({ length: 18 }, (_, i) => ({
-  left: 8 + ((i * 53) % 88),
-  size: 2 + (i % 3),
-  dur: 9 + ((i * 7) % 9),
-  delay: -((i * 5) % 13),
-  dx: ((i % 2 ? 1 : -1) * (14 + ((i * 11) % 36))),
-}));
 
 /** The trailer video lives in /public/trailer and respects the Vite base path. */
 const trailerUrl = (file: string) => `${import.meta.env.BASE_URL}trailer/${file}`;
@@ -291,40 +265,7 @@ document.querySelector<HTMLDivElement>("#app")!.innerHTML = `
     </header>
 
     <main id="top">
-      <section class="hero hero-has-key">
-        <div class="hero-grid"></div><div class="hero-glow"></div>
-        <div class="hero-copy">
-          <div class="eyebrow"><span class="eyebrow-line"></span> INDEPENDENT GAME LAB <span class="eyebrow-tag">WEB3 / SOLANA-READY</span></div>
-          <h1>PLAY BEYOND<br/>THE <span class="outlined">GRID</span><span class="period">.</span></h1>
-          <p class="hero-text">A new generation of browser games. Built at the edge of AI, arcade culture, and on-chain worlds.</p>
-          <div class="hero-actions">
-            ${heroActions}
-          </div>
-          <div class="hero-stats">
-            <div><strong>${String(GAMES.length).padStart(2, "0")}</strong><span>GAMES IN THE ARCADE</span></div>
-            <i></i><div><strong>∞</strong><span>WORLDS TO EXPLORE</span></div>
-            <i></i><div><strong class="green">◎</strong><span>SOLANA-READY VISION</span></div>
-          </div>
-        </div>
-        <div class="hero-art hero-key" id="heroArt" aria-label="AI World Owl key art">
-          <div class="key-stage">
-            <div class="key-zoom">
-              <img class="key-img" src="${img("hero-keyart.webp")}" alt="Jax, Kira, Lyra and Kai leap into action across a ruined desert, linked by golden threads, under a cracked violet sphere and a colossal golden serpent." width="2048" height="1144" fetchpriority="high" decoding="async" />
-              <svg class="key-svg" viewBox="0 0 1024 572" preserveAspectRatio="none" aria-hidden="true" focusable="false">
-                <defs><linearGradient id="thGold" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#ffeab0"/><stop offset="1" stop-color="#ffb94d"/></linearGradient></defs>
-                <g class="key-threads">
-                  ${KEY_THREADS.map((t) => `<path class="th-glow" d="${t.d}"/><path class="th-base" d="${t.d}"/><path class="th-pulse" d="${t.d}" pathLength="100" style="animation-delay:${t.delay}s"/>`).join("")}
-                  ${KEY_NODES.map(([x, y], i) => `<circle class="key-node" cx="${x}" cy="${y}" r="2.6" style="animation-delay:${(i * 0.37).toFixed(2)}s"/>`).join("")}
-                </g>
-              </svg>
-            </div>
-          </div>
-          <div class="key-dust" aria-hidden="true">${KEY_DUST.map((d) => `<i style="left:${d.left}%;width:${d.size}px;height:${d.size}px;animation-duration:${d.dur}s;animation-delay:${d.delay}s;--dx:${d.dx}px"></i>`).join("")}</div>
-          <div class="art-scan"></div>
-          <a class="key-tag" href="#comic"><i></i> AI WORLD OWL <span>/</span> VOL. 01 <span>/</span> READ THE SAGA ↗</a>
-        </div>
-        <div class="hero-bottomline"><span>SCROLL TO ENTER</span><span class="scroll-mark">↓</span><span class="bottom-right">EST. 2026 <b>///</b> DIGITAL WORLDS, REAL OWNERSHIP</span></div>
-      </section>
+      ${spotlightMarkup()}
 
       ${trailerSection}
 
@@ -381,9 +322,8 @@ ${faqSection}
 
 renderGames();
 initViews();
+initSpotlight();
 renderLore();
-initHeroBanner();
-initHeroKey();
 initNftCards();
 initComicReader(img);
 initAnalytics();
