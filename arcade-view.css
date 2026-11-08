@@ -1,0 +1,5 @@
+/* ===== GAMES tab (#arcade): home and arcade are two views of the same page ===== */
+#arcade { display: none; }
+body.view-arcade main > *:not(#arcade) { display: none !important; }
+body.view-arcade #arcade { display: block; }
+.games-more { display: flex; justify-content: center; margin-top: 28px; }
