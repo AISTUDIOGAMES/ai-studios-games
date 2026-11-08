@@ -16,6 +16,8 @@ export interface Game {
   /** Optional CSS object-position for the cover (e.g. "68% 50%") to keep the focal point visible when cropped. */
   coverPos?: string;
   meta: string[];
+  /** true = card appears on the home page. false/omitted = only on the GAMES tab (#arcade). */
+  home?: boolean;
 }
 
 export const STATUS_LABEL: Record<GameStatus, string> = {
@@ -63,6 +65,7 @@ export const GAMES: Game[] = [
     kind: "external",
     url: "/rpg.html",
     cover: "banner-owl.webp",
+    home: true,
     meta: ["⌁ TURN-BASED RPG", "◈ 8 OPERATORS", "◎ BROWSER PROTOTYPE"],
   },
   {

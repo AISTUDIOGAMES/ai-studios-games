@@ -385,3 +385,10 @@ a.ep-row.is-live .ep-num{color:var(--green)}
 .nft-modal-hint{margin:0;padding:10px;text-align:center;font-size:8px;letter-spacing:1.2px;color:#737987;border-top:1px solid var(--line)}
 body.nft-modal-open{overflow:hidden}
 @media(prefers-reduced-motion:reduce){.nft-frame{transition:none}}
+
+/* ===== GAMES tab (#arcade): home and arcade are two views of the same page ===== */
+#arcade { display: none; }
+body.view-arcade main > *:not(#arcade) { display: none !important; }
+body.view-arcade #arcade { display: block; }
+.games-more { display: flex; justify-content: center; margin-top: 28px; }
+

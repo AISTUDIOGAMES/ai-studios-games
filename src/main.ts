@@ -116,11 +116,8 @@ function actionFor(game: Game): string {
   return `<a class="button button-primary launch-btn" href="${esc(href)}" target="_blank" rel="noopener noreferrer" data-play="${esc(game.id)}">PLAY ${esc(game.title)} <span>↗</span></a>`;
 }
 
-function renderGames(): void {
-  const list = document.querySelector<HTMLDivElement>("#gamesList");
-  if (!list) return;
-  list.innerHTML = GAMES.map(
-    (game) => `
+function gameCard(game: Game): string {
+  return `
     <article class="game-card" id="game-${esc(game.id)}">
       ${artFor(game)}
       <div class="game-info">
@@ -132,19 +129,26 @@ function renderGames(): void {
         <div class="game-meta">${game.meta.map((m) => `<span>${esc(m)}</span>`).join("")}</div>
         <div class="game-actions">${actionFor(game)}<button class="button button-ghost share-btn" type="button" data-share="${esc(game.id)}">SHARE <span>↗</span></button></div>
       </div>
-    </article>`
-  ).join("");
+    </article>`;
+}
+
+/** Home shows only games with home: true. The GAMES tab (#arcade) shows the rest. */
+function renderGames(): void {
+  const home = document.querySelector<HTMLDivElement>("#gamesList");
+  const arcade = document.querySelector<HTMLDivElement>("#arcadeList");
+  if (home) home.innerHTML = GAMES.filter((g) => g.home).map(gameCard).join("");
+  if (arcade) arcade.innerHTML = GAMES.filter((g) => !g.home).map(gameCard).join("");
 }
 
 /** The newest game that already has a public link: used by the hero button and the top bar. */
-const featured = [...GAMES].reverse().find((g) => safeUrl(g.url));
+const featured = [...GAMES].reverse().find((g) => g.home && safeUrl(g.url));
 const featuredHref = featured ? safeUrl(featured.url) : null;
 
 const heroActions = featured && featuredHref
   ? `<a class="button button-primary" href="${esc(featuredHref)}" target="_blank" rel="noopener noreferrer" data-play="${esc(featured.id)}">PLAY ${esc(featured.title)} <span>↗</span></a>
-            <a class="button button-ghost" href="#games"><span class="play-icon">▶</span> EXPLORE GAMES</a>
+            <a class="button button-ghost" href="#arcade"><span class="play-icon">▶</span> EXPLORE GAMES</a>
             <a class="button button-ghost" href="/trailer/" target="_blank" rel="noopener noreferrer"><span class="play-icon">▶</span> WATCH TRAILER</a>`
-  : `<a class="button button-primary" href="#games">EXPLORE GAMES <span>↗</span></a>
+  : `<a class="button button-primary" href="#arcade">EXPLORE GAMES <span>↗</span></a>
             <a class="button button-ghost" href="#about"><span class="play-icon">▶</span> MEET THE STUDIO</a>
             <a class="button button-ghost" href="/trailer/" target="_blank" rel="noopener noreferrer"><span class="play-icon">▶</span> WATCH TRAILER</a>`;
 
@@ -280,7 +284,7 @@ document.querySelector<HTMLDivElement>("#app")!.innerHTML = `
         <span class="brand-type">AI STUDIOS <b>GAMES</b><small>PLAY BEYOND THE GRID</small></span>
       </a>
       <nav class="nav-links" aria-label="Main navigation">
-        <a href="#trailer">TRAILER</a><a href="#comic">COMIC</a><a href="#lore">LORE</a><a href="#games">GAMES</a><a href="#nfts">NFTS</a><a href="#about">THE STUDIO</a><a href="#token">$ASG</a><a href="#roadmap">ROADMAP</a><a href="#join">JOIN</a>
+        <a href="#trailer">TRAILER</a><a href="#comic">COMIC</a><a href="#lore">LORE</a><a href="#arcade">GAMES</a><a href="#nfts">NFTS</a><a href="#about">THE STUDIO</a><a href="#token">$ASG</a><a href="#roadmap">ROADMAP</a><a href="#join">JOIN</a>
       </nav>
       <button class="wallet-btn" id="walletBtn"><span class="wallet-dot"></span><span id="walletLabel">CONNECT WALLET</span></button>
       <button class="menu-toggle" id="menuToggle" aria-label="Toggle navigation">☰</button>
@@ -334,6 +338,13 @@ document.querySelector<HTMLDivElement>("#app")!.innerHTML = `
       <section class="section games-section" id="games">
         <div class="section-heading"><div><div class="eyebrow"><span class="eyebrow-line"></span> THE ARCADE</div><h2>ENTER THE <span>PLAYGROUND</span></h2></div><div class="section-note">SMALL WORLDS.<br/>BIG ENERGY.</div></div>
         <div class="games-list" id="gamesList"></div>
+        <div class="games-more"><a class="button button-ghost" href="#arcade">MORE GAMES <span>→</span></a></div>
+      </section>
+
+      <section class="section games-section" id="arcade">
+        <div class="section-heading"><div><div class="eyebrow"><span class="eyebrow-line"></span> THE ARCADE</div><h2>MORE <span>GAMES</span></h2></div><div class="section-note">SMALL WORLDS.<br/>BIG ENERGY.</div></div>
+        <div class="games-list" id="arcadeList"></div>
+        <div class="games-more"><a class="button button-ghost" href="#top">← BACK TO HOME</a></div>
       </section>
 
       <section class="nft-section" id="nfts">
@@ -369,6 +380,7 @@ ${faqSection}
 `;
 
 renderGames();
+initViews();
 renderLore();
 initHeroBanner();
 initHeroKey();
@@ -457,3 +469,19 @@ function notify(message: string) {
 document.querySelector("#menuToggle")?.addEventListener("click", () => document.querySelector(".nav-links")?.classList.toggle("open"));
 
 initWallet(notify);
+
+/** Two views on one page: home, and the GAMES tab (#arcade). */
+function initViews(): void {
+  const apply = (): void => {
+    const hash = location.hash;
+    const gameId = hash.startsWith("#game-") ? hash.slice(6) : "";
+    const gameOnArcade = !!gameId && GAMES.some((g) => g.id === gameId && !g.home);
+    const arcade = hash === "#arcade" || gameOnArcade;
+    document.body.classList.toggle("view-arcade", arcade);
+    if (hash === "#arcade") window.scrollTo(0, 0);
+    else if (gameOnArcade) document.getElementById(hash.slice(1))?.scrollIntoView();
+    else if (!arcade && hash) document.getElementById(hash.slice(1))?.scrollIntoView();
+  };
+  window.addEventListener("hashchange", apply);
+  apply();
+}
