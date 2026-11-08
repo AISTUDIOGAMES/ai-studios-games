@@ -1,0 +1,21 @@
+ATUALIZACAO: NOVO HERO (ARTE CINEMATOGRAFICA DOS 4 PERSONAGENS)
+
+Este pacote vem DEPOIS do pacote anterior (trailer, HQ e YouTube). Se ja aplicou aquele, aplique este por cima.
+
+1) Copie as pastas "src" e "public" deste zip para dentro da pasta do repositorio, aceitando substituir.
+   (src\main.ts e src\style.css ja incluem tudo das atualizacoes anteriores.)
+
+2) No terminal, dentro da pasta do repositorio:
+   git add -A
+   git commit -m "Novo hero com arte dos personagens"
+   git push
+
+ARQUIVOS
+- src/heroKey.ts ....................... paralaxe suave e pausa das animacoes fora da tela
+- src/main.ts .......................... novo codigo do hero
+- src/style.css ........................ estilos do hero (zoom lento, fios dourados, poeira)
+- public/images/hero-keyart.webp ....... a arte nova (2048 x 1144)
+
+COMO TROCAR A ARTE NO FUTURO
+Substitua public/images/hero-keyart.webp por outra imagem 16:9. Se os personagens mudarem de lugar,
+ajuste os fios dourados em src/main.ts (listas KEY_THREADS e KEY_NODES, em coordenadas 1024 x 572).

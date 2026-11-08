@@ -34,10 +34,3 @@ export async function requestClaim(wallet: string) {
   if (!r.ok) throw new Error(data.error ?? "Falha no saque");
   return data as { transaction: string; amount: string; nonce: number };
 }
-
-/** Assina um texto (login do Alpha). Devolve a assinatura em base64. Nao move nenhum valor. */
-export async function signText(message: string): Promise<string> {
-  if (!window.solana?.signMessage) throw new Error("A carteira nao permite assinar mensagens");
-  const signed = await window.solana.signMessage(new TextEncoder().encode(message), "utf8");
-  return toBase64(signed.signature);
-}

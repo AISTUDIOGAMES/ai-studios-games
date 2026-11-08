@@ -1,0 +1,31 @@
+/* ===== Site-wide interaction polish (see siteFx.ts). Same neon identity as the hero. ===== */
+/* menu links: neon underline that grows from the left */
+.nav-links a{position:relative;padding:6px 0;transition:color .2s,text-shadow .2s}
+.nav-links a:after{content:"";position:absolute;left:0;right:0;bottom:0;height:1px;background:linear-gradient(90deg,var(--green),#8a72ff);transform:scaleX(0);transform-origin:left;transition:transform .28s cubic-bezier(.2,.7,.2,1);box-shadow:0 0 8px var(--green)}
+.nav-links a:hover,.nav-links a:focus-visible{text-shadow:0 0 10px #b6ff3b66}
+.nav-links a:hover:after,.nav-links a:focus-visible:after{transform:scaleX(1)}
+/* buttons: neon hover, light that follows the pointer, press feedback */
+.button,.wallet-btn,.restart-btn,.share-btn,.roster-btn{position:relative;overflow:hidden;transition:transform .2s,border-color .2s,box-shadow .25s,color .2s}
+.button:after,.wallet-btn:after,.restart-btn:after,.share-btn:after,.roster-btn:after{content:"";position:absolute;inset:0;pointer-events:none;opacity:0;transition:opacity .25s;background:radial-gradient(110px circle at var(--bx,50%) var(--by,50%),#ffffff38,transparent 65%)}
+.button:hover:after,.wallet-btn:hover:after,.restart-btn:hover:after,.share-btn:hover:after,.roster-btn:hover:after{opacity:1}
+.button-primary:hover{box-shadow:0 0 26px #b6ff3b55,0 0 2px #b6ff3b inset}
+.button-ghost:hover{box-shadow:0 0 22px #8a72ff44;color:#fff}
+.wallet-btn:hover{box-shadow:0 0 18px #b6ff3b33}
+.button:active,.wallet-btn:active,.restart-btn:active{transform:translateY(0) scale(.97)}
+.button:focus-visible,.wallet-btn:focus-visible,.nav-links a:focus-visible,.key-tag:focus-visible{outline:2px solid var(--green);outline-offset:3px}
+/* cards: depth tilt with a glare in the card's own colour */
+.fx-tilt{--glow:#8a72ff;--rx:0deg;--ry:0deg;position:relative;transform-style:preserve-3d;
+  transition:transform .35s cubic-bezier(.2,.7,.2,1),border-color .25s,box-shadow .3s}
+.fx-tilt.is-tilting{transform:perspective(1000px) rotateX(var(--rx)) rotateY(var(--ry)) translateY(-4px);transition:transform .08s linear,border-color .25s,box-shadow .3s;box-shadow:0 18px 50px color-mix(in srgb,var(--glow) 28%,transparent)}
+.fx-tilt:before{content:"";position:absolute;inset:0;z-index:3;pointer-events:none;opacity:0;transition:opacity .3s;background:radial-gradient(280px circle at var(--gx,50%) var(--gy,50%),color-mix(in srgb,var(--glow) 32%,transparent),transparent 65%);mix-blend-mode:screen}
+.fx-tilt.is-tilting:before{opacity:1}
+.game-card{--glow:#b6ff3b}
+.dossier{--glow:var(--accent)}
+.nft-card:hover{border-color:var(--glow);box-shadow:0 16px 44px color-mix(in srgb,var(--glow) 30%,transparent)}
+#nft-lyra{--glow:#3dffd0}#nft-titan{--glow:#ff9a3d}#nft-kai{--glow:#b6ff3b}#nft-vex{--glow:#ff4fd8}
+#nft-kira{--glow:#ff6fa8}#nft-jax{--glow:#a45cff}#nft-aeon{--glow:#4fd8ff}#nft-orion{--glow:#ffd36b}
+/* scroll reveal: only when JS is running and motion is allowed, so content is always there without it */
+.fx-on .fx-reveal{opacity:0;transform:translate3d(0,22px,0);transition:opacity .7s ease,transform .7s cubic-bezier(.2,.7,.2,1);transition-delay:var(--rd,0s)}
+.fx-on .fx-reveal.is-in{opacity:1;transform:none}
+.fx-on .fx-tilt.fx-reveal.is-in{transition:transform .35s cubic-bezier(.2,.7,.2,1),border-color .25s,box-shadow .3s}
+@media(prefers-reduced-motion:reduce){.fx-tilt.is-tilting{transform:none}.nav-links a:after{transition:none}.button:active{transform:none}}

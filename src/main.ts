@@ -1,13 +1,18 @@
 import { tokenSection } from "./tokenomics";
 import { initWallet } from "./wallet";
 import "./style.css";
+import "./comic-reader.css";
 import { GAMES, STATUS_LABEL, safeUrl, type Game } from "./games";
 import { NFTS } from "./nfts";
 import { initHeroBanner } from "./heroFx";
+import { initHeroKey } from "./heroKey";
+import { initNftCards } from "./nftFx";
 import { SITE_URL, SOCIALS, WAITLIST_ENDPOINT } from "./config";
 import { FAQ, NEWS } from "./content";
 import { initAnalytics, track } from "./analytics";
 import { CHARACTERS, GROUP_LABEL, PROLOGUE, UNIVERSE, type Character } from "./lore";
+import { initComicReader } from "./comicReader";
+import { COMIC_VOLUME, COMIC_STATUS_LABEL, NEXT_VOLUME, type ComicEpisode } from "./comic";
 
 /** Images live in /public/images and respect the Vite base path. */
 const img = (file: string) => `${import.meta.env.BASE_URL}images/${file}`;
@@ -155,6 +160,77 @@ const officialLinks = [
   ...liveSocials.map((s) => ({ label: s.label, url: s.url })),
 ];
 
+/** Golden threads over the hero key art, in the art's own 1024x572 coordinates. */
+const KEY_THREADS = [
+  { d: "M880 142 Q822 150 773 171", delay: 0 },
+  { d: "M880 142 Q832 172 790 208", delay: 0.5 },
+  { d: "M880 142 Q790 215 681 313", delay: 1 },
+  { d: "M910 230 Q955 292 960 360", delay: 1.5 },
+  { d: "M713 340 Q785 372 838 392", delay: 2 },
+];
+const KEY_NODES: [number, number][] = [[880, 142], [773, 171], [790, 208], [681, 313], [960, 360], [713, 340], [838, 392]];
+const KEY_DUST = Array.from({ length: 18 }, (_, i) => ({
+  left: 8 + ((i * 53) % 88),
+  size: 2 + (i % 3),
+  dur: 9 + ((i * 7) % 9),
+  delay: -((i * 5) % 13),
+  dx: ((i % 2 ? 1 : -1) * (14 + ((i * 11) % 36))),
+}));
+
+/** The trailer video lives in /public/trailer and respects the Vite base path. */
+const trailerUrl = (file: string) => `${import.meta.env.BASE_URL}trailer/${file}`;
+
+/** The YouTube channel comes from SOCIALS in config.ts, so there is only one place to edit. */
+const youtubeUrl = safeUrl(SOCIALS.find((x) => x.id === "youtube")?.url ?? "");
+
+const trailerSection = `
+      <section class="trailer-section" id="trailer">
+        <div class="section-heading"><div><div class="eyebrow"><span class="eyebrow-line"></span> OFFICIAL TRAILER</div><h2>WATCH THE <span>TRAILER</span></h2></div><div class="section-note">AI WORLD OWL<br/>VOL. 01 // THE OBSIDIAN SANCTUM</div></div>
+        <div class="trailer-frame">
+          <video id="trailerVideo" class="trailer-video" controls playsinline preload="none" poster="${trailerUrl("poster.jpg")}" aria-label="AI World Owl official trailer">
+            <source src="${trailerUrl("trailer.mp4")}" type="video/mp4" />
+            Your browser does not support the video tag. <a href="${trailerUrl("trailer.mp4")}">Download the trailer</a>.
+          </video>
+          <i class="art-corner corner-a"></i><i class="art-corner corner-b"></i>
+        </div>
+        <div class="trailer-actions"><a class="button button-ghost" href="/trailer/" target="_blank" rel="noopener noreferrer"><span class="play-icon">▶</span> OPEN FULL PAGE <span>↗</span></a>${youtubeUrl ? `<a class="button button-primary" href="${esc(youtubeUrl)}" target="_blank" rel="noopener noreferrer" data-social="youtube"><span class="play-icon yt">▶</span> SUBSCRIBE ON YOUTUBE <span>↗</span></a>` : ""}</div>
+      </section>`;
+
+function comicEpisodeRow(ep: ComicEpisode): string {
+  const pill = `<span class="status-pill ${ep.status === "live" ? "is-live" : "is-soon"}"><i></i> ${COMIC_STATUS_LABEL[ep.status]}</span>`;
+  const inner = `<span class="ep-num">EP ${esc(ep.number)}</span><span class="ep-body"><b>${esc(ep.title)}</b><em>${esc(ep.tagline)}</em></span>${pill}`;
+  if (ep.status === "live" && ep.page !== undefined) return `<li><button type="button" class="ep-row is-live" data-read="${ep.page}">${inner}</button></li>`;
+  const href = ep.status === "live" && ep.url ? safeUrl(ep.url) : null;
+  return href
+    ? `<li><a class="ep-row is-live" href="${esc(href)}" target="_blank" rel="noopener noreferrer">${inner}</a></li>`
+    : `<li><div class="ep-row">${inner}</div></li>`;
+}
+
+const comicSection = `
+      <section class="comic-section" id="comic">
+        <div class="section-heading"><div><div class="eyebrow"><span class="eyebrow-line"></span> THE GRAPHIC NOVEL</div><h2>THE <span>SAGA</span></h2></div><div class="section-note">AI WORLD OWL<br/>EVERY CHOICE IS A THREAD.</div></div>
+        <div class="comic-grid">
+          <figure class="comic-cover" data-read="0" title="Read Vol. 01">
+            <img src="${img(COMIC_VOLUME.cover)}" alt="${esc(COMIC_VOLUME.coverAlt)}" width="687" height="1024" loading="lazy" decoding="async" />
+            <i class="art-corner corner-a"></i><i class="art-corner corner-b"></i>
+          </figure>
+          <div class="comic-info">
+            <div class="comic-kicker">VOLUME ${esc(COMIC_VOLUME.number)} <span>/</span> EPISODES 001 - 004</div>
+            <h3>${esc(COMIC_VOLUME.title)}</h3>
+            <p class="comic-blurb">${esc(COMIC_VOLUME.blurb)}</p>
+            <ul class="comic-episodes" aria-label="Episodes of Volume ${esc(COMIC_VOLUME.number)}">
+              ${COMIC_VOLUME.episodes.map(comicEpisodeRow).join("")}
+              <li><div class="ep-row ep-next"><span class="ep-num">VOL ${esc(NEXT_VOLUME.number)}</span><span class="ep-body"><b>THE SAGA CONTINUES</b><em>The threads are still being pulled.</em></span><span class="status-pill is-soon"><i></i> ${esc(NEXT_VOLUME.label)}</span></div></li>
+            </ul>
+            <div class="comic-actions">
+              <button type="button" class="button button-primary" data-read="0">READ VOL. 01 <span>→</span></button>
+              <a class="button button-ghost" href="#join">GET NOTIFIED ON VOL. 02 <span>↗</span></a>
+              <a class="button button-ghost" href="#lore"><span class="play-icon">▶</span> MEET THE LEGENDS</a>
+            </div>
+          </div>
+        </div>
+      </section>`;
+
 const logSection = `
       <section class="log-section" id="log">
         <div class="section-heading"><div><div class="eyebrow"><span class="eyebrow-line"></span> WHAT'S NEW</div><h2>THE STUDIO <span>LOG</span></h2></div><div class="section-note">SHIPPING<br/>IN PUBLIC.</div></div>
@@ -204,14 +280,14 @@ document.querySelector<HTMLDivElement>("#app")!.innerHTML = `
         <span class="brand-type">AI STUDIOS <b>GAMES</b><small>PLAY BEYOND THE GRID</small></span>
       </a>
       <nav class="nav-links" aria-label="Main navigation">
-        <a href="#lore">LORE</a><a href="#games">GAMES</a><a href="#nfts">NFTS</a><a href="#about">THE STUDIO</a><a href="#token">$ASG</a><a href="#roadmap">ROADMAP</a><a href="#join">JOIN</a>
+        <a href="#trailer">TRAILER</a><a href="#comic">COMIC</a><a href="#lore">LORE</a><a href="#games">GAMES</a><a href="#nfts">NFTS</a><a href="#about">THE STUDIO</a><a href="#token">$ASG</a><a href="#roadmap">ROADMAP</a><a href="#join">JOIN</a>
       </nav>
       <button class="wallet-btn" id="walletBtn"><span class="wallet-dot"></span><span id="walletLabel">CONNECT WALLET</span></button>
       <button class="menu-toggle" id="menuToggle" aria-label="Toggle navigation">☰</button>
     </header>
 
     <main id="top">
-      <section class="hero">
+      <section class="hero hero-has-key">
         <div class="hero-grid"></div><div class="hero-glow"></div>
         <div class="hero-copy">
           <div class="eyebrow"><span class="eyebrow-line"></span> INDEPENDENT GAME LAB <span class="eyebrow-tag">WEB3 / SOLANA-READY</span></div>
@@ -226,26 +302,29 @@ document.querySelector<HTMLDivElement>("#app")!.innerHTML = `
             <i></i><div><strong class="green">◎</strong><span>SOLANA-READY VISION</span></div>
           </div>
         </div>
-        <div class="hero-art" id="heroArt" aria-label="Cyberpunk neon city artwork">
-          <div class="hb-cover">
-            <div class="hb-stage">
-              <div class="hb-center"><div class="hb-media">
-                <img class="hero-img" src="${img("hero-banner-live.webp")}" alt="AI Studios Games — Vex, Kira and Titan standing in a neon cyber-city under the owl emblem" width="1584" height="672" fetchpriority="high" decoding="async" />
-                <i class="hb-glow"></i><i class="hb-eye hb-eye-blue"></i><i class="hb-eye hb-eye-purple"></i>
-                <div class="hb-glitch hb-g1" style="background-image:url(${img("hero-banner-live.webp")})"></div>
-                <div class="hb-glitch hb-g2" style="background-image:url(${img("hero-banner-live.webp")})"></div>
-              </div>
-              </div>
+        <div class="hero-art hero-key" id="heroArt" aria-label="AI World Owl key art">
+          <div class="key-stage">
+            <div class="key-zoom">
+              <img class="key-img" src="${img("hero-keyart.webp")}" alt="Jax, Kira, Lyra and Kai leap into action across a ruined desert, linked by golden threads, under a cracked violet sphere and a colossal golden serpent." width="2048" height="1144" fetchpriority="high" decoding="async" />
+              <svg class="key-svg" viewBox="0 0 1024 572" preserveAspectRatio="none" aria-hidden="true" focusable="false">
+                <defs><linearGradient id="thGold" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#ffeab0"/><stop offset="1" stop-color="#ffb94d"/></linearGradient></defs>
+                <g class="key-threads">
+                  ${KEY_THREADS.map((t) => `<path class="th-glow" d="${t.d}"/><path class="th-base" d="${t.d}"/><path class="th-pulse" d="${t.d}" pathLength="100" style="animation-delay:${t.delay}s"/>`).join("")}
+                  ${KEY_NODES.map(([x, y], i) => `<circle class="key-node" cx="${x}" cy="${y}" r="2.6" style="animation-delay:${(i * 0.37).toFixed(2)}s"/>`).join("")}
+                </g>
+              </svg>
             </div>
-            <canvas class="hb-fx" aria-hidden="true"></canvas>
           </div>
-          <div class="hb-sweep"></div><div class="hb-scanbar"></div><div class="art-scan"></div>
-          <div class="hb-hud"><span class="hb-live"><i></i>LIVE FEED</span><span>GRID-01 // SIGNAL STABLE</span><span id="hbClock">00:00:00</span></div>
-          <div class="art-coordinate">34°03' N<br/>118°15' W</div>
-          <div class="art-corner corner-a"></div><div class="art-corner corner-b"></div>
+          <div class="key-dust" aria-hidden="true">${KEY_DUST.map((d) => `<i style="left:${d.left}%;width:${d.size}px;height:${d.size}px;animation-duration:${d.dur}s;animation-delay:${d.delay}s;--dx:${d.dx}px"></i>`).join("")}</div>
+          <div class="art-scan"></div>
+          <a class="key-tag" href="#comic"><i></i> AI WORLD OWL <span>/</span> VOL. 01 <span>/</span> READ THE SAGA ↗</a>
         </div>
         <div class="hero-bottomline"><span>SCROLL TO ENTER</span><span class="scroll-mark">↓</span><span class="bottom-right">EST. 2026 <b>///</b> DIGITAL WORLDS, REAL OWNERSHIP</span></div>
       </section>
+
+      ${trailerSection}
+
+      ${comicSection}
 
       <section class="lore-section" id="lore">
         <div class="section-heading"><div><div class="eyebrow"><span class="eyebrow-line"></span> THE UNIVERSE</div><h2>AI WORLD <span>OWL</span></h2></div><div class="section-note">ONE GRID.<br/>EIGHT LEGENDS.</div></div>
@@ -259,12 +338,12 @@ document.querySelector<HTMLDivElement>("#app")!.innerHTML = `
 
       <section class="nft-section" id="nfts">
         <div class="nft-bg" style="background-image:url(${img("banner-glow.webp")})"></div>
-        <div class="section-heading"><div><div class="eyebrow"><span class="eyebrow-line"></span> THE CREW</div><h2>MEET THE <span>OPERATORS</span></h2></div><div class="section-note">EIGHT OPERATORS.<br/>ONE GRID.</div></div>
+        <div class="section-heading"><div><div class="eyebrow"><span class="eyebrow-line"></span> THE VAULT</div><h2>THE <span>DIVINE</span> CARDS</h2></div><div class="section-note">TWO CARDS.<br/>ONE GRID.</div></div>
         <div class="nft-grid">
           ${NFTS.map((n) => `<article class="nft-card${n.accent ? " nft-" + n.accent : ""}" id="nft-${esc(n.id)}">
-            <div class="nft-frame"><img src="${img(n.image)}" alt="${esc(n.alt)}" loading="lazy" decoding="async" width="620" height="871" /></div>
+            <div class="nft-frame" data-tilt><img src="${img(n.image)}" alt="${esc(n.alt)}" loading="lazy" decoding="async" width="1084" height="1451" /><span class="nft-glare" aria-hidden="true"></span></div>
             <div class="nft-info"><div><div class="game-kicker">${esc(n.kicker)}</div><h3>${esc(n.name)}</h3><small>${esc(n.role)}</small></div><span class="nft-price">${esc(n.price)}</span></div>
-            <a class="button button-ghost nft-bio" href="#lore" data-bio="${esc(n.id)}">READ BIO <span>→</span></a>
+            <div class="nft-actions"><button class="button button-primary nft-3d" type="button" data-3d="${esc(n.id)}">VIEW IN 3D <span>◆</span></button><a class="button button-ghost nft-bio" href="#lore" data-bio="${esc(n.id)}">READ BIO <span>→</span></a></div>
           </article>`).join("")}
         </div>
         <p class="nft-note">CONCEPT ART // PREVIEW ONLY // MINTING IS NOT LIVE</p>
@@ -292,6 +371,9 @@ ${faqSection}
 renderGames();
 renderLore();
 initHeroBanner();
+initHeroKey();
+initNftCards();
+initComicReader(img);
 initAnalytics();
 initGrowth();
 
@@ -305,6 +387,7 @@ function initGrowth(): void {
     const social = t.closest<HTMLElement>("[data-social]");
     if (social?.dataset.social) track("Social Click", { network: social.dataset.social });
   });
+  document.querySelector<HTMLVideoElement>("#trailerVideo")?.addEventListener("play", () => track("Trailer Play"), { once: true });
   initWaitlist();
   injectFaqSchema();
 }
