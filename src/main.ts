@@ -110,7 +110,7 @@ function renderLore(): void {
 function actionFor(game: Game): string {
   const href = safeUrl(game.url);
   if (!href) {
-    return `<span class="button button-ghost launch-btn is-disabled" role="link" aria-disabled="true">LINK COMING SOON</span>`;
+    return `<span class="button button-ghost launch-btn is-disabled" role="link" aria-disabled="true">COMING SOON</span>`;
   }
   return `<a class="button button-primary launch-btn" href="${esc(href)}" target="_blank" rel="noopener noreferrer" data-play="${esc(game.id)}">PLAY ${esc(game.title)} <span>↗</span></a>`;
 }

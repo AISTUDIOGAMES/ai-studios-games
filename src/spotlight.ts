@@ -99,20 +99,20 @@ const DURATION = 7000; // ms per slide
 const esc = (s: string) => s.replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]!));
 const asset = (file: string) => (file.startsWith("/") ? file : `${import.meta.env.BASE_URL}images/${file}`);
 
-function linkFor(s: Slide): { href: string; newTab: boolean } {
+function linkFor(s: Slide): { href: string; newTab: boolean; locked: boolean } {
   if (s.game) {
     const g = GAMES.find((x) => x.id === s.game);
     const href = g ? safeUrl(g.url) : null;
-    if (href) return { href, newTab: true };
-    return { href: `#game-${s.game}`, newTab: false };
+    if (href) return { href, newTab: true, locked: false };
+    return { href: "", newTab: false, locked: true }; // game not released yet (open: false in games.ts)
   }
-  return { href: s.href ?? "#games", newTab: false };
+  return { href: s.href ?? "#games", newTab: false, locked: false };
 }
 
 export function spotlightMarkup(): string {
   const n = SLIDES.length;
   const slides = SLIDES.map((s, i) => {
-    const { href, newTab } = linkFor(s);
+    const { href, newTab, locked } = linkFor(s);
     const first = i === 0;
     return `
     <article class="sp-slide${first ? " is-active" : ""}" role="group" aria-roledescription="slide" aria-label="${i + 1} of ${n}"${first ? "" : " inert"}>
@@ -120,11 +120,13 @@ export function spotlightMarkup(): string {
       <div class="sp-shade"></div>
       ${s.poster ? `<div class="sp-poster"><img src="${esc(asset(s.poster))}" alt="${esc(s.title)} cover" loading="lazy" decoding="async" /></div>` : ""}
       <div class="sp-content">
-        <span class="sp-tag"><i></i>${esc(s.tag)}</span>
+        <span class="sp-tag"><i></i>${locked ? "COMING SOON" : esc(s.tag)}</span>
         <div class="sp-kicker">${esc(s.kicker)}</div>
         <h2 class="sp-title">${esc(s.title)}</h2>
         <p class="sp-text">${esc(s.text)}</p>
-        <div class="sp-cta"><a class="button button-primary" href="${esc(href)}"${newTab ? ' target="_blank" rel="noopener noreferrer"' : ""}${s.game ? ` data-play="${esc(s.game)}"` : ""}>${esc(s.cta)} <span>↗</span></a></div>
+        <div class="sp-cta">${locked
+          ? `<span class="button button-ghost is-disabled" role="link" aria-disabled="true">COMING SOON</span>`
+          : `<a class="button button-primary" href="${esc(href)}"${newTab ? ' target="_blank" rel="noopener noreferrer"' : ""}${s.game ? ` data-play="${esc(s.game)}"` : ""}>${esc(s.cta)} <span>↗</span></a>`}</div>
       </div>
     </article>`;
   }).join("");

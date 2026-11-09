@@ -16,6 +16,11 @@ export interface Game {
   /** Optional CSS object-position for the cover (e.g. "68% 50%") to keep the focal point visible when cropped. */
   coverPos?: string;
   meta: string[];
+  /**
+   * PLAY SWITCH. false (or missing) = "COMING SOON": no play button, nobody can launch it from the site.
+   * true = released: the real status and link below are used.
+   */
+  open?: boolean;
   /** true = card appears on the home page. false/omitted = only on the GAMES tab (#arcade). */
   home?: boolean;
 }
@@ -41,9 +46,10 @@ export const BOMBER_IDLE_URL = "/bomber-idle/";
  * Every game on the platform is one entry in this list.
  * To launch a new game: add an object here, and (for artwork) a case in artFor() in main.ts.
  */
-export const GAMES: Game[] = [
+const ALL_GAMES: Game[] = [
   {
     id: "slither-idle",
+    open: false, // change to true to release the play button
     kicker: "01 / SNAKE + IDLE",
     title: "SLITHER.IDLE",
     summary:
@@ -57,6 +63,7 @@ export const GAMES: Game[] = [
   },
   {
     id: "gridbreakers",
+    open: false, // change to true to release the play button
     kicker: "02 / TURN-BASED RPG",
     title: "OWL: GRIDBREAKERS",
     summary:
@@ -70,6 +77,7 @@ export const GAMES: Game[] = [
   },
   {
     id: "bomber-idle",
+    open: false, // change to true to release the play button
     kicker: "03 / GRID BOMBER + IDLE",
     title: "BOMBER.IDLE",
     summary:
@@ -81,6 +89,9 @@ export const GAMES: Game[] = [
     meta: ["◈ BROWSER GAME", "⌁ IDLE GRID FARMING", "◎ TEST BUILD // NO REAL VALUE"],
   },
 ];
+
+/** What the site uses. Games with open: false are shown as COMING SOON, without a link. */
+export const GAMES: Game[] = ALL_GAMES.map((game) => (game.open ? game : { ...game, status: "soon" as const, url: "" }));
 
 /** Returns a safe https address or same-site path, or null when the link is empty or invalid. */
 export function safeUrl(raw: string): string | null {
