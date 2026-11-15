@@ -2,6 +2,11 @@
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "redirects": [
     {
+      "source": "/gridbreakers",
+      "destination": "/?soon=gridbreakers",
+      "permanent": false
+    },
+    {
       "source": "/gridbreakers/:path*",
       "destination": "/?soon=gridbreakers",
       "permanent": false
