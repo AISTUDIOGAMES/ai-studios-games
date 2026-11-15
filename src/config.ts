@@ -27,3 +27,14 @@ export const WAITLIST_ENDPOINT = "";
  * "aistudiosgames.vercel.app". Empty = no analytics, nothing is loaded. Do-Not-Track is respected.
  */
 export const ANALYTICS_DOMAIN = "";
+
+/**
+ * Token launched on pump.fun (Solana). Edit ONLY this block to update the token section.
+ * TOKEN_SYMBOL: confirm the exact ticker shown on your pump.fun page.
+ * DEV_BUY_PCT: % of the supply the creator wallet bought at launch (see "Holders" on pump.fun).
+ *   Use null to hide the line. Be honest here: holders can check it on-chain.
+ */
+export const TOKEN_SYMBOL = "$ASG";
+export const TOKEN_NAME = "AI Studios Games";
+export const TOKEN_CA = "2t9TvrU2LF45xLGPZ9aTVzmkYg2kcdkcyvnUd18kpump";
+export const DEV_BUY_PCT: number | null = null;

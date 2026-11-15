@@ -396,3 +396,29 @@ body.view-arcade #arcade { display: block; }
 #game-gridbreakers .game-cover { aspect-ratio: 16 / 9; height: auto; min-height: 0; }
 #game-gridbreakers .game-cover img { width: 100%; height: 100%; object-fit: cover; }
 
+.token-ca{background:var(--panel);border:1px solid #2a2e38;border-left:2px solid var(--purple);padding:22px 26px;margin-bottom:18px}
+.token-ca small{display:block;font-size:8px;letter-spacing:1.2px;color:#737987;margin-bottom:10px}
+.token-ca-row{display:flex;flex-wrap:wrap;align-items:center;gap:14px}
+.token-ca code{flex:1 1 320px;min-width:0;font:700 13px/1.6 'Space Mono',monospace;color:var(--green);word-break:break-all;background:#0b0e15;border:1px solid #20242e;padding:12px 14px}
+.token-links{display:flex;flex-wrap:wrap;gap:12px;margin-top:16px}
+.token-foot{margin:16px 0 0;font-size:9px;line-height:1.8;color:#7d8391}
+@media(max-width:950px){.token-ca{padding:18px}}
+
+/* token: CA bar, live chart */
+.token-ca{background:var(--panel);border:1px solid #2a2e38;border-left:2px solid var(--green);padding:22px 26px;margin-bottom:18px}
+.token-ca small,.token-chart-head b{display:block;font-size:8px;letter-spacing:1.2px;color:#737987;margin-bottom:10px}
+.token-ca-row{display:flex;flex-wrap:wrap;align-items:center;gap:14px}
+.token-ca code{flex:1 1 320px;min-width:0;font:700 13px/1.6 'Space Mono',monospace;color:var(--green);word-break:break-all;user-select:all}
+.token-links{display:flex;flex-wrap:wrap;gap:10px;margin-top:16px}
+.token-chart{background:var(--panel);border:1px solid #2a2e38;border-top:2px solid var(--purple);padding:18px;margin-bottom:18px}
+.token-chart-head{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:6px}
+.token-chart-head b{margin:0;color:var(--green)}
+.token-chart-head span{display:flex;align-items:center;gap:8px;font-size:8px;letter-spacing:1px;color:#8b90a0}
+.live-dot{width:6px;height:6px;border-radius:50%;background:var(--green);box-shadow:0 0 10px var(--green);animation:livepulse 1.6s ease-in-out infinite}
+@keyframes livepulse{50%{opacity:.35}}
+.token-chart-frame{position:relative;width:100%;height:560px;background:#0b0e14;border:1px solid #202638}
+.token-chart-frame iframe{position:absolute;inset:0;width:100%;height:100%;border:0}
+.token-foot{margin:14px 0 0;font-size:9px;line-height:1.8;color:#737987}
+.token-foot a{color:var(--green)}
+@media(max-width:950px){.token-chart-frame{height:440px}.token-ca{padding:18px}}
+@media (prefers-reduced-motion:reduce){.live-dot{animation:none}}

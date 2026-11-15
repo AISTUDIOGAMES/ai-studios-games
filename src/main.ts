@@ -6,7 +6,7 @@ import { GAMES, STATUS_LABEL, safeUrl, type Game } from "./games";
 import { NFTS } from "./nfts";
 import { spotlightMarkup, initSpotlight } from "./spotlight";
 import { initNftCards } from "./nftFx";
-import { SITE_URL, SOCIALS, WAITLIST_ENDPOINT } from "./config";
+import { SITE_URL, SOCIALS, WAITLIST_ENDPOINT, TOKEN_SYMBOL } from "./config";
 import { FAQ, NEWS } from "./content";
 import { initAnalytics, track } from "./analytics";
 import { CHARACTERS, GROUP_LABEL, PROLOGUE, UNIVERSE, type Character } from "./lore";
@@ -258,7 +258,7 @@ document.querySelector<HTMLDivElement>("#app")!.innerHTML = `
         <span class="brand-type">AI STUDIOS <b>GAMES</b><small>PLAY BEYOND THE GRID</small></span>
       </a>
       <nav class="nav-links" aria-label="Main navigation">
-        <a href="#trailer">TRAILER</a><a href="#comic">COMIC</a><a href="#lore">LORE</a><a href="#arcade">GAMES</a><a href="#nfts">NFTS</a><a href="#about">THE STUDIO</a><a href="#token">$ASG</a><a href="#roadmap">ROADMAP</a><a href="#join">JOIN</a>
+        <a href="#trailer">TRAILER</a><a href="#comic">COMIC</a><a href="#lore">LORE</a><a href="#arcade">GAMES</a><a href="#nfts">NFTS</a><a href="#about">THE STUDIO</a><a href="#token">${TOKEN_SYMBOL}</a><a href="#roadmap">ROADMAP</a><a href="#join">JOIN</a>
       </nav>
       <button class="wallet-btn" id="walletBtn"><span class="wallet-dot"></span><span id="walletLabel">CONNECT WALLET</span></button>
       <button class="menu-toggle" id="menuToggle" aria-label="Toggle navigation">☰</button>
@@ -314,7 +314,7 @@ ${tokenSection}
 ${joinSection}
 ${faqSection}
     </main>
-    <p class="legal-note">AI STUDIOS GAMES MAKES BROWSER GAMES. NOTHING ON THIS SITE IS FINANCIAL ADVICE OR A PROMISE OF VALUE. DIGITAL ITEMS CAN LOSE ALL VALUE. NFT CARDS ARE PREVIEWS AND MINTING IS NOT LIVE. NEVER SHARE YOUR SEED PHRASE.</p>
+    <p class="legal-note">AI STUDIOS GAMES MAKES BROWSER GAMES. NOTHING ON THIS SITE IS FINANCIAL ADVICE OR A PROMISE OF VALUE. DIGITAL ITEMS CAN LOSE ALL VALUE. NFT CARDS ARE PREVIEWS AND MINTING IS NOT LIVE. THE COMMUNITY TOKEN IS A VOLATILE MEMECOIN: DO YOUR OWN RESEARCH. NEVER SHARE YOUR SEED PHRASE.</p>
     <footer><a class="brand footer-brand" href="#top">${logo}<span class="brand-type">AI STUDIOS <b>GAMES</b><small>PLAY BEYOND THE GRID</small></span></a><span>INDEPENDENT WORLDS. INFINITE CONTINUES.</span>${liveSocials.length ? `<nav class="footer-socials" aria-label="Community links">${liveSocials.map((s) => `<a href="${esc(safeUrl(s.url)!)}" target="_blank" rel="noopener noreferrer" data-social="${esc(s.id)}">${esc(s.label)} ↗</a>`).join("")}</nav>` : ""}<span>© 2026 AI STUDIOS GAMES</span></footer>
     <div class="toast" id="toast" role="status" aria-live="polite"></div>
   </div>
@@ -409,6 +409,19 @@ function notify(message: string) {
 document.querySelector("#menuToggle")?.addEventListener("click", () => document.querySelector(".nav-links")?.classList.toggle("open"));
 
 initWallet(notify);
+
+document.querySelector<HTMLButtonElement>("#copyCa")?.addEventListener("click", async (e) => {
+  const ca = (e.currentTarget as HTMLElement).dataset.ca ?? "";
+  try {
+    await navigator.clipboard.writeText(ca);
+    notify("Contract address copied.");
+  } catch {
+    const r = document.createRange();
+    const el = document.querySelector("#tokenCa");
+    if (el) { r.selectNodeContents(el); const sel = window.getSelection(); sel?.removeAllRanges(); sel?.addRange(r); }
+    notify("Press Ctrl+C to copy the address.");
+  }
+});
 
 /** Two views on one page: home, and the GAMES tab (#arcade). */
 function initViews(): void {
