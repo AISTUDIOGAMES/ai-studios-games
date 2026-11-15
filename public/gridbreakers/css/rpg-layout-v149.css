@@ -1,0 +1,246 @@
+/* OWL GRIDBREAKERS v1.4.9 — battle layout + Menus hub */
+
+/* Party status sits in a reserved strip at the upper-left of the battle viewport.
+   It never overlays the 3D canvas, so the playfield remains fully visible. */
+.battle-viewport {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 8px;
+}
+.battle-roster-panel {
+  width: 100%;
+  max-width: min(100%, 860px);
+  align-self: flex-start;
+  padding: 8px 9px;
+  border-left: 3px solid var(--rpg-gold);
+  background: linear-gradient(100deg, rgba(31, 41, 56, .98), rgba(17, 23, 34, .98));
+}
+.battle-roster-panel .rpg-panel-title {
+  margin-bottom: 7px;
+  padding-bottom: 6px;
+  font-size: 9px;
+}
+#battle-roster {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 6px;
+}
+#battle-roster .battle-unit {
+  min-width: 0;
+  min-height: 54px;
+  grid-template-columns: 32px minmax(0, 1fr);
+  gap: 6px;
+  padding: 4px 6px;
+  border-radius: 5px;
+}
+#battle-roster .battle-unit img {
+  width: 30px;
+  height: 38px;
+}
+#battle-roster .battle-unit-name {
+  min-width: 0;
+  align-items: baseline;
+  font-size: 9px;
+}
+#battle-roster .battle-unit-name span { font-size: 8px; }
+#battle-roster .battle-unit-meta { font-size: 8px; }
+#battle-roster .battle-unit-meta b { font-size: 8px; }
+.battle-roster-panel #battle-target-panel {
+  display: grid;
+  grid-template-columns: minmax(110px, .45fr) minmax(0, 1fr);
+  align-items: center;
+  gap: 10px;
+  margin-top: 7px;
+  padding: 5px 8px;
+}
+.battle-roster-panel #battle-target-panel .battle-target .battle-unit-hp,
+.battle-roster-panel #battle-target-panel .battle-unit-hp { margin-top: 0; }
+
+/* Tactical controls and Character Skills share the right-hand rail. */
+.battle-sidebar {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 10px;
+  min-width: 0;
+}
+.battle-command-panel {
+  border-top: 2px solid #9c8052;
+}
+.battle-commands .rpg-panel-title::before {
+  content: '✦';
+  margin-right: 7px;
+  color: var(--rpg-gold-bright);
+  font-size: 13px;
+}
+.battle-commands .side {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 7px;
+}
+.battle-commands .side button {
+  min-height: 44px;
+  padding: 7px 6px;
+  border: 1px solid #68778d;
+  border-bottom: 2px solid #3a4559;
+  border-radius: 6px;
+  background: linear-gradient(180deg, #35445b 0%, #202b3c 55%, #151d2b 100%);
+  box-shadow: inset 0 1px 0 #ffffff1d, 0 3px 7px #0007;
+  color: #edf2f8;
+  font-size: 9px;
+  font-weight: 900;
+  letter-spacing: .045em;
+  text-shadow: 0 1px 2px #0009;
+}
+.battle-commands .side button:hover:not(:disabled) {
+  transform: translateY(-1px);
+  border-color: #d5b77a;
+  border-bottom-color: #a98b56;
+  background: linear-gradient(180deg, #465874, #26364d);
+  box-shadow: inset 0 1px 0 #ffffff2c, 0 5px 12px #0008;
+}
+.battle-commands .side button[data-a="pause"] { border-left: 3px solid #d5ad62; }
+.battle-commands .side button[data-a="speed"] { border-left: 3px solid #70b8c6; }
+.battle-commands .side button[data-a="auto"] { border-left: 3px solid #6ba9a5; }
+.battle-commands .side button[data-a="autou"] { border-left: 3px solid #9c83c8; }
+.battle-commands .side button[data-a="autoContinue"] {
+  grid-column: 1 / -1;
+  min-height: 39px;
+  color: #bcebd1;
+  background: linear-gradient(180deg, #234c42, #142e2a);
+  border-color: #4b9c7c;
+  border-bottom-color: #28634e;
+}
+.battle-commands .side button[aria-pressed="false"] { filter: saturate(.72); }
+.battle-skills-panel {
+  display: block;
+  border-top: 2px solid #657c9b;
+  padding: 10px;
+}
+.battle-skills-panel .battle-skills-label {
+  margin: 0 0 8px;
+  padding-bottom: 7px;
+  border-bottom: 1px solid #3b4558;
+  color: #d8e3f2;
+  font-size: 9px;
+  line-height: 1.4;
+  letter-spacing: .10em;
+}
+.battle-skills-panel .battle-skills { display: flex; flex-direction: column; gap: 7px; }
+.battle-skills-panel .battle-skills .skr {
+  display: grid !important;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  align-items: center;
+  justify-content: stretch;
+  gap: 5px;
+}
+.battle-skills-panel .battle-skills .skb {
+  width: 100% !important;
+  height: auto !important;
+  min-width: 0;
+  aspect-ratio: 1 / 1;
+  flex: 0 0 auto !important;
+  border-radius: 6px;
+}
+.battle-skills-panel .battle-help {
+  max-width: none;
+  text-align: left;
+  font-size: 8px;
+  line-height: 1.4;
+}
+
+/* Menus hub */
+.owl-menus-page { width: min(100%, 1120px); margin: 0 auto; padding: 8px 0 24px; }
+.owl-menus-heading {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 14px;
+  margin-bottom: 14px;
+  padding: 18px 20px;
+  background: linear-gradient(115deg, #252f43, #141b29 70%);
+  border: 1px solid #59677c;
+  border-left: 3px solid var(--rpg-gold);
+  border-radius: 7px;
+  box-shadow: 0 8px 22px #0006, inset 0 1px 0 #ffffff12;
+}
+.owl-menus-heading span { color: #c4a66e; font-size: 9px; font-weight: 900; letter-spacing: .18em; }
+.owl-menus-heading h1 { margin: 3px 0; color: #f3dca9; font-size: 24px; letter-spacing: .14em; }
+.owl-menus-heading p { margin: 0; color: #aeb9c9; font-size: 11px; }
+.owl-menus-emblem { color: #d6bb82; font-size: 34px; line-height: 1; opacity: .9; }
+.owl-menu-cards { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+.owl-menu-card {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  gap: 11px;
+  padding: 15px;
+  background: linear-gradient(155deg, #222d41, #141b29 72%);
+  border: 1px solid #46546b;
+  border-top: 2px solid #8c7957;
+  border-radius: 7px;
+  box-shadow: 0 7px 18px #0006, inset 0 1px 0 #ffffff0c;
+}
+.owl-menu-settings { border-top-color: #d5ad62; }
+.owl-menu-afk { border-top-color: #6ca98e; }
+.owl-menu-reports { border-top-color: #7a94bb; }
+.owl-menu-icon { color: #e2c98f; font-size: 23px; line-height: 1; }
+.owl-menu-copy { flex: 1; min-width: 0; }
+.owl-menu-copy > span { color: #9fadc0; font-size: 8px; font-weight: 900; letter-spacing: .14em; }
+.owl-menu-copy h2 { margin: 4px 0 5px; color: #edf1f6; font-size: 16px; }
+.owl-menu-copy p { margin: 0; color: #aeb9c9; font-size: 10px; line-height: 1.5; }
+.owl-afk-preview { display: flex; flex-wrap: wrap; gap: 6px 11px; margin-top: 9px; color: #d8c89f; font-size: 10px; font-weight: 800; }
+.owl-menu-open {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  width: 100%;
+  min-height: 42px;
+  padding: 8px 11px;
+  color: #f3e6c8;
+  background: linear-gradient(180deg, #4a566b, #252f41);
+  border: 1px solid #8796aa;
+  border-bottom: 2px solid #536176;
+  border-radius: 5px;
+  font-size: 9px;
+  font-weight: 900;
+  letter-spacing: .07em;
+  text-align: left;
+}
+.owl-menu-open:hover:not(:disabled) { color: #fff; border-color: #e0c181; background: linear-gradient(180deg, #596a83, #303d53); }
+.owl-menu-open:disabled { opacity: .45; cursor: not-allowed; }
+
+/* Settings are opened from Menus; save actions stay in the Config panel. */
+#gfx-open, body > button[title="Export / import save"] { display: none !important; }
+.gfx-settings-card { width: min(100%, 520px); max-height: min(91vh, 820px); }
+.gfx-save-group { padding: 11px; border: 1px solid #8a744f; border-radius: 6px; background: linear-gradient(180deg, #202b3e, #141c2a); }
+.gfx-save-actions { display: grid; grid-template-columns: 1fr; gap: 7px; }
+.gfx-save-actions button { min-height: 38px; color: #f1e4c5; background: linear-gradient(180deg, #39465a, #202b3c); border: 1px solid #78879b; border-radius: 5px; font-size: 10px; font-weight: 900; }
+.gfx-save-actions button:first-child { border-color: #c4a56a; color: #fae8bf; background: linear-gradient(180deg, #675638, #3b3024); }
+
+@media (max-width: 1100px) {
+  #battle-roster { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .battle-grid { grid-template-columns: minmax(0, 1fr) 250px; }
+  .battle-skills-panel .battle-skills .skr { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+}
+@media (max-width: 820px) {
+  .battle-grid { grid-template-columns: minmax(0, 1fr); }
+  .battle-sidebar { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); align-items: start; }
+  .battle-skills-panel .battle-skills .skr { grid-template-columns: repeat(5, minmax(0, 1fr)); }
+}
+@media (max-width: 560px) {
+  .battle-roster-panel { max-width: 100%; }
+  #battle-roster { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .battle-sidebar { display: flex; flex-direction: column; }
+  .battle-commands .side { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .battle-commands .side button { min-height: 40px; font-size: 9px; }
+  .battle-skills-panel .battle-skills .skr { grid-template-columns: repeat(5, minmax(0, 1fr)); }
+  .owl-menus-page { padding-top: 2px; }
+  .owl-menus-heading { padding: 14px; }
+  .owl-menus-heading h1 { font-size: 20px; }
+  .owl-menu-cards { grid-template-columns: minmax(0, 1fr); gap: 9px; }
+  .owl-menu-card { padding: 12px; }
+  #nav { justify-content: flex-start; overflow-x: auto; }
+  #nav button { flex: 0 0 auto; min-width: 66px; }
+}

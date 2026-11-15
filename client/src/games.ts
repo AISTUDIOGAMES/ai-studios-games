@@ -58,7 +58,7 @@ export const GAMES: Game[] = [
       "A turn-based RPG in the universe of the Grid. Build a squad of three Operators, fight through five sectors, and unlock the legendary Aeon and Orion. Opens in a new tab.",
     status: "prototype",
     kind: "external",
-    url: "/rpg.html",
+    url: "/gridbreakers/index.html",
     cover: "rpg-cover.webp",
     meta: ["⌁ TURN-BASED RPG", "◈ 8 OPERATORS", "◎ BROWSER PROTOTYPE"],
   },
@@ -79,7 +79,7 @@ export const GAMES: Game[] = [
 /** Returns a safe https address or same-site path, or null when the link is empty or invalid. */
 export function safeUrl(raw: string): string | null {
   if (!raw) return null;
-  if (/^\/[^/\\]/.test(raw)) return raw; // same-site path such as "/rpg.html"
+  if (/^\/[^/\\]/.test(raw)) return raw; // same-site path such as "/gridbreakers/"
   try {
     const parsed = new URL(raw);
     return parsed.protocol === "https:" ? parsed.href : null;

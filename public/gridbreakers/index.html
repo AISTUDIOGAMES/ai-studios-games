@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<title>AI WORLD OWL — The Obsidian Age</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<link rel="stylesheet" href="css/main.css?v=161">
+<link rel="stylesheet" href="css/victory-report.css">
+<link rel="stylesheet" href="css/performance-v145.css">
+<link rel="stylesheet" href="css/rpg-interface.css">
+<link rel="stylesheet" href="css/report-menu-v144.css">
+<link rel="stylesheet" href="css/rpg-layout-v149.css?v=149">
+<link rel="stylesheet" href="css/party-power-damage-v150.css?v=150">
+<link rel="stylesheet" href="css/character-summoner-v152.css?v=152">
+<link rel="stylesheet" href="css/settings-navigation-v153.css?v=153">
+<link rel="stylesheet" href="css/battle-hud-v155.css?v=155">
+<link rel="stylesheet" href="css/battlefield-ui-v156.css?v=156">
+<link rel="stylesheet" href="css/battlefield-ui-v157.css?v=157">
+<link rel="stylesheet" href="css/tower-loot-crit-gear-v158.css?v=161">
+<link rel="stylesheet" href="css/dungeon-expedition-v159.css?v=159">
+<link rel="stylesheet" href="css/display-settings-v1510.css?v=1510">
+<link rel="stylesheet" href="css/equipment-enchant-v1512.css?v=1512">
+<link rel="stylesheet" href="css/obsidian-core-art-v1513.css?v=1513">
+<link rel="stylesheet" href="css/equipment-sets-v160.css?v=164">
+<link rel="stylesheet" href="css/battlefield-reference-v3.css?v=31">
+<link rel="stylesheet" href="css/battlefield-visual-v166.css?v=166">
+<link rel="stylesheet" href="css/premium-ui-v167.css?v=167">
+<link rel="stylesheet" href="css/worldmap-audio-v168.css?v=168">
+<link rel="stylesheet" href="css/tactical-toggle-v169.css?v=169">
+<link rel="stylesheet" href="css/party-bars-foes-v170.css?v=170">
+</head>
+<body>
+<div id="app">
+<div class="top"><span>💰 <b id="g"></b></span><span>🔷 <b class="cy" id="sh"></b></span><span id="stg"></span></div>
+<div class="top sm" id="cur"></div><div id="view"></div></div>
+<nav id="nav"></nav><div id="modal"></div>
+
+<!-- Three.js r128: local copy first (vendor/), CDN as fallback -->
+<script src="vendor/three.min.js"></script>
+<script>window.THREE||document.write('<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"><\/script>')</script>
+
+<!-- game code, loaded in order (classic scripts share one global scope) -->
+<script src="js/00-config-v147.js?v=165"></script>
+<script src="js/01-core-v146.js?v=165"></script>
+<script src="js/02-obsidian-age-3d-map-vfx.js?v=31"></script>
+<script src="js/03-soundtrack-engine-v145.js"></script>
+<script src="js/04-sound-design.js"></script>
+<script src="js/05-sfx-bank-v145.js?v=165"></script>
+<script src="js/06-rarity-gacha-100-stages.js?v=165"></script>
+<script src="js/07-campaign-difficulty.js?v=165"></script>
+<script src="js/08-auto-continue-v143.js"></script>
+<script src="js/09-battle-report-countdown-v143.js"></script>
+<script src="js/10-formation-5v5-v143.js?v=165"></script>
+<script src="js/11-gacha-party.js"></script>
+<script src="js/12-ultimate-audio.js"></script>
+<script src="js/13-hotfix-basic-attacks.js"></script>
+<script src="js/14-victory-report-runup-v143.js"></script>
+<script src="js/15-debug-grant.js"></script>
+<script src="js/16-visual-polish.js?v=31"></script>
+<script src="js/17-battle-report-toggle-v143.js"></script>
+<script src="js/18-premium-gacha.js?v=165"></script>
+<script src="js/19-menu-music-v145.js"></script>
+<script src="js/20-gacha-roll-sound-v145.js"></script>
+<script src="js/21-gacha-reveal-impact-v145.js"></script>
+<script src="js/22-performance-v145.js?v=1510"></script>
+<script src="js/23-33-wave-campaign.js"></script>
+<script src="js/24-rpg-interface-vfx-v143.js?v=149"></script>
+<script src="js/25-report-menu-v144.js"></script>
+<script src="js/26-menus-layout-v149.js?v=149"></script>
+<script src="js/27-party-power-damage-v150.js?v=150"></script>
+<script src="js/29-character-summoner-v152.js?v=1511"></script>
+<script src="js/30-settings-navigation-v153.js?v=153"></script>
+<script src="js/31-navigation-cleanup-v154.js?v=154"></script>
+<script src="js/32-battle-hud-v155.js?v=155"></script>
+<script src="js/33-battlefield-ui-v157.js?v=157"></script>
+<script src="js/34-tower-loot-crit-gear-v158.js?v=158"></script>
+<script src="js/35-dungeon-expedition-v159.js?v=165"></script>
+<script src="js/36-equipment-sets-v160.js?v=164"></script>
+<script src="js/37-balance-v165.js?v=165"></script>
+<script src="js/38-battlefield-menu-v166.js?v=166"></script>
+<script src="js/39-combat-numbers-v167.js?v=167"></script>
+<script src="js/40-vfx-governor-v167.js?v=167"></script>
+<script src="js/41-hud-guard-v167.js?v=167"></script>
+<script src="js/99-boot.js"></script>
+<script src="js/42-worldmap-audio-v168.js?v=168"></script>
+<script src="js/43-tactical-toggle-v169.js?v=169"></script>
+<script src="js/44-party-bars-foes-v170.js?v=170"></script>
+
+</body>
+</html>

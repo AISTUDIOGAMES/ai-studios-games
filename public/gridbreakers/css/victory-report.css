@@ -1,0 +1,9 @@
+/* On-arena victory report offset */
+#arena .ban [data-battle-report]{
+    margin-top: clamp(42px, 8vh, 76px) !important;
+    position: relative;
+    z-index: 7;
+  }
+  @media (max-height: 650px){
+    #arena .ban [data-battle-report]{margin-top: clamp(28px, 5vh, 48px) !important;}
+  }

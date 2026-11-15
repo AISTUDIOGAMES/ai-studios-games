@@ -1,0 +1,25 @@
+/* v3 battlefield reference restoration: restore the visual frame/atmosphere from the supplied index.html.
+   The current in-arena HUD, panel positions, controls, stage size and responsive layout remain untouched. */
+#battle-rpg-shell #arena.stage {
+  border: 1px solid #3a2a63 !important;
+  border-radius: 12px !important;
+  background: #120626 !important;
+  box-shadow: inset 0 0 0 1px #ffffff0a !important;
+}
+#arena.stage:after {
+  background: radial-gradient(ellipse at 50% 55%, transparent 55%, #0008 100%) !important;
+  z-index: 1;
+}
+#arena.stage .tilt {
+  display: block !important;
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  pointer-events: none;
+  backdrop-filter: blur(2.5px);
+  -webkit-backdrop-filter: blur(2.5px);
+  -webkit-mask-image: linear-gradient(#000 0,#0000 20%,#0000 88%,#000 100%);
+  mask-image: linear-gradient(#000 0,#0000 20%,#0000 88%,#000 100%);
+}
+#arena.stage .fx2 { opacity: .55 !important; }
+#arena.stage .ban { z-index: 12; }

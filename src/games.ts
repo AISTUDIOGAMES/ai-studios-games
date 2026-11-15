@@ -39,6 +39,9 @@ export const STATUS_LABEL: Record<GameStatus, string> = {
  */
 export const SLITHER_IDLE_URL = "/slither-idle/";
 
+/** OWL: Gridbreakers, hosted on this same site (files live in public/gridbreakers/). The old /rpg.html redirects here. */
+export const GRIDBREAKERS_URL = "/gridbreakers/index.html";
+
 /** Bomber Idle, hosted on this same site (files live in public/bomber-idle/). */
 export const BOMBER_IDLE_URL = "/bomber-idle/";
 
@@ -64,16 +67,16 @@ const ALL_GAMES: Game[] = [
   {
     id: "gridbreakers",
     open: false, // change to true to release the play button
-    kicker: "02 / TURN-BASED RPG",
+    kicker: "02 / IDLE AUTO-BATTLER RPG",
     title: "OWL: GRIDBREAKERS",
     summary:
-      "A turn-based RPG in the universe of the Grid. Build a squad of three Operators, fight through five sectors, and unlock the legendary Aeon and Orion. Opens in a new tab.",
+      "An idle auto-battler RPG in the universe of the Grid. Summon Operators, build a 5-slot formation, clear 100 campaign stages, run dungeons and the Ancient Tower, and gear up with Obsidian, Lunar and Thread sets. Opens in a new tab.",
     status: "prototype",
     kind: "external",
-    url: "/rpg.html",
+    url: GRIDBREAKERS_URL,
     cover: "banner-owl.webp",
     home: true,
-    meta: ["⌁ TURN-BASED RPG", "◈ 8 OPERATORS", "◎ BROWSER PROTOTYPE"],
+    meta: ["⌁ IDLE AUTO-BATTLER", "◈ 8 OPERATORS", "◎ BROWSER PROTOTYPE"],
   },
   {
     id: "bomber-idle",
@@ -96,7 +99,7 @@ export const GAMES: Game[] = ALL_GAMES.map((game) => (game.open ? game : { ...ga
 /** Returns a safe https address or same-site path, or null when the link is empty or invalid. */
 export function safeUrl(raw: string): string | null {
   if (!raw) return null;
-  if (/^\/[^/\\]/.test(raw)) return raw; // same-site path such as "/rpg.html"
+  if (/^\/[^/\\]/.test(raw)) return raw; // same-site path such as "/gridbreakers/"
   try {
     const parsed = new URL(raw);
     return parsed.protocol === "https:" ? parsed.href : null;

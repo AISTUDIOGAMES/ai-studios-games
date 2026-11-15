@@ -1,0 +1,149 @@
+/* OWL: GRIDBREAKERS v1.6.0 — Set Codex, ordered inventory and rarity polish */
+.awo-equipment-codex {
+  margin: 8px 0 12px;
+  padding: 12px;
+  overflow: hidden;
+  border: 1px solid #4a3672;
+  border-radius: 13px;
+  background: linear-gradient(150deg, #1d1530, #0c0917 78%);
+  box-shadow: inset 0 1px 0 #ffffff0a, 0 8px 20px #0004;
+}
+.awo-codex-top { display:flex; align-items:center; justify-content:space-between; gap:10px; }
+.awo-codex-top h2 { margin:2px 0; color:#f4eaff; font-size:18px; line-height:1.15; letter-spacing:1.4px; }
+.awo-codex-top p { margin:4px 0 0; color:#a99cbe; font-size:10px; line-height:1.4; }
+.awo-eyebrow,.awo-subheading { color:#bda4ec; font-size:9px; font-weight:900; letter-spacing:1.6px; }
+.awo-codex-top>strong { flex:0 0 56px; padding:7px 4px; border:1px solid #9370c8; border-radius:9px; color:#e4d1ff; font-size:19px; line-height:1.05; text-align:center; }
+.awo-codex-top>strong small { color:#9f92b3; font-size:7px; letter-spacing:1px; }
+.awo-rarity-guide { margin:12px 0; padding:9px; border:1px solid #ffffff12; border-radius:9px; background:#08061288; }
+.awo-rarity-list { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:6px; margin-top:8px; }
+.awo-rarity-chip { display:flex; align-items:center; gap:4px; min-width:0; color:#d8d0e7; font-size:8px; font-weight:800; white-space:nowrap; }
+.awo-rarity-chip i { width:7px; height:7px; flex:0 0 7px; border-radius:50%; background:var(--rarity); box-shadow:0 0 7px var(--rarity); }
+.awo-set-grid { display:grid; gap:10px; }
+.awo-set-card { min-width:0; padding:10px; border:1px solid color-mix(in srgb,var(--set-color) 65%,#ffffff20); border-radius:11px; background:linear-gradient(145deg,color-mix(in srgb,var(--set-color) 13%,#171124),#0d0a17 70%); box-shadow:inset 0 0 20px color-mix(in srgb,var(--set-color) 7%,transparent); }
+.awo-set-heading { display:flex; justify-content:space-between; align-items:center; gap:8px; }
+.awo-set-heading>div:first-child>span { color:var(--set-color); font-size:8px; font-weight:900; letter-spacing:1.6px; }
+.awo-set-heading h3 { margin:0; color:#fff; font-size:17px; letter-spacing:1.5px; }
+.awo-set-heading small { color:#a89dbb; font-size:8px; letter-spacing:1px; }
+.awo-set-count { flex:0 0 64px; text-align:right; }
+.awo-set-count b { display:block; color:var(--set-color); font-size:18px; line-height:1; }
+.awo-set-count small,.awo-set-count em { display:block; color:#a89dbb; font-size:8px; font-style:normal; }
+.awo-set-count em { margin-top:3px; color:#7f7692; }
+.awo-set-description { margin:7px 0 9px; color:#b7aec8; font-size:10px; line-height:1.45; }
+.awo-piece-list { display:grid; gap:4px; }
+.awo-piece-row { display:grid; grid-template-columns:52px minmax(0,1fr) auto; align-items:center; gap:6px; padding:5px 6px; border:1px solid #ffffff0b; border-radius:6px; background:#05040b55; }
+.awo-piece-slot { color:#9186a6; font-size:8px; font-weight:800; text-transform:uppercase; }
+.awo-piece-row b { overflow:hidden; color:#e9e2f4; font-size:9px; text-overflow:ellipsis; white-space:nowrap; }
+.awo-piece-row small { color:var(--set-color); font-size:7px; white-space:nowrap; }
+.awo-tier-list { margin-top:9px; padding-top:8px; border-top:1px solid #ffffff13; }
+.awo-tier-row { display:grid; grid-template-columns:42px minmax(0,1fr); gap:6px; margin-top:5px; color:#d7cfe5; font-size:9px; }
+.awo-tier-row b { color:var(--set-color); font-size:8px; letter-spacing:.5px; }
+.awo-tier-row span { line-height:1.35; }
+.awo-filter-set { width:100%; margin-top:9px; padding:7px; border-color:color-mix(in srgb,var(--set-color) 65%,#ffffff20); color:var(--set-color); background:#080612cc; font-size:9px; letter-spacing:1px; }
+.awo-filter-set:active { background:color-mix(in srgb,var(--set-color) 18%,#17102a); }
+.awo-hero-set-panel { display:grid; gap:8px; }
+.awo-hero-set-panel> b { color:#d9c8ff; font-size:10px; letter-spacing:1px; }
+.awo-hero-set-row { padding:7px; border:1px solid color-mix(in srgb,var(--set-color) 50%,#ffffff16); border-radius:8px; background:color-mix(in srgb,var(--set-color) 8%,#080612); }
+.awo-hero-set-row>div:first-child { display:flex; align-items:center; justify-content:space-between; gap:8px; margin-bottom:4px; }
+.awo-hero-set-row strong { color:var(--set-color); font-size:10px; letter-spacing:1px; }
+.awo-hero-set-row>div:first-child span,.awo-set-status span { color:#a89dbb; font-size:8px; }
+.awo-set-status { display:flex; justify-content:space-between; flex-wrap:wrap; gap:4px; }
+.awo-set-status .awo-active-tier { color:var(--set-color); font-weight:900; letter-spacing:.7px; }
+.awo-set-status .awo-inactive-tier { color:#9a8fb8; font-weight:800; }
+.awo-set-current { margin-top:3px; color:#e5dff0; font-size:9px; }
+
+/* Divine gold and Ancestral cyan keep separate visual identities. */
+.eqi.r6:not(.empty) { border-color:#d9a52b; box-shadow:0 0 14px #d9a52b88,inset 0 0 12px #000a; }
+.eqi.r6:not(.empty)::after { content:""; position:absolute; inset:0; z-index:2; pointer-events:none; border-radius:inherit; background:linear-gradient(115deg,transparent 30%,#fff8 50%,transparent 68%); background-size:200% 100%; background-position:0% 0; animation:gearShimmer 2.6s linear infinite; }
+.eqi.r7:not(.empty) { border-color:#16c9d5; }
+
+@media (min-width:560px) {
+  .awo-set-grid { grid-template-columns:repeat(2,minmax(0,1fr)); }
+  .awo-set-card:first-child { grid-column:1/-1; }
+}
+@media (max-width:370px) {
+  .awo-equipment-codex { padding:9px; }
+  .awo-rarity-list { grid-template-columns:repeat(2,minmax(0,1fr)); }
+  .awo-piece-row { grid-template-columns:47px minmax(0,1fr); }
+  .awo-piece-row small { display:none; }
+  .awo-tier-row { grid-template-columns:38px minmax(0,1fr); }
+}
+
+
+/* SET I — OBSIDIAN real transparent equipment sprites (v1.6.2). */
+.eqi.obsidian-gear-art {
+  isolation:isolate;
+  background:radial-gradient(circle at 50% 45%,#2b1450 0%,#120b22 57%,#080610 100%);
+}
+.eqi.obsidian-gear-art>.obsidian-gear-sprite {
+  position:absolute;
+  inset:4%;
+  z-index:1;
+  display:block;
+  width:92%;
+  height:92%;
+  object-fit:contain;
+  object-position:center;
+  user-select:none;
+  pointer-events:none;
+  filter:drop-shadow(0 2px 3px #000) drop-shadow(0 0 4px #9b5cff66);
+}
+.eqi.obsidian-gear-art>small { z-index:5; }
+.eqi.obsidian-gear-art.fire { overflow:visible; }
+.eqi.obsidian-gear-art.fire>.eq-fire-particles { z-index:3; }
+.awo-piece-row { grid-template-columns:30px 52px minmax(0,1fr) auto; }
+.awo-piece-row>.eqi { width:30px!important; height:30px!important; border-width:1px; border-radius:6px; }
+.awo-piece-row>.eqi>small { display:none; }
+.awo-piece-row>.eqi>.obsidian-gear-sprite { inset:2%; width:96%; height:96%; }
+
+@media (max-width:370px) {
+  .awo-piece-row { grid-template-columns:28px 44px minmax(0,1fr); }
+  .awo-piece-row small { display:none; }
+}
+
+
+/* SET II — LUNAR transparent game sprites (v1.6.3). */
+.eqi.lunar-gear-art {
+  isolation:isolate;
+  background:radial-gradient(circle at 50% 44%,#183f72 0%,#0c1a35 58%,#07101f 100%);
+}
+.eqi.lunar-gear-art>.lunar-gear-sprite {
+  position:absolute;
+  inset:4%;
+  z-index:1;
+  display:block;
+  width:92%;
+  height:92%;
+  object-fit:contain;
+  object-position:center;
+  user-select:none;
+  pointer-events:none;
+  filter:drop-shadow(0 2px 3px #000) drop-shadow(0 0 4px #55baff77);
+}
+.eqi.lunar-gear-art>small { z-index:5; }
+.eqi.lunar-gear-art.fire { overflow:visible; }
+.eqi.lunar-gear-art.fire>.eq-fire-particles { z-index:3; }
+.awo-piece-row>.eqi.lunar-gear-art>.lunar-gear-sprite { inset:2%; width:96%; height:96%; }
+
+
+/* SET III — THREAD transparent quantum equipment sprites (v1.6.4). */
+.eqi.thread-gear-art {
+  isolation:isolate;
+  background:radial-gradient(circle at 50% 44%,#153c4b 0%,#10172e 54%,#070d18 100%);
+}
+.eqi.thread-gear-art>.thread-gear-sprite {
+  position:absolute;
+  inset:4%;
+  z-index:1;
+  display:block;
+  width:92%;
+  height:92%;
+  object-fit:contain;
+  object-position:center;
+  user-select:none;
+  pointer-events:none;
+  filter:drop-shadow(0 2px 3px #000) drop-shadow(0 0 4px #38e8ff88) drop-shadow(0 0 7px #8b5cff44);
+}
+.eqi.thread-gear-art>small { z-index:5; }
+.eqi.thread-gear-art.fire { overflow:visible; }
+.eqi.thread-gear-art.fire>.eq-fire-particles { z-index:3; }
+.awo-piece-row>.eqi.thread-gear-art>.thread-gear-sprite { inset:2%; width:96%; height:96%; }

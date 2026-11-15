@@ -1,0 +1,49 @@
+/* Equipment enhancement visuals v1.5.12
+   +5 no longer draws an inner rarity-like ring. +10 emits restrained fire sparks. */
+.eqi.hi svg{filter:drop-shadow(0 0 5px var(--c));}
+.eqi.fire{
+  overflow:visible;
+  isolation:isolate;
+  box-shadow:0 0 10px color-mix(in srgb,var(--c) 54%,#ff6b26 46%),inset 0 0 10px #000a;
+}
+.eqi.fire>svg{position:relative;z-index:1;}
+.eqi.fire>small{position:absolute;z-index:5;}
+.eqi.fire>.eq-fire-particles{
+  position:absolute;
+  z-index:3;
+  inset:-9px -7px -5px;
+  overflow:visible;
+  pointer-events:none;
+}
+.eqi.fire>.eq-fire-particles>i{
+  position:absolute;
+  left:var(--x);
+  top:var(--y);
+  display:block;
+  width:5px;
+  height:7px;
+  border-radius:55% 45% 60% 40%;
+  opacity:0;
+  background:radial-gradient(ellipse at 45% 65%,#fff7c4 0 12%,#ffd36b 28%,#ff8734 56%,#ed3d20 73%,transparent 76%);
+  filter:drop-shadow(0 0 3px #ff742d);
+  transform-origin:50% 70%;
+  animation:ogbEquipmentEmber var(--duration,1.12s) ease-out var(--delay,0s) infinite;
+  will-change:transform,opacity;
+}
+.eqi.fire>.eq-fire-particles>i:nth-child(1){--x:10%;--y:63%;--duration:1.02s;--delay:-.22s;--dx:-5px;}
+.eqi.fire>.eq-fire-particles>i:nth-child(2){--x:26%;--y:77%;--duration:1.24s;--delay:-.74s;--dx:3px;width:4px;height:6px;}
+.eqi.fire>.eq-fire-particles>i:nth-child(3){--x:43%;--y:68%;--duration:.96s;--delay:-.48s;--dx:-2px;width:4px;height:5px;}
+.eqi.fire>.eq-fire-particles>i:nth-child(4){--x:61%;--y:76%;--duration:1.18s;--delay:-.88s;--dx:5px;}
+.eqi.fire>.eq-fire-particles>i:nth-child(5){--x:79%;--y:62%;--duration:1.08s;--delay:-.35s;--dx:-4px;width:4px;height:6px;}
+.eqi.fire>.eq-fire-particles>i:nth-child(6){--x:91%;--y:74%;--duration:1.3s;--delay:-.61s;--dx:3px;width:4px;height:5px;}
+.eqi.fire>.eq-fire-particles>i:nth-child(7){--x:18%;--y:43%;--duration:1.16s;--delay:-.98s;--dx:-6px;width:3px;height:5px;}
+.eqi.fire>.eq-fire-particles>i:nth-child(8){--x:84%;--y:42%;--duration:1.04s;--delay:-.13s;--dx:6px;width:3px;height:5px;}
+@keyframes ogbEquipmentEmber{
+  0%{opacity:0;transform:translate3d(0,4px,0) scale(.35) rotate(-14deg)}
+  16%{opacity:.95}
+  58%{opacity:.8;transform:translate3d(var(--dx,0),-10px,0) scale(.85) rotate(12deg)}
+  100%{opacity:0;transform:translate3d(calc(var(--dx,0)*1.8),-23px,0) scale(.18) rotate(42deg)}
+}
+@media(prefers-reduced-motion:reduce){
+  .eqi.fire>.eq-fire-particles>i{animation:none;opacity:.5;transform:translateY(-4px) scale(.55)}
+}

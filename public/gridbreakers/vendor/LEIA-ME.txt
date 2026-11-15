@@ -1,0 +1,3 @@
+Coloque aqui three.min.js (r128). O Iniciar-Jogo.ps1 baixa automaticamente na primeira execucao.
+URL: https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js
+Sem este arquivo o jogo usa a CDN (precisa de internet).

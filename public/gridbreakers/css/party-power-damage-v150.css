@@ -1,0 +1,82 @@
+/* OWL GRIDBREAKERS v1.5.0 — Party POWER + combat numbers */
+.party-power-display {
+  min-width: 0;
+  color: #e7edf5;
+  background: linear-gradient(110deg, rgba(27, 37, 53, .98), rgba(17, 23, 35, .98));
+  border: 1px solid #65748a;
+  border-left: 3px solid #d5ad62;
+  border-radius: 5px;
+  box-shadow: inset 0 1px 0 #ffffff12, 0 3px 9px #0005;
+}
+.battle-party-power { margin: 0 0 7px; padding: 6px 9px; }
+.party-power-line { display: flex; align-items: baseline; gap: 8px; min-width: 0; }
+.party-power-label { color: #d8bf87; font-size: 8px; font-weight: 900; letter-spacing: .12em; }
+.party-power-line strong { color: #ffe2a0; font-size: 17px; font-weight: 950; font-variant-numeric: tabular-nums; text-shadow: 0 1px 5px #000; }
+.party-power-line small { margin-left: auto; color: #9eacbf; font-size: 8px; font-weight: 800; }
+.party-power-members { display: flex; flex-wrap: wrap; gap: 4px 10px; margin-top: 5px; }
+.party-power-member { display: inline-flex; align-items: center; gap: 5px; min-width: 0; color: #b9c5d5; font-size: 8px; line-height: 1.35; }
+.party-power-member b { color: #dfe7f1; font-size: 8px; font-weight: 800; }
+.party-power-member em { color: #d5b879; font-size: 8px; font-style: normal; font-variant-numeric: tabular-nums; }
+.characters-party-power { margin: 0 0 11px; padding: 11px 13px; border-left-width: 4px; }
+.party-power-heading { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.party-power-heading span { color: #aebbd0; font-size: 8px; font-weight: 900; letter-spacing: .16em; }
+.party-power-heading h2 { margin: 3px 0 0; color: #f0d69b; font-size: 15px; letter-spacing: .12em; }
+.party-power-heading > b { color: #ffe2a0; font-size: clamp(18px, 3vw, 24px); font-weight: 950; font-variant-numeric: tabular-nums; text-shadow: 0 1px 6px #000; }
+.characters-party-power > p { margin: 6px 0 0; color: #aeb9c9; font-size: 9px; line-height: 1.4; }
+.characters-party-power .party-power-members { margin-top: 8px; gap: 6px 14px; }
+.characters-party-power .party-power-member { font-size: 9px; }
+.characters-party-power .party-power-member b,
+.characters-party-power .party-power-member em { font-size: 9px; }
+
+/* The old #hudu remains hidden (it contains removed over-character bars).
+   Damage feedback uses its own transparent overlay over the 3D arena. */
+#combat-number-layer {
+  position: absolute;
+  inset: 0;
+  z-index: 9;
+  overflow: hidden;
+  pointer-events: none;
+  contain: layout paint;
+}
+.combat-number {
+  position: absolute;
+  display: block;
+  transform: translate(-50%, -50%);
+  opacity: 0;
+  color: var(--number-color, #ffe18c);
+  font-family: Inter, system-ui, sans-serif;
+  font-size: 14px;
+  line-height: 1;
+  font-weight: 950;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -.035em;
+  -webkit-text-stroke: .35px #170e20;
+  text-shadow: 0 2px 2px #000, 0 0 5px #000, 0 0 9px currentColor;
+  animation: owl-damage-rise .92s cubic-bezier(.16,.72,.3,1) forwards;
+}
+.combat-number.is-damage.damage-dealt { color: #ffe18c; }
+.combat-number.is-damage.damage-received { color: #ff777f; text-shadow: 0 2px 2px #000, 0 0 6px #410b18, 0 0 10px currentColor; }
+.combat-number.is-damage.is-critical { z-index: 2; font-size: 19px; color: #fff0a6; -webkit-text-stroke: .65px #5c2600; text-shadow: 0 2px 3px #000, 0 0 8px #e99a27, 0 0 14px currentColor; }
+.combat-number.is-damage.is-critical::before { content: attr(data-tag); position: absolute; left: 50%; bottom: 100%; margin-bottom: 2px; transform: translateX(-50%); color: #ffe0a0; font-size: 7px; letter-spacing: .1em; }
+.combat-number.is-feedback { font-size: 12px; color: var(--number-color, #d9e6ff); }
+.combat-number.is-heal { color: #8affb8; }
+.combat-number.is-miss { color: #d6dce7; font-size: 11px; }
+@keyframes owl-damage-rise {
+  0% { opacity: 0; transform: translate(-50%, -30%) scale(.78); }
+  12% { opacity: 1; transform: translate(-50%, -50%) scale(1.08); }
+  58% { opacity: 1; transform: translate(-50%, -115%) scale(1); }
+  100% { opacity: 0; transform: translate(-50%, -175%) scale(.92); }
+}
+
+@media (max-width: 560px) {
+  .battle-party-power { padding: 5px 7px; }
+  .party-power-line strong { font-size: 15px; }
+  .battle-party-power .party-power-members { gap: 3px 7px; }
+  .battle-party-power .party-power-member,
+  .battle-party-power .party-power-member b,
+  .battle-party-power .party-power-member em { font-size: 7px; }
+  .characters-party-power { padding: 9px; }
+  .combat-number { font-size: 12px; }
+  .combat-number.is-damage.is-critical { font-size: 16px; }
+}

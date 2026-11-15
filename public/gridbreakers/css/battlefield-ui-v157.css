@@ -1,0 +1,245 @@
+/* =====================================================================
+   OWL GRIDBREAKERS v1.5.7 — MINIMAL IN-ARENA ICON HUD
+   No translucent panel cards. Keep the playfield open, controls obvious,
+   party portraits on the left and abilities centered along the bottom.
+   ===================================================================== */
+
+/* Resource counters: icons + values only, no bars or translucent cards. */
+#bf-resources-slot { top: 5px; left: 8px; right: 8px; z-index: 30; }
+#bf-resources-slot .battle-resource-strip {
+  display: flex !important; align-items: flex-start; justify-content: space-between;
+  gap: 8px; width: 100%;
+}
+#bf-resources-slot .top,
+#bf-resources-slot .top.sm {
+  display: flex !important; align-items: center; gap: 8px;
+  min-width: 0; min-height: 0; margin: 0 !important; padding: 1px 0 !important;
+  color: #f0eadf; background: transparent !important; border: 0 !important;
+  border-radius: 0 !important; box-shadow: none !important;
+  backdrop-filter: none !important; -webkit-backdrop-filter: none !important;
+  font-size: 9px; line-height: 1.15; text-shadow: 0 2px 4px #000, 0 0 7px #000;
+  white-space: nowrap; overflow: visible;
+}
+#bf-resources-slot .top { flex: 1 1 auto; justify-content: flex-start; flex-wrap: wrap; }
+#bf-resources-slot .top > span { white-space: nowrap; }
+#bf-resources-slot .top #stg { margin-left: auto; color: #f1d38d; font-size: 9px; font-weight: 800; }
+#bf-resources-slot .top.sm { flex: 0 1 auto; justify-content: flex-end; max-width: 42%; }
+
+/* Remove the header plate; retain only compact stage text and alerts. */
+#bf-header-slot { top: 27px; left: 8px; right: 8px; z-index: 29; }
+#bf-header-slot .battle-header {
+  display: flex !important; align-items: center; justify-content: flex-end;
+  gap: 8px; min-height: 17px !important; padding: 0 !important;
+  color: #edf1f7; background: transparent !important; border: 0 !important;
+  border-radius: 0 !important; box-shadow: none !important;
+  backdrop-filter: none !important; -webkit-backdrop-filter: none !important;
+}
+#bf-header-slot .battle-brand { display: none !important; }
+#bf-header-slot .battle-context { display: flex; justify-content: flex-end; align-items: center; gap: 8px; min-width: 0; }
+#bf-header-slot .battle-context .inf {
+  display: block !important; position: static !important; max-width: none !important;
+  margin: 0 !important; padding: 0 !important; color: #f3ead7; font-size: 8px !important;
+  line-height: 1.15; text-align: right; text-shadow: 0 2px 4px #000, 0 0 8px #000;
+}
+#bf-header-slot .battle-alert {
+  max-width: min(42%, 240px); margin: 0 !important; padding: 0 !important;
+  color: #ffda9a; background: transparent !important; border: 0 !important;
+  box-shadow: none !important; font-size: 8px !important; line-height: 1.2;
+  text-shadow: 0 2px 4px #000, 0 0 8px #000;
+}
+
+/* Left party rail: five portraits, health bars and a tiny power readout only. */
+#bf-party-slot {
+  top: 62px; bottom: 118px; left: 8px; width: 58px; max-height: none;
+  z-index: 28; overflow: visible;
+}
+#bf-party-slot .battle-roster-panel {
+  display: block !important; width: 100%; max-width: none !important; max-height: 100%;
+  overflow: visible; padding: 0 !important; margin: 0 !important;
+  background: transparent !important; border: 0 !important; border-radius: 0 !important;
+  box-shadow: none !important; backdrop-filter: none !important; -webkit-backdrop-filter: none !important;
+}
+#bf-party-slot .rpg-panel-title { display: none !important; }
+#bf-party-slot #battle-party-power {
+  display: block !important; margin: 0 0 7px !important; padding: 0 !important;
+  color: #ffe2a0; background: transparent !important; border: 0 !important;
+  border-radius: 0 !important; box-shadow: none !important;
+  text-align: center; white-space: nowrap;
+}
+#bf-party-slot .party-power-line { display: flex; justify-content: center; align-items: center; gap: 2px; }
+#bf-party-slot .party-power-label { display: inline-block; width: auto; overflow: visible; font-size: 0 !important; }
+#bf-party-slot .party-power-label::before { content: '⚔'; font-size: 10px; }
+#bf-party-slot .party-power-line strong { color: #ffe2a0; font-size: 9px !important; font-weight: 800; text-shadow: 0 2px 4px #000, 0 0 7px #000; }
+#bf-party-slot .party-power-line small,
+#bf-party-slot .party-power-members { display: none !important; }
+#bf-party-slot #battle-roster {
+  display: flex !important; flex-direction: column !important; align-items: center;
+  gap: 7px !important; width: 100%; margin: 0; padding: 0;
+}
+#bf-party-slot #battle-roster .battle-unit {
+  display: flex !important; flex-direction: column !important; align-items: center; justify-content: center;
+  gap: 2px !important; width: 46px; min-width: 0; min-height: 0 !important;
+  margin: 0; padding: 0 !important; background: transparent !important;
+  border: 0 !important; border-radius: 0 !important; box-shadow: none !important;
+}
+#bf-party-slot #battle-roster .battle-unit img {
+  display: block !important; width: 33px !important; height: 33px !important;
+  object-fit: cover; object-position: 50% 18%; border: 1px solid rgba(219, 194, 140, .75);
+  border-radius: 50%; background: transparent; box-shadow: 0 2px 6px #000b;
+}
+#bf-party-slot #battle-roster .battle-unit.dead img { filter: grayscale(1) brightness(.58); border-color: #89909a; }
+#bf-party-slot .battle-unit-info { display: block !important; width: 33px; min-width: 0; }
+#bf-party-slot .battle-unit-name,
+#bf-party-slot .battle-unit-meta { display: none !important; }
+#bf-party-slot .battle-unit-hp {
+  display: block !important; width: 100%; height: 3px !important; margin: 0 !important;
+  overflow: hidden; background: rgba(8, 12, 18, .45) !important;
+  border: 0 !important; border-radius: 3px; box-shadow: 0 1px 3px #000b;
+}
+#bf-party-slot .battle-unit-hp i { display: block; height: 100%; transition: width .16s linear; }
+#bf-party-slot .battle-unit-hp s { display: block; }
+
+/* Target/boss info: one line + slim HP track, no panel or verbose enemy label. */
+#bf-target-slot { top: 64px; right: 10px; width: min(190px, calc(100% - 88px)); z-index: 29; }
+#bf-target-slot #battle-target-panel {
+  display: block !important; width: 100%; margin: 0 !important; padding: 0 !important;
+  color: #f5e8d9; background: transparent !important; border: 0 !important;
+  border-radius: 0 !important; box-shadow: none !important;
+}
+#bf-target-slot .battle-target-name { display: flex; justify-content: space-between; gap: 7px; margin: 0 0 3px; color: #f4e8d6; font-size: 8px !important; line-height: 1.15; font-weight: 800; text-shadow: 0 2px 4px #000, 0 0 8px #000; }
+#bf-target-slot .battle-target-name b { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+#bf-target-slot .battle-target-name span { flex: 0 0 auto; color: #e9b2a6; font-size: 7px !important; font-weight: 700; }
+#bf-target-slot .battle-unit-hp {
+  display: block !important; height: 4px !important; margin: 0 !important;
+  border: 0 !important; border-radius: 4px; background: rgba(5, 8, 13, .52) !important;
+  box-shadow: 0 1px 3px #000b;
+}
+#bf-target-slot .battle-unit-hp i { display: block; height: 100%; border-radius: inherit; }
+
+/* Tactical controls: icon-only buttons on the left, the only translucent UI buttons. */
+#bf-controls-slot { left: 8px; bottom: 9px; width: 74px; z-index: 34; }
+#bf-controls-slot .battle-command-panel {
+  display: block !important; margin: 0 !important; padding: 0 !important;
+  background: transparent !important; border: 0 !important; border-radius: 0 !important;
+  box-shadow: none !important; backdrop-filter: none !important; -webkit-backdrop-filter: none !important;
+}
+#bf-controls-slot .rpg-panel-title { display: none !important; }
+#bf-controls-slot .side {
+  display: grid !important; position: static !important; inset: auto !important; transform: none !important;
+  grid-template-columns: repeat(2, 31px) !important; justify-content: start; gap: 5px !important;
+  width: 67px; margin: 0; padding: 0; pointer-events: auto !important;
+}
+#bf-controls-slot .side button {
+  display: inline-grid !important; place-items: center; width: 31px !important; min-width: 31px !important;
+  height: 31px !important; min-height: 31px !important; margin: 0 !important; padding: 0 !important;
+  color: transparent !important; font-size: 0 !important; line-height: 0 !important;
+  background: rgba(16, 27, 43, .72) !important;
+  border: 1px solid rgba(185, 202, 224, .78) !important; border-radius: 50% !important;
+  box-shadow: 0 2px 7px #000b, inset 0 1px 0 rgba(255,255,255,.18) !important;
+  backdrop-filter: none !important; -webkit-backdrop-filter: none !important;
+  text-shadow: none !important; touch-action: manipulation; cursor: pointer;
+}
+#bf-controls-slot .side button::before {
+  display: block; color: #f2e6cb; font: 700 15px/1 system-ui, sans-serif;
+  text-shadow: 0 1px 3px #000b; pointer-events: none;
+}
+#bf-controls-slot .side button[data-bf-icon="pause"]::before { content: 'Ⅱ'; }
+#bf-controls-slot .side button[data-bf-icon="play"]::before { content: '▶'; font-size: 13px; }
+#bf-controls-slot .side button[data-bf-icon="speed"]::before { content: '⚡'; }
+#bf-controls-slot .side button[data-bf-icon="skills"]::before { content: '✦'; }
+#bf-controls-slot .side button[data-bf-icon="ultimate"]::before { content: '✧'; }
+#bf-controls-slot .side button[data-bf-icon="continue"]::before { content: '⏭'; font-size: 13px; }
+#bf-controls-slot .side button[data-a="auto"][aria-pressed="true"],
+#bf-controls-slot .side button[data-a="autou"][aria-pressed="true"],
+#bf-controls-slot .side button[data-a="autoContinue"][aria-pressed="true"] { border-color: #74d4c0 !important; color: transparent !important; box-shadow: 0 0 0 1px #74d4c066, 0 2px 7px #000b !important; }
+#bf-controls-slot .side button:hover:not(:disabled),
+#bf-controls-slot .side button:focus-visible { background: rgba(43, 62, 86, .92) !important; border-color: #f0d18d !important; }
+#bf-controls-slot .side button:disabled { opacity: .42; }
+#bf-controls-slot .side button[data-a="autoContinue"] { grid-column: 1 / -1; justify-self: start; }
+
+/* Skills: center the character portraits along the bottom; no outer frame. */
+#bf-skills-slot {
+  left: 50%; right: auto; bottom: 8px; width: auto; max-width: calc(100% - 104px);
+  transform: translateX(-50%); z-index: 33;
+}
+#bf-skills-slot .battle-skills-panel {
+  display: block !important; width: max-content; max-width: 100%; margin: 0 !important;
+  padding: 0 !important; background: transparent !important; border: 0 !important;
+  border-radius: 0 !important; box-shadow: none !important;
+  backdrop-filter: none !important; -webkit-backdrop-filter: none !important;
+}
+#bf-skills-slot .battle-skills-label,
+#bf-skills-slot .battle-help { display: none !important; }
+#bf-skills-slot .battle-skills { display: block !important; margin: 0 !important; padding: 0 !important; }
+#bf-skills-slot .battle-skills .skr {
+  display: flex !important; position: static !important; inset: auto !important; transform: none !important;
+  align-items: center; justify-content: center; flex-wrap: nowrap; gap: 7px !important;
+  width: max-content; max-width: 100%; margin: 0 auto !important; padding: 0 !important;
+  pointer-events: auto !important;
+}
+#bf-skills-slot .battle-skills .skb {
+  position: relative; flex: 0 0 40px !important; width: 40px !important; height: 40px !important;
+  min-width: 40px; margin: 0 !important; padding: 0 !important; overflow: hidden;
+  background: transparent !important; border: 1px solid rgba(210, 220, 235, .62) !important;
+  border-radius: 50% !important; box-shadow: 0 2px 7px #000b !important;
+  outline: 0; touch-action: manipulation;
+}
+#bf-skills-slot .battle-skills .skb img {
+  display: block; width: 100% !important; height: 100% !important;
+  object-fit: cover; object-position: 50% 12%; border-radius: 50%;
+}
+#bf-skills-slot .battle-skills .skb .cd { border-radius: 50%; }
+#bf-skills-slot .battle-skills .skb .en { height: 3px !important; background: rgba(0, 0, 0, .66); }
+#bf-skills-slot .battle-skills .skb.rdy { border-color: #73e4ef !important; box-shadow: 0 0 0 1px #73e4ef7a, 0 2px 8px #000b !important; }
+#bf-skills-slot .battle-skills .skb.ult { border-color: #f5ca73 !important; box-shadow: 0 0 0 1px #f5ca7380, 0 2px 9px #000b !important; }
+
+/* Keep results readable only when the battle actually ends. */
+#bf-result-slot { left: 50%; top: 50%; width: min(420px, calc(100% - 24px)); transform: translate(-50%, -50%); z-index: 40; }
+#bf-result-slot .battle-result-slot:empty { display: none !important; }
+#bf-result-slot .battle-result-slot:not(:empty) {
+  max-height: 72%; overflow: auto; padding: 9px !important;
+  background: rgba(9, 13, 21, .94) !important; border: 1px solid #7a684c !important;
+  border-radius: 7px; box-shadow: 0 8px 26px #000b;
+}
+#battle-rpg-shell .battle-result-slot { display: block; }
+
+/* HP/name labels above the heads remain disabled; damage numbers remain on. */
+#arena #hudu, #arena #hudu .ub, #arena #hudu .fl { display: none !important; visibility: hidden !important; }
+#arena #combat-number-layer { display: block !important; z-index: 12; }
+#arena .combat-number { font-weight: 400 !important; }
+#arena .combat-number.is-damage.is-critical { font-weight: 400 !important; }
+#arena .combat-number.is-damage.is-critical::before { font-weight: 900 !important; }
+
+@media (max-width: 820px) {
+  #battle-rpg-shell #arena.stage { height: clamp(420px, 66vh, 650px) !important; min-height: 390px !important; }
+  #bf-party-slot { top: 58px; bottom: 110px; left: 5px; width: 48px; }
+  #bf-party-slot #battle-roster { gap: 6px !important; }
+  #bf-party-slot #battle-roster .battle-unit { width: 40px; }
+  #bf-party-slot #battle-roster .battle-unit img { width: 28px !important; height: 28px !important; }
+  #bf-party-slot .battle-unit-info { width: 28px; }
+  #bf-controls-slot { left: 5px; bottom: 6px; width: 66px; }
+  #bf-controls-slot .side { grid-template-columns: repeat(2, 28px) !important; width: 61px; gap: 4px !important; }
+  #bf-controls-slot .side button { width: 28px !important; min-width: 28px !important; height: 28px !important; min-height: 28px !important; }
+  #bf-skills-slot { bottom: 7px; max-width: calc(100% - 76px); }
+  #bf-skills-slot .battle-skills .skr { gap: 4px !important; }
+  #bf-skills-slot .battle-skills .skb { flex-basis: 34px !important; width: 34px !important; height: 34px !important; min-width: 34px; }
+  #bf-target-slot { top: 59px; right: 6px; width: min(160px, calc(100% - 64px)); }
+  #bf-resources-slot .top, #bf-resources-slot .top.sm { font-size: 7px; gap: 5px; }
+  #bf-header-slot { top: 25px; left: 5px; right: 5px; }
+}
+@media (max-width: 360px) {
+  #bf-party-slot { width: 43px; }
+  #bf-party-slot #battle-roster .battle-unit img { width: 25px !important; height: 25px !important; }
+  #bf-party-slot .battle-unit-info { width: 25px; }
+  #bf-controls-slot { width: 59px; }
+  #bf-controls-slot .side { grid-template-columns: repeat(2, 25px) !important; width: 54px; gap: 4px !important; }
+  #bf-controls-slot .side button { width: 25px !important; min-width: 25px !important; height: 25px !important; min-height: 25px !important; }
+  #bf-controls-slot .side button::before { font-size: 13px; }
+  #bf-skills-slot { max-width: calc(100% - 66px); }
+  #bf-skills-slot .battle-skills .skr { gap: 3px !important; }
+  #bf-skills-slot .battle-skills .skb { flex-basis: 29px !important; width: 29px !important; height: 29px !important; min-width: 29px; }
+}
+@media (max-height: 620px) and (min-width: 561px) {
+  #battle-rpg-shell #arena.stage { height: 470px !important; min-height: 420px !important; }
+  #bf-party-slot { top: 57px; bottom: 130px; }
+}

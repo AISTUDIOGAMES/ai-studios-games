@@ -1,0 +1,144 @@
+/* =====================================================================
+   OWL GRIDBREAKERS v3.3 — PREMIUM UI, COMBAT NUMBERS & EFFECT GRADING
+   Loaded last. Presentation only: no combat, economy or save logic is touched.
+   ===================================================================== */
+:root {
+  --ui-font: "Rajdhani", "Barlow Condensed", Inter, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --gold: #e3c27d; --gold-hi: #ffe9b8; --ink: #14091f; --edge: rgba(170, 140, 255, .30);
+  --good: #7dffa8; --bad: #ff6470; --info: #8fe9ff;
+}
+
+/* ============ 1) COMBAT NUMBERS ============ */
+#combat-number-layer { position: absolute; inset: 0; z-index: 22; overflow: hidden; pointer-events: none; contain: layout paint; }
+.cn {
+  position: absolute; left: 0; top: 0; transform: translate3d(-50%, -50%, 0); opacity: 0; white-space: nowrap;
+  font-family: var(--ui-font); font-weight: 800; font-variant-numeric: tabular-nums; letter-spacing: .01em; line-height: 1;
+  font-size: calc(16px * var(--s, 1)); color: var(--c, #fff1c2);
+  -webkit-text-stroke: .7px rgba(20, 8, 30, .92); paint-order: stroke fill;
+  text-shadow: 0 1px 0 rgba(0, 0, 0, .9), 0 2px 4px rgba(0, 0, 0, .7);
+  will-change: transform, opacity; animation: cnRise .95s cubic-bezier(.2, .8, .25, 1) forwards;
+}
+.cn.cn-off { display: none; }
+.cn b { font-weight: inherit; }
+
+/* damage DEALT: warm white-gold, rises */
+.cn-dealt { --c: #fff1c2; }
+/* damage RECEIVED: red, short slam that settles downward, sits left of the unit */
+.cn-received { --c: var(--bad); -webkit-text-stroke-color: rgba(60, 4, 14, .95);
+  text-shadow: 0 1px 0 rgba(0, 0, 0, .95), 0 2px 4px rgba(0, 0, 0, .75), 0 0 8px rgba(255, 60, 80, .28);
+  animation: cnSlam .85s cubic-bezier(.2, .9, .3, 1) forwards; }
+.cn-received.cn-hi { font-weight: 900; text-shadow: 0 1px 0 #000, 0 2px 4px #000, 0 0 12px rgba(255, 60, 80, .5); animation-duration: 1.05s; }
+/* heal: soft green, slow gentle rise, sits right of the unit */
+.cn-heal { --c: var(--good); -webkit-text-stroke-color: rgba(4, 40, 22, .92);
+  text-shadow: 0 1px 0 rgba(0, 0, 0, .9), 0 2px 4px rgba(0, 0, 0, .7), 0 0 8px rgba(110, 255, 170, .25);
+  animation: cnHeal 1.2s cubic-bezier(.25, .7, .3, 1) forwards; }
+.cn-miss { --c: #c9d3e6; font-weight: 700; font-size: calc(12px * var(--s, 1)); animation-duration: .8s; }
+.cn-skill { --c: var(--info); font-size: calc(11px * var(--s, 1)); letter-spacing: .12em; text-transform: uppercase; font-weight: 800; animation: cnCall 1.1s ease-out forwards; }
+/* critical: own identity (gold, heavier, tag, pop-and-settle) */
+.cn-crit { --c: #ffd04d; font-weight: 900; -webkit-text-stroke: .9px #4a2400; z-index: 2;
+  text-shadow: 0 1px 0 #2a1200, 0 2px 4px rgba(0, 0, 0, .8), 0 0 7px rgba(255, 176, 60, .5);
+  animation: cnCrit 1.2s cubic-bezier(.2, .9, .25, 1) forwards; }
+.cn-crit::before { content: attr(data-tag); position: absolute; left: 50%; bottom: 100%; margin-bottom: 1px; transform: translateX(-50%);
+  font-size: 7px; letter-spacing: .2em; color: #ffe2a6; -webkit-text-stroke: 0; text-shadow: 0 1px 2px #000; }
+.cn-crit-hi { --c: #ffe27a; text-shadow: 0 1px 0 #2a1200, 0 2px 5px #000, 0 0 11px rgba(255, 190, 70, .7); }
+.cn-crit-hi::after { content: ""; position: absolute; left: 50%; top: 50%; width: 100%; height: 100%; border-radius: 50%;
+  transform: translate(-50%, -50%) scale(.6); border: 1.5px solid rgba(255, 214, 120, .6); animation: cnRing .55s ease-out forwards; }
+
+@keyframes cnRise {
+  0%   { opacity: 0; transform: translate3d(-50%, calc(-50% + 6px), 0) scale(.72); }
+  14%  { opacity: 1; transform: translate3d(calc(-50% + var(--dx, 0px) * .25), calc(-50% - 4px), 0) scale(1.1); }
+  28%  { transform: translate3d(calc(-50% + var(--dx, 0px) * .4), calc(-50% - 12px), 0) scale(1); }
+  72%  { opacity: 1; }
+  100% { opacity: 0; transform: translate3d(calc(-50% + var(--dx, 0px)), calc(-50% - 44px), 0) scale(.94); }
+}
+@keyframes cnSlam {
+  0%   { opacity: 0; transform: translate3d(-50%, calc(-50% - 10px), 0) scale(1.65); }
+  10%  { opacity: 1; transform: translate3d(-50%, -50%, 0) scale(1); }
+  16%  { transform: translate3d(calc(-50% + 3px), -50%, 0) scale(1.04); }
+  22%  { transform: translate3d(calc(-50% - 3px), -50%, 0) scale(1); }
+  70%  { opacity: 1; transform: translate3d(calc(-50% + var(--dx, 0px)), calc(-50% + 8px), 0) scale(1); }
+  100% { opacity: 0; transform: translate3d(calc(-50% + var(--dx, 0px)), calc(-50% + 20px), 0) scale(.92); }
+}
+@keyframes cnHeal {
+  0%   { opacity: 0; transform: translate3d(-50%, calc(-50% + 8px), 0) scale(.8); }
+  18%  { opacity: 1; transform: translate3d(-50%, calc(-50% - 2px), 0) scale(1.05); }
+  75%  { opacity: 1; }
+  100% { opacity: 0; transform: translate3d(calc(-50% + var(--dx, 0px)), calc(-50% - 38px), 0) scale(.96); }
+}
+@keyframes cnCrit {
+  0%   { opacity: 0; transform: translate3d(-50%, calc(-50% + 4px), 0) scale(.4) rotate(-5deg); }
+  9%   { opacity: 1; transform: translate3d(-50%, calc(-50% - 4px), 0) scale(1.5) rotate(1deg); }
+  22%  { transform: translate3d(-50%, calc(-50% - 10px), 0) scale(1.16) rotate(0); }
+  68%  { opacity: 1; transform: translate3d(calc(-50% + var(--dx, 0px) * .6), calc(-50% - 24px), 0) scale(1.2); }
+  100% { opacity: 0; transform: translate3d(calc(-50% + var(--dx, 0px)), calc(-50% - 46px), 0) scale(1.04); }
+}
+@keyframes cnCall { 0% { opacity: 0; transform: translate3d(-50%, calc(-50% + 6px), 0) scale(.9); } 18% { opacity: .95; } 80% { opacity: .95; } 100% { opacity: 0; transform: translate3d(-50%, calc(-50% - 20px), 0) scale(1); } }
+@keyframes cnRing { 0% { opacity: .8; transform: translate(-50%, -50%) scale(.6); } 100% { opacity: 0; transform: translate(-50%, -50%) scale(1.9); } }
+
+@media (max-width: 560px) { .cn { font-size: calc(14px * var(--s, 1)); } .cn-skill { font-size: calc(10px * var(--s, 1)); } }
+
+/* feedback when a hero is hit: portrait flash + (heavy hits) arena edge vignette */
+.battle-unit.bf-hit img { animation: bfHit .28s ease-out; }
+@keyframes bfHit { 0% { box-shadow: 0 0 0 2px #ff5060, 0 0 12px #ff5060; filter: brightness(1.35); } 100% { filter: none; } }
+.bf-hurt-layer { position: absolute; inset: 0; z-index: 8; pointer-events: none; opacity: 0;
+  background: radial-gradient(ellipse at 50% 50%, transparent 55%, rgba(220, 30, 50, .30) 100%); }
+.bf-hurt-layer.on { animation: bfHurt .32s ease-out; }
+@keyframes bfHurt { 0% { opacity: 1; } 100% { opacity: 0; } }
+
+/* ============ 2) EFFECT GRADING: screen flash becomes an edge vignette (center stays readable) ============ */
+#battle-rpg-shell #arena.stage .fx2, #arena.stage .fx2, .stage .fx2, .fx2 {
+  opacity: 1 !important; mix-blend-mode: normal !important;
+  background: radial-gradient(ellipse at 50% 55%, rgba(var(--fx-rgb, 255, 255, 255), 0) 52%, rgba(var(--fx-rgb, 255, 255, 255), .30) 100%) !important;
+  animation: bfFlash .42s ease-out forwards !important;
+}
+@keyframes bfFlash { 0% { opacity: 0; } 22% { opacity: 1; } 100% { opacity: 0; } }
+
+/* ============ 3) BUTTONS: consistent states across the game ============ */
+button { transition: transform .08s ease, background-color .15s ease, border-color .15s ease, box-shadow .15s ease, filter .15s ease; -webkit-tap-highlight-color: transparent; touch-action: manipulation; }
+button:not(:disabled):active { transform: translateY(1px) scale(.975); filter: brightness(.94); }
+button:disabled, button[aria-disabled="true"] { opacity: .45; cursor: not-allowed; filter: saturate(.6); }
+button:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; }
+@media (hover: hover) { button:not(:disabled):hover { border-color: #7a63c4; filter: brightness(1.08); } }
+
+/* menu (docked in battle): pressed / active / compact */
+#bf-menu-slot #nav button { font-family: var(--ui-font); font-weight: 700; }
+#bf-menu-slot #nav button:active { transform: scale(.94); }
+#battlefield-hud.bf-menu-compact #bf-menu-slot #nav button { font-size: 0 !important; }
+#battlefield-hud.bf-menu-compact #bf-menu-slot #nav button span { font-size: 16px !important; }
+
+/* control column: touch-friendly, vector icons keep their state colors */
+#bf-controls-slot .side button { border: 1px solid rgba(214, 190, 130, .55) !important; border-radius: 9px !important; box-shadow: inset 0 1px 0 rgba(255, 255, 255, .08), 0 2px 6px #000b; }
+#bf-controls-slot .side button:active { transform: scale(.92); }
+@media (pointer: coarse) {
+  #bf-controls-slot .side { grid-template-columns: repeat(2, 34px) !important; width: 73px; gap: 5px !important; }
+  #bf-controls-slot .side button { width: 34px !important; min-width: 34px !important; height: 34px !important; min-height: 34px !important; }
+  #bf-menu-slot #nav button { height: 36px; min-width: 42px !important; }
+}
+
+/* ============ 4) ADAPTIVE SIZES (driven by js/41-hud-guard; only active once it has measured) ============ */
+#battlefield-hud[data-fit] #bf-skills-slot .battle-skills .skb {
+  flex: 0 0 var(--bf-skill, 40px) !important; width: var(--bf-skill, 40px) !important; height: var(--bf-skill, 40px) !important; min-width: var(--bf-skill, 40px) !important;
+}
+#battlefield-hud[data-fit] #bf-party-slot #battle-roster .battle-unit img { width: var(--bf-portrait, 33px) !important; height: var(--bf-portrait, 33px) !important; }
+#battlefield-hud[data-fit] #bf-party-slot .battle-unit-info { width: var(--bf-portrait, 33px); }
+#battlefield-hud[data-fit] #bf-party-slot #battle-roster .battle-unit { width: calc(var(--bf-portrait, 33px) + 13px); }
+#battlefield-hud.bf-party-tight #bf-party-slot .battle-party-power { display: none !important; }
+#battlefield-hud.bf-party-tight #bf-party-slot #battle-roster { gap: 2px !important; }
+
+/* ============ 5) LEGIBILITY, SAFE AREAS & LIMITS ============ */
+#bf-menu-slot { left: max(6px, env(safe-area-inset-left)) !important; right: max(6px, env(safe-area-inset-right)) !important; }
+#bf-controls-slot { left: max(6px, env(safe-area-inset-left)); bottom: max(9px, env(safe-area-inset-bottom)); }
+#bf-resources-slot, #bf-header-slot, #bf-target-slot { max-width: calc(100% - 12px); box-sizing: border-box; }
+#bf-header-slot, #bf-target-slot, #bf-resources-slot, #battlefield-hud .bf-slot { text-shadow: 0 1px 2px rgba(0, 0, 0, .9), 0 0 6px rgba(0, 0, 0, .6); }
+.battle-loot-item b { font-size: 9px; }
+.battle-loot-item i { font-size: 11px; }
+#bf-target-slot, #bf-header-slot { font-family: var(--ui-font); }
+#bf-target-slot .battle-unit-name, #bf-header-slot strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+#bf-skills-slot .battle-skills .skb .en { background: rgba(0, 0, 0, .72); }
+#bf-skills-slot .battle-skills .skb .cd { font-family: var(--ui-font); font-weight: 800; text-shadow: 0 1px 3px #000; }
+
+@media (prefers-reduced-motion: reduce) {
+  .cn { animation-duration: .5s !important; }
+  .cn-crit-hi::after, .bf-hurt-layer.on, .battle-unit.bf-hit img { animation: none !important; }
+  .fx2 { animation-duration: .2s !important; }
+}

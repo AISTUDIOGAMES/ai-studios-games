@@ -1,0 +1,34 @@
+/* OWL GRIDBREAKERS 1.2 - performance layer. Nothing here changes the default look or any layout size;
+   rules only apply when the player picks the LOW profile or turns the FPS counter on. */
+.gfx-low .tilt{display:none!important}                       /* full-screen backdrop blur over the animated canvas */
+#gfx-fps{position:fixed;right:8px;top:8px;z-index:20;pointer-events:none;font:11px/1.2 ui-monospace,Consolas,monospace;color:#9ff;background:rgba(5,8,20,.65);border:1px solid #2a4a6a;border-radius:6px;padding:3px 6px}
+#gfx-open{position:fixed;left:8px;bottom:108px;z-index:15;width:34px;height:34px;padding:0;border-radius:50%;opacity:.55;font-size:15px}
+#gfx-open:hover{opacity:.9}
+
+
+/* RPG settings dialog and desktop/mobile presentation selector. */
+.gfx-settings-overlay {
+  position: fixed; inset: 0; z-index: 98; display: flex;
+  align-items: center; justify-content: center; padding: 14px;
+  background: rgba(3, 5, 9, .84); backdrop-filter: blur(6px);
+}
+.gfx-settings-card {
+  width: min(100%, 390px); max-height: min(88vh, 720px); overflow: auto;
+  display: flex; flex-direction: column; gap: 14px; padding: 18px;
+  color: #edf0f5; background: linear-gradient(180deg, #252f42, #111722);
+  border: 1px solid #7a879a; border-top: 2px solid #d5ad62; border-radius: 7px;
+  box-shadow: 0 20px 60px #000c, inset 0 1px 0 #ffffff16;
+}
+.gfx-settings-heading { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding-bottom: 11px; border-bottom: 1px solid #48566b; }
+.gfx-settings-heading b { color: #f0d292; font-size: 14px; letter-spacing: .12em; }
+.gfx-settings-heading span { color: #9daabd; font-size: 8px; font-weight: 800; letter-spacing: .16em; }
+.gfx-setting-group { display: flex; flex-direction: column; gap: 7px; }
+.gfx-setting-label { color: #e4d0a5; font-size: 11px; font-weight: 900; letter-spacing: .1em; text-transform: uppercase; }
+.gfx-choice-row { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; }
+.gfx-choice { min-width: 0; min-height: 39px; padding: 7px 5px; color: #c4cedb; background: linear-gradient(180deg, #202a3c, #151d2a); border: 1px solid #56647a; border-radius: 4px; font-size: 10px; font-weight: 900; letter-spacing: .06em; }
+.gfx-choice:hover { color: #fff; border-color: #a4b1c4; }
+.gfx-choice.is-active { color: #fff0c8; background: linear-gradient(180deg, #63543d, #352d25); border-color: #d5ad62; box-shadow: inset 0 0 0 1px #d5ad6244, 0 0 0 1px #0008; }
+.gfx-setting-help { margin: 0; color: #aab5c5; font-size: 10px; line-height: 1.45; }
+.gfx-check-row { display: flex; align-items: center; gap: 8px; color: #d7dfeb; font-size: 12px; cursor: pointer; }
+.gfx-check-row input { width: 17px; height: 17px; accent-color: #c4a064; }
+.gfx-close-button { min-height: 42px; color: #fff0c8; background: linear-gradient(180deg, #594b39, #322b25); border-color: #c7a76e; }

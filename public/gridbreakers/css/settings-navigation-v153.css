@@ -1,0 +1,41 @@
+/* OWL GRIDBREAKERS v1.5.3 — permanent Settings entry */
+#nav [data-settings-tab] > span {
+  color: #f0d292;
+}
+#nav [data-settings-tab]:hover:not(:disabled) {
+  border-color: #d5ad62;
+  color: #fff1ce;
+}
+#nav [data-settings-tab].on {
+  color: #fff1ce;
+  background: linear-gradient(180deg, #594b39, #322b25);
+  border-color: #d5ad62;
+  box-shadow: inset 0 0 0 1px #d5ad6244, 0 0 0 1px #0008;
+}
+#nav [data-settings-tab].on > span { color: #ffe3a0; }
+.owl-settings-error {
+  position: fixed;
+  z-index: 120;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  width: min(90vw, 360px);
+  display: grid;
+  gap: 10px;
+  padding: 18px;
+  color: #edf0f5;
+  background: linear-gradient(180deg, #252f42, #111722);
+  border: 1px solid #d5ad62;
+  border-radius: 7px;
+  box-shadow: 0 18px 55px #000c;
+  font: 13px/1.45 system-ui, sans-serif;
+}
+.owl-settings-error b { color: #f0d292; }
+.owl-settings-error span { color: #c4cedb; }
+.owl-settings-error button {
+  min-height: 38px;
+  color: #fff0c8;
+  background: linear-gradient(180deg, #594b39, #322b25);
+  border: 1px solid #c7a76e;
+  border-radius: 4px;
+}

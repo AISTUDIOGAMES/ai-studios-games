@@ -1,0 +1,130 @@
+/* OWL GRIDBREAKERS v1.5.8 — battle loot cluster and rarity motion fixes */
+
+/* Six resources grouped tightly in the upper-left corner of the arena. */
+#bf-resources-slot {
+  top: 5px !important;
+  left: 8px !important;
+  right: auto !important;
+  width: min(430px, calc(100% - 16px)) !important;
+  z-index: 36 !important;
+  pointer-events: none !important;
+}
+#bf-resources-slot .battle-resource-strip { display: none !important; }
+#battle-loot-cluster {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  align-items: center;
+  gap: 5px;
+  width: 100%;
+  min-height: 18px;
+  margin: 0;
+  padding: 0;
+  color: #f4ead8;
+  background: transparent;
+  border: 0;
+  box-shadow: none;
+  pointer-events: none;
+  text-shadow: 0 2px 4px #000, 0 0 8px #000;
+}
+.battle-loot-item {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 3px;
+  min-width: 0;
+  white-space: nowrap;
+  line-height: 1;
+}
+.battle-loot-item i {
+  flex: 0 0 auto;
+  font-size: 10px;
+  font-style: normal;
+  line-height: 1;
+}
+.battle-loot-item b {
+  display: block;
+  min-width: 0;
+  overflow: hidden;
+  color: #fff0d2;
+  font-size: 8px;
+  font-weight: 700;
+  line-height: 1.1;
+  text-overflow: ellipsis;
+}
+
+/* Locked character cards: no aura pulse, shimmer, filter animation or transitions. */
+.hero-locked-static,
+.hero-locked-static * {
+  animation: none !important;
+  transition: none !important;
+}
+.hero-locked-static {
+  box-shadow: none !important;
+  filter: none !important;
+  border-color: rgba(150, 154, 166, .48) !important;
+}
+.hero-locked-static img {
+  filter: none !important;
+  animation: none !important;
+}
+
+/* Re-enable the Ancestral (r7) gear shimmer after the legacy global static rule. */
+.eqi.r7:not(.empty) {
+  animation: ancestralGear 2.2s ease-in-out infinite !important;
+  border-color: #16c9d5 !important;
+  box-shadow: 0 0 14px var(--c) !important;
+}
+.eqi.r7:not(.empty)::after {
+  content: "" !important;
+  display: block !important;
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  pointer-events: none;
+  border-radius: inherit;
+  background: linear-gradient(115deg, transparent 30%, #fff9 50%, transparent 68%);
+  background-size: 200% 100%;
+  background-position: 0% 0;
+  animation: gearShimmer 2.1s linear infinite !important;
+}
+
+/* Tower run summary appears only after the whole party is defeated. */
+#bf-result-slot #awo-battle-results { display: block; width: 100%; max-height: 72%; overflow: auto; }
+.owl-tower-run-summary {
+  display: grid;
+  gap: 5px;
+  margin: 0 0 8px;
+  padding: 9px 10px;
+  color: #eee8dc;
+  background: rgba(9, 13, 21, .94);
+  border: 1px solid rgba(210, 178, 111, .72);
+  border-radius: 8px;
+  box-shadow: 0 5px 18px #000b;
+  text-align: center;
+}
+.owl-tower-run-summary > b { color: #f1d18f; font-size: 10px; letter-spacing: 1px; }
+.owl-tower-run-summary > strong { color: #f7e3b4; font-size: 25px; line-height: 1.05; }
+.owl-tower-run-summary > span { color: #d3c6ae; font-size: 9px; }
+.owl-tower-run-summary > small { color: #c6d2de; font-size: 8px; line-height: 1.4; }
+
+@media (max-width: 820px) {
+  #bf-resources-slot { left: 5px !important; width: min(370px, calc(100% - 10px)) !important; }
+  #battle-loot-cluster { gap: 3px; min-height: 17px; }
+  .battle-loot-item { gap: 2px; }
+  .battle-loot-item i { font-size: 9px; }
+  .battle-loot-item b { font-size: 7px; }
+}
+@media (max-width: 360px) {
+  #bf-resources-slot { width: calc(100% - 10px) !important; }
+  #battle-loot-cluster { gap: 1px; }
+  .battle-loot-item { gap: 1px; }
+  .battle-loot-item i { font-size: 8px; }
+  .battle-loot-item b { font-size: 6.5px; }
+}
+
+
+/* Fixed-viewport shimmer: move the gradient, never the pseudo-element. */
+@keyframes gearShimmer {
+  from { background-position: 0% 0; }
+  to   { background-position: 100% 0; }
+}

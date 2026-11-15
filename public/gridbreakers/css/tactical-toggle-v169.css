@@ -1,0 +1,24 @@
+/* v3.6 — aba para ocultar TACTICAL CONTROLS para a esquerda */
+#bf-controls-slot #bf-tactical-tab {
+  position: absolute; top: 0; left: calc(100% + 3px); width: 16px; height: 40px; padding: 0;
+  display: grid; place-items: center; z-index: 3;
+  color: #f2e6cb; font: 700 10px/1 system-ui, sans-serif;
+  background: rgba(11, 17, 27, .86); border: 1px solid #8d7855; border-left: 0;
+  border-radius: 0 9px 9px 0; box-shadow: 0 3px 9px #0009; cursor: pointer;
+  touch-action: manipulation; pointer-events: auto !important;
+  transition: left .22s ease, background .15s;
+}
+#bf-controls-slot #bf-tactical-tab:hover { background: rgba(60, 48, 28, .92); color: #ffe7b0; }
+#bf-controls-slot #bf-tactical-tab:focus-visible { outline: 2px solid #e5c17c; outline-offset: 1px; }
+#bf-controls-slot .battle-command-panel {
+  transition: transform .22s ease, opacity .18s ease, visibility 0s linear 0s;
+}
+html[data-tactical-hidden="1"] #bf-controls-slot .battle-command-panel {
+  transform: translateX(calc(-100% - 16px)); opacity: 0; visibility: hidden; pointer-events: none !important;
+  transition: transform .22s ease, opacity .18s ease, visibility 0s linear .22s;
+}
+html[data-tactical-hidden="1"] #bf-controls-slot #bf-tactical-tab { left: -8px; }
+@media (max-width: 700px) {
+  #bf-controls-slot #bf-tactical-tab { width: 15px; height: 34px; }
+  html[data-tactical-hidden="1"] #bf-controls-slot #bf-tactical-tab { left: -5px; }
+}
