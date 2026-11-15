@@ -1,0 +1,81 @@
+/* =====================================================================
+   OWL GRIDBREAKERS v3.7.1 — MOBILE FULLSCREEN (presentation only)
+   Battlefield now fills the WHOLE phone screen (portrait and landscape).
+   Before: the arena used fixed heights (62vh / 470px) and #app had side
+   margins + bottom padding, so part of the screen stayed empty.
+   Applies to phones/tablets (touch) and any window <= 820px wide.
+   --app-h is set by js/45-mobile-fullscreen-v371.js (real visible height);
+   100dvh is the fallback when the script has not run yet.
+   ===================================================================== */
+:root { --app-h: 100dvh; }
+
+@media (max-width: 820px), (pointer: coarse) {
+  html:has(#battle-rpg-shell) {
+    height: var(--app-h, 100dvh);
+    overflow: hidden;
+    overscroll-behavior: none;
+    padding-left: env(safe-area-inset-left, 0px);
+    padding-right: env(safe-area-inset-right, 0px);
+    background: #080b12;
+  }
+  html:has(#battle-rpg-shell) body {
+    height: 100%;
+    min-height: 0;
+    margin: 0;
+    overflow: hidden;
+    overscroll-behavior: none;
+  }
+  html:has(#battle-rpg-shell) #app {
+    width: 100% !important;
+    max-width: none !important;
+    height: 100%;
+    min-height: 0;
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+  html:has(#battle-rpg-shell) #view,
+  html:has(#battle-rpg-shell) #battle-rpg-shell,
+  html:has(#battle-rpg-shell) #battle-rpg-shell .battle-grid,
+  html:has(#battle-rpg-shell) #battle-rpg-shell .battle-viewport {
+    height: 100%;
+    min-height: 0;
+  }
+  html:has(#battle-rpg-shell) #battle-rpg-shell #arena.stage {
+    width: 100% !important;
+    height: 100% !important;
+    min-height: 0 !important;
+    max-height: none !important;
+    margin: 0 !important;
+    border: 0 !important;
+    border-radius: 0 !important;
+  }
+}
+
+/* ---------------------------------------------------------------------
+   Celular deitado (tela baixa): a arena agora ocupa a altura real da tela
+   (~360-440px). O painel TACTICAL CONTROLS em coluna (2x3) ficava por cima
+   dos herois 3-5 do grupo; passa a ser UMA linha horizontal (so os icones),
+   no mesmo canto, e o HUD guard devolve o espaco aos retratos do grupo.
+   A aba de ocultar (◀/▶) continua funcionando.
+   --------------------------------------------------------------------- */
+@media (orientation: landscape) and (max-height: 460px) {
+  html body #arena #bf-controls-slot { width: auto !important; }
+  html body #arena #bf-controls-slot .battle-command-panel { padding: 4px !important; }
+  html body #arena #bf-controls-slot .rpg-panel-title { display: none !important; }
+  html body #arena #bf-controls-slot .side {
+    display: flex !important;
+    flex-direction: row !important;
+    flex-wrap: nowrap !important;
+    gap: 4px !important;
+  }
+  html body #arena #bf-controls-slot .side button,
+  html body #arena #bf-controls-slot .side button[data-a="autoContinue"] {
+    flex: 0 0 auto !important;
+    grid-column: auto !important;
+    width: 32px !important;
+    min-width: 32px !important;
+    height: 32px !important;
+    min-height: 32px !important;
+  }
+  html body #arena #bf-controls-slot #bf-tactical-tab { height: 32px; }
+}
