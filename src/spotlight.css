@@ -10,6 +10,56 @@
 .sp-slide.is-active .sp-bg img { animation: spZoom 9s ease-out forwards; }
 @keyframes spZoom { from { transform: scale(1.02); } to { transform: scale(1.12); } }
 
+/* EIGHT LEGENDS: no photo backdrop, only the Grid drawn in CSS (no image request). */
+.sp-bg.is-css { overflow: hidden; }
+.sp-bg.is-css::before, .sp-bg.is-css::after { content: ""; position: absolute; inset: 0; }
+.sp-bg.is-css::before {
+  background:
+    radial-gradient(52% 62% at 72% 40%, rgba(138, 114, 255, 0.30) 0%, rgba(138, 114, 255, 0) 68%),
+    radial-gradient(46% 56% at 26% 30%, rgba(56, 232, 255, 0.11) 0%, rgba(56, 232, 255, 0) 70%),
+    radial-gradient(80% 90% at 50% 108%, rgba(182, 255, 59, 0.13) 0%, rgba(182, 255, 59, 0) 66%),
+    linear-gradient(160deg, #0a0d16 0%, #0d1020 44%, #07090d 100%);
+}
+.sp-bg.is-css::after {
+  background-image:
+    linear-gradient(rgba(182, 255, 59, 0.085) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(182, 255, 59, 0.085) 1px, transparent 1px);
+  background-size: 64px 64px, 64px 64px;
+  transform: perspective(700px) rotateX(58deg) scale(1.5);
+  transform-origin: 50% 100%;
+  opacity: 0.55;
+  -webkit-mask-image: radial-gradient(78% 72% at 50% 92%, #000 0%, rgba(0, 0, 0, 0.35) 58%, transparent 100%);
+  mask-image: radial-gradient(78% 72% at 50% 92%, #000 0%, rgba(0, 0, 0, 0.35) 58%, transparent 100%);
+}
+/* eight markers: one point of light per legend, drifting inside the halo */
+.sp-bg.is-css i { position: absolute; inset: 0; display: block; }
+.sp-bg.is-css i::before, .sp-bg.is-css i::after {
+  content: ""; position: absolute; border-radius: 50%;
+  box-shadow:
+    0 0 14px rgba(182, 255, 59, 0.85), 0 0 34px rgba(182, 255, 59, 0.35);
+  background: radial-gradient(circle, #eaffc0 0%, #b6ff3b 42%, rgba(182, 255, 59, 0.12) 100%);
+}
+.sp-bg.is-css i::before {
+  width: 7px; height: 7px; top: 26%; left: 58%;
+  box-shadow:
+    0 0 14px rgba(182, 255, 59, 0.85), 0 0 34px rgba(182, 255, 59, 0.35),
+    0 46px 14px rgba(182, 255, 59, 0.7), 0 62px 30px rgba(182, 255, 59, 0.28),
+    -58px 74px 14px rgba(56, 232, 255, 0.6), -76px 92px 30px rgba(56, 232, 255, 0.24),
+    32px 96px 14px rgba(138, 114, 255, 0.65), 46px 116px 30px rgba(138, 114, 255, 0.26);
+  animation: spLegendA 11s ease-in-out infinite alternate;
+}
+.sp-bg.is-css i::after {
+  width: 5px; height: 5px; top: 41%; left: 44%;
+  background: radial-gradient(circle, #dff8ff 0%, #38e8ff 46%, rgba(56, 232, 255, 0.1) 100%);
+  box-shadow:
+    0 0 14px rgba(56, 232, 255, 0.8), 0 0 32px rgba(56, 232, 255, 0.3),
+    -44px 28px 14px rgba(138, 114, 255, 0.75), -60px 44px 30px rgba(138, 114, 255, 0.28),
+    58px 34px 14px rgba(182, 255, 59, 0.7), 76px 52px 30px rgba(182, 255, 59, 0.26);
+  animation: spLegendB 13s ease-in-out infinite alternate;
+}
+@keyframes spLegendA { from { transform: translate3d(-46px, 16px, 0); } to { transform: translate3d(38px, -22px, 0); } }
+@keyframes spLegendB { from { transform: translate3d(34px, -18px, 0); } to { transform: translate3d(-40px, 24px, 0); } }
+
 .sp-shade {
   background:
     linear-gradient(90deg, rgba(7, 9, 13, 0.94) 0%, rgba(7, 9, 13, 0.72) 34%, rgba(7, 9, 13, 0.12) 68%, rgba(7, 9, 13, 0.25) 100%),
@@ -62,6 +112,7 @@
 @media (prefers-reduced-motion: reduce) {
   .sp-slide, .sp-slide.is-active { transition: none; }
   .sp-slide.is-active .sp-bg img, .sp-slide.is-active .sp-content > *, .sp-slide.is-active .sp-poster { animation: none; }
+  .sp-bg.is-css i::before, .sp-bg.is-css i::after { animation: none; }
 }
 
 /* page title for screen readers and search engines (the old hero held the h1) */

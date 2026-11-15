@@ -7,7 +7,8 @@ import { GAMES, safeUrl } from "./games";
  *
  *  tag     small label (NEW RELEASE, UPDATE, DID YOU KNOW?...)
  *  nav     short name shown in the progress bar at the bottom
- *  image   wide background, a file inside public/images (or a full path starting with "/")
+ *  image   optional wide background, a file inside public/images (or a full path starting with "/");
+ *          leave it out and the slide uses its own CSS backdrop (.sp-bg.is-css) instead
  *  poster  optional tall image shown on the right (comic covers, cards...)
  *  pos     optional object-position for the background, e.g. "50% 20%"
  *  game    optional game id from games.ts: the button then opens that game's link and counts as a Play click
@@ -19,7 +20,7 @@ interface Slide {
   kicker: string;
   title: string;
   text: string;
-  image: string;
+  image?: string;
   poster?: string;
   pos?: string;
   game?: string;
@@ -87,8 +88,6 @@ const SLIDES: Slide[] = [
     kicker: "THE UNIVERSE OF AI WORLD OWL",
     title: "EIGHT LEGENDS. ONE GRID.",
     text: "Meet Jax, Kira, Lyra, Kai, Titan and Vex, and the legendary Aeon and Orion.",
-    image: "hero-keyart-hd.webp",
-    pos: "50% 40%",
     href: "#lore",
     cta: "MEET THE LEGENDS",
   },
@@ -116,7 +115,9 @@ export function spotlightMarkup(): string {
     const first = i === 0;
     return `
     <article class="sp-slide${first ? " is-active" : ""}" role="group" aria-roledescription="slide" aria-label="${i + 1} of ${n}"${first ? "" : " inert"}>
-      <div class="sp-bg"><img src="${esc(asset(s.image))}" alt="" width="1920" height="1080" ${first ? 'fetchpriority="high"' : 'loading="lazy"'} decoding="async"${s.pos ? ` style="object-position:${esc(s.pos)}"` : ""} /></div>
+      ${s.image
+        ? `<div class="sp-bg"><img src="${esc(asset(s.image))}" alt="" width="1920" height="1080" ${first ? 'fetchpriority="high"' : 'loading="lazy"'} decoding="async"${s.pos ? ` style="object-position:${esc(s.pos)}"` : ""} /></div>`
+        : `<div class="sp-bg is-css" aria-hidden="true"><i></i></div>`}
       <div class="sp-shade"></div>
       ${s.poster ? `<div class="sp-poster"><img src="${esc(asset(s.poster))}" alt="${esc(s.title)} cover" loading="lazy" decoding="async" /></div>` : ""}
       <div class="sp-content">
