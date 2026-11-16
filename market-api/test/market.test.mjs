@@ -150,3 +150,15 @@ test('login: duas verificações simultâneas com o mesmo nonce geram só UMA se
   const rs = await Promise.all(Array.from({length: 5}, () => call(w.env, 'POST', '/v1/wallet/verify', {body})));
   assert.equal(rs.filter(r => r.status === 200).length, 1);
 });
+test('Token-2022 como o $ASG (só metadataPointer + tokenMetadata): compra completa funciona', async () => {
+  const w = world({token2022: true}), kp = player(w), token = await login(w.env, kp); addProduct(w.env, w);
+  const o = (await order(w, token)).body.order, sig = sig58(); chainTx(w, dbOrder(w, o.id), kp.address, sig);
+  const v = await call(w.env, 'POST', '/v1/payments/verify', {token, body: {order_id: o.id, signature: sig}});
+  assert.equal(v.body.status, 'paid'); assert.equal(count(w, 'mk_inventory'), 1);
+});
+test('Token-2022 com ALLOW_TOKEN_2022=0 (padrão) é recusado; com taxa de transferência também', async () => {
+  const w = world({token2022: true}), kp = player(w), token = await login(w.env, kp); addProduct(w.env, w);
+  w.env.ALLOW_TOKEN_2022 = '0'; assert.equal((await order(w, token)).body.error, 'unsupported_token_program');
+  w.env.ALLOW_TOKEN_2022 = '1'; w.st.extensions.push({extension: 'transferFeeConfig'});
+  const {clearMintCache} = await import('../src/solana.js'); clearMintCache(); assert.equal((await order(w, token)).body.error, 'unsupported_token_extension');
+});

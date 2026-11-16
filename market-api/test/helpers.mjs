@@ -34,6 +34,8 @@ export function world(opts = {}) {
       throw new Error('rpc method ' + method);
     }
   };
+  if (opts.token2022) { st.mintOwner = 'TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb'; env.ALLOW_TOKEN_2022 = '1';
+    st.extensions = [{extension: 'metadataPointer', state: {authority: null, metadataAddress: mint}}, {extension: 'tokenMetadata', state: {name: 'AI STUDIO GAMES', symbol: 'ASG', updateAuthority: null}}]; }
   return {env, st};
 }
 export function player(w, balance = '5000000000') { const k = keypair(); w.st.taccts[k.address] = rnd58(); w.st.balances[k.address] = balance; return k; }
@@ -54,7 +56,7 @@ export function addProduct(env, w, o = {}) {
 export function chainTx(w, order, wallet, sig, o = {}) {
   const src = w.st.taccts[wallet], amount = o.amount ?? order.amount_raw, mint = o.mint ?? w.st.mint, dest = o.dest ?? order.treasury_token_account;
   const bt = o.blockTime ?? order.created_at + 5;
-  const ixs = [{programId: TOKEN_PROGRAM, parsed: {type: 'transferChecked', info: {source: src, mint, destination: dest, authority: o.authority ?? wallet, tokenAmount: {amount, decimals: '6'}}}}];
+  const ixs = [{programId: w.st.mintOwner, parsed: {type: 'transferChecked', info: {source: src, mint, destination: dest, authority: o.authority ?? wallet, tokenAmount: {amount, decimals: '6'}}}}];
   if (!o.noMemo) ixs.push({programId: MEMO_PROGRAMS[0], parsed: o.memo ?? order.memo});
   w.st.txs[sig] = {slot: 1, blockTime: bt, meta: {err: o.err ?? null,
     preTokenBalances: [{accountIndex: 1, mint, owner: o.srcOwner ?? wallet, uiTokenAmount: {amount: '5000000000'}}, {accountIndex: 2, mint, owner: w.st.treasury, uiTokenAmount: {amount: '0'}}],

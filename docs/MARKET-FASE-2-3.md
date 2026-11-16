@@ -17,7 +17,7 @@ Preço sempre em unidades brutas (`price_raw`, texto) + `amount_display` calcula
 ## Instalação e teste local
 ```
 cd market-api && npm install
-npm test                       # 27 testes (RPC simulado; Node 22+)
+npm test                       # 30 testes (RPC simulado; Node 22+)
 npx wrangler d1 create aisg-market      # cole o database_id no wrangler.toml
 npx wrangler d1 migrations apply aisg-market --remote
 npx wrangler secret put SESSION_SECRET  # e SOLANA_RPC_URL, SOLANA_RPC_FALLBACK_URL
@@ -42,3 +42,10 @@ Nunca faça compra real na mainnet sem sua autorização.
 - A suíte comprova a lógica; a garantia contra corrida em produção vem das restrições UNIQUE do D1, não do simulador.
 - Falta: UI do marketplace (Fase 4), integração por jogo (Fase 6, cada jogo precisa de um adaptador; Gridbreakers guarda tudo no navegador), painel admin (Fase 7), reconciliação por cron de pedidos pendentes.
 - Pendências suas: mint, tesouraria, RPC, produtos/preços; decisão sobre o P2E vs. "sem recompensas automáticas"; alinhar `docs/TOKENOMICS.md` (fala de governança/staking).
+
+## Atualização (decisões do dono)
+- **Token do marketplace = $ASG** (pump.fun). O play-to-earn **não está autorizado**; quando for, pagará em um token separado por jogo e não passa pelo marketplace.
+- Mint e tesouraria já estão em `wrangler.toml` (valores públicos). Atenção: são da **mainnet**; para testar na devnet use um mint de teste. A API revalida o mint on-chain (decimais, programa, extensões).
+- **O mint do $ASG é Token-2022** (extensões `metadataPointer` e `tokenMetadata`, vistas no Solscan). Por isso `ALLOW_TOKEN_2022 = "1"`. Extensões que alteram valor/poder (taxa, hook, delegado permanente, pausa etc.) continuam bloqueadas, e testes cobrem os dois cenários.
+- A tesouraria precisa ter a **conta de token do $ASG** criada (Token-2022) antes da primeira compra; senão a API responde `treasury_token_account_missing`.
+- `scripts/check-dev-cap.mjs`: confere, só leitura, se a carteira do dev tem no máximo 3% do supply (limite: só enxerga a carteira informada, não outras que o dev controle).

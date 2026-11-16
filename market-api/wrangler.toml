@@ -10,13 +10,13 @@ migrations_dir = "migrations"
 
 [vars]
 # Valores NÃO secretos. Em produção use "mainnet-beta".
-SOLANA_NETWORK = "devnet"
+SOLANA_NETWORK = "devnet"   # mint/tesouraria abaixo são da MAINNET: ao testar em devnet use um mint de teste; em produção troque para "mainnet-beta"
 # Preencher (nada é inventado aqui): mint do token e carteira da tesouraria.
-AI_STUDIO_TOKEN_MINT = ""
-AI_STUDIO_TREASURY_WALLET = ""
+AI_STUDIO_TOKEN_MINT = "2t9TvrU2LF45xLGPZ9aTVzmkYg2kcdkcyvnUd18kpump"   # $ASG (pump.fun) - confira no Solscan; a API revalida on-chain
+AI_STUDIO_TREASURY_WALLET = "6iMA7tJW1WfoByGDbausikU7QunvzfL4YEzNeq6ZckUa"
 ALLOW_ORIGIN = "https://aistudiosgames.vercel.app"
 ORDER_TTL_SEC = "900"
 # Token-2022 só com "1" e depois de auditar o mint (extensões de taxa/hook são sempre rejeitadas)
-ALLOW_TOKEN_2022 = "0"
+ALLOW_TOKEN_2022 = "1"   # o mint do $ASG usa Token-2022 (metadataPointer + tokenMetadata); outras extensões perigosas seguem bloqueadas
 
 # Segredos (NÃO colocar aqui): wrangler secret put SESSION_SECRET / ADMIN_KEY / SOLANA_RPC_URL / SOLANA_RPC_FALLBACK_URL
