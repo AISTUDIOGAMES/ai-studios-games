@@ -19,7 +19,7 @@
 #bf-controls-slot .battle-command-panel{padding:5px!important;border:1px solid #8d7855!important;border-radius:9px!important;background:#0b111bd9!important;box-shadow:0 4px 12px #0009!important;backdrop-filter:blur(5px)!important}
 #bf-controls-slot .side{grid-template-columns:repeat(2,30px)!important;justify-content:center!important;width:100%!important;gap:4px!important}
 #bf-controls-slot .side button{width:30px!important;min-width:30px!important;height:30px!important;min-height:30px!important}
-@media(max-width:700px){.owl-map-heading{align-items:flex-start;flex-direction:column}.owl-map-progress{flex-basis:auto;width:100%;box-sizing:border-box}.owl-map-frame{height:72vh;min-height:440px}.owl-map-art{width:760px;min-width:760px}.owl-map-region{max-width:28%}.owl-map-region b{font-size:9px}.owl-map-foot{flex-direction:column}.owl-map-stage{width:17px;height:17px;font-size:7px}.owl-map-stage.is-current{width:25px;height:25px}
+@media(max-width:700px){.owl-map-heading{align-items:flex-start;flex-direction:column}.owl-map-progress{flex-basis:auto;width:100%;box-sizing:border-box}.owl-map-frame{height:72vh;min-height:440px}.owl-map-art{width:100%;min-width:0}.owl-map-region{max-width:28%}.owl-map-region b{font-size:9px}.owl-map-foot{flex-direction:column}.owl-map-stage{width:17px;height:17px;font-size:7px}.owl-map-stage.is-current{width:25px;height:25px}
  #bf-menu-slot{width:calc(100% - 10px)!important;max-width:calc(100% - 10px)!important;bottom:max(5px,env(safe-area-inset-bottom))!important}
  #bf-menu-slot #nav{gap:3px!important;padding:4px!important;border-radius:9px}
  #bf-menu-slot #nav button{height:35px!important;padding:3px 1px!important;font-size:0!important;min-width:0!important}

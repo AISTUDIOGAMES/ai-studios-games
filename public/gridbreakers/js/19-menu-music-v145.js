@@ -27,6 +27,8 @@
  function sync(){
   const wanted=activeTrack();
   if(!enabled)return;
+  // F3.1: em batalha quem toca e o 03-soundtrack-engine. Aqui a trilha de menu pausa.
+  if(typeof view!=='undefined'&&view==='battle'){Object.values(players).forEach(a=>a.pause());current='';return}
   if(wanted==='summon'&&window.__AWO_GACHA_ROLLING){players.summon.pause();current='';return}
   if(wanted===current&&!players[wanted].paused)return;
   Object.entries(players).forEach(([k,a])=>{if(k!==wanted){a.pause();a.currentTime=0}});
@@ -53,6 +55,8 @@
  document.addEventListener('pointerdown',unlock,{once:false,passive:true});
  document.addEventListener('keydown',unlock,{once:false});
  document.addEventListener('click',()=>setTimeout(sync,100),true);
+ // F3.1: a batalha e do 03; ao voltar dela, retoma a trilha de menu.
+ if(typeof draw==='function'){const _draw=draw;draw=function(){const out=_draw.apply(this,arguments);if(view!=='battle')sync();return out}}
  const nav=document.getElementById('nav');
  if(nav)new MutationObserver(()=>sync()).observe(nav,{subtree:true,attributes:true,attributeFilter:['class']});
  document.addEventListener('visibilitychange',()=>{
