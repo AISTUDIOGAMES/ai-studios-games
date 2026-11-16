@@ -66,7 +66,7 @@ const ALL_GAMES: Game[] = [
   },
   {
     id: "gridbreakers",
-    open: false, // change to true to release the play button
+    open: true, // PLAY TEST release: shows the play button and the link (set back to false to hide it again)
     kicker: "02 / IDLE AUTO-BATTLER RPG",
     title: "OWL: GRIDBREAKERS",
     summary:

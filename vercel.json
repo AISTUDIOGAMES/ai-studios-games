@@ -1,25 +1,3 @@
 {
-  "$schema": "https://openapi.vercel.sh/vercel.json",
-  "redirects": [
-    {
-      "source": "/gridbreakers",
-      "destination": "/?soon=gridbreakers",
-      "permanent": false
-    },
-    {
-      "source": "/gridbreakers/",
-      "destination": "/?soon=gridbreakers",
-      "permanent": false
-    },
-    {
-      "source": "/gridbreakers/:path*",
-      "destination": "/?soon=gridbreakers",
-      "permanent": false
-    },
-    {
-      "source": "/rpg.html",
-      "destination": "/?soon=gridbreakers",
-      "permanent": false
-    }
-  ]
+  "$schema": "https://openapi.vercel.sh/vercel.json"
 }
