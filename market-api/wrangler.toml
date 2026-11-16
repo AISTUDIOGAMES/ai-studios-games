@@ -1,0 +1,22 @@
+name = "aisg-market-api"
+main = "src/index.js"
+compatibility_date = "2024-09-01"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "aisg-market"
+database_id = "PREENCHER_COM_O_ID_DO_wrangler_d1_create"
+migrations_dir = "migrations"
+
+[vars]
+# Valores NÃO secretos. Em produção use "mainnet-beta".
+SOLANA_NETWORK = "devnet"
+# Preencher (nada é inventado aqui): mint do token e carteira da tesouraria.
+AI_STUDIO_TOKEN_MINT = ""
+AI_STUDIO_TREASURY_WALLET = ""
+ALLOW_ORIGIN = "https://aistudiosgames.vercel.app"
+ORDER_TTL_SEC = "900"
+# Token-2022 só com "1" e depois de auditar o mint (extensões de taxa/hook são sempre rejeitadas)
+ALLOW_TOKEN_2022 = "0"
+
+# Segredos (NÃO colocar aqui): wrangler secret put SESSION_SECRET / ADMIN_KEY / SOLANA_RPC_URL / SOLANA_RPC_FALLBACK_URL
