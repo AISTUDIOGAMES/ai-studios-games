@@ -372,3 +372,8 @@ html[data-theme="dark"] body::before { opacity: .22; }
 /* Carousel keeps its original artwork and text colours in dark mode. */
 html[data-theme="dark"] .sp-viewport { filter: invert(1) hue-rotate(180deg); }
 html[data-theme="dark"] .sp-viewport img { filter: none !important; }
+
+/* v0.3.5: SVG flags (emoji flags do not render on Windows) */
+.language-switch button[data-language] { width: 34px; height: 28px; }
+.language-switch .flag { display: block; width: 22px; height: 15px; border-radius: 2px; box-shadow: 0 0 0 1px rgba(64,52,38,.28); }
+html[data-theme="dark"] .language-switch .flag { filter: invert(1) hue-rotate(180deg); }

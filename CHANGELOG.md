@@ -221,3 +221,6 @@ Primeira versao estavel do cliente e **base de todas as proximas versoes**.
 
 ## 0.3.4
 - Logos sem circulos; slide 3 com o mesmo fundo do slide 7; botao MODO ESCURO/CLARO ao lado dos idiomas; Discord e Telegram adicionados.
+
+## 0.3.5
+- TikTok adicionado aos links; bandeiras SVG (EUA=EN, Espanha=ES, Brasil=PT-BR).

@@ -6,6 +6,7 @@ export const CONTACT_EMAIL = "aistudioowl@gmail.com";
 export const SOCIALS: { id: string; label: string; url: string }[] = [
   { id: "x", label: "X", url: "https://x.com/aistudioowl" },
   { id: "youtube", label: "YOUTUBE", url: "https://www.youtube.com/@aistudioowl" },
+  { id: "tiktok", label: "TIKTOK", url: "https://www.tiktok.com/@aistudioowl" },
   { id: "discord", label: "DISCORD", url: "https://discord.gg/5wQXZqzpE" },
   { id: "telegram", label: "TELEGRAM", url: "https://t.me/aistudioowl" },
 ];
