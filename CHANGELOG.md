@@ -1,6 +1,48 @@
-# Changelog
+# Changelog — AI STUDIO OWL
 
-Formato baseado em [Keep a Changelog](https://keepachangelog.com/) e versionamento [SemVer](https://semver.org/lang/pt-BR/).
+## [0.3.0] - 2026-11-18
+
+### Visual identity — Desert Marble
+- Adopted the user-provided AI STUDIO OWL crest and panoramic brand banner as the primary brand artwork.
+- Replaced the previous cool neon palette across the main website with a desert-marble palette: parchment, ivory, limestone, sand, aged bronze and muted gold.
+- Retained cyan and violet only as small signature details in the supplied owl artwork.
+- Updated typography to an editorial serif display face with a clean sans-serif interface.
+- Restyled navigation, buttons, cards, categories, $OWL teaser, forms, modals, footer and carousel controls for the warm light theme.
+- Updated browser theme color to match the new parchment palette.
+- Kept game-specific art and external service dependencies intact.
+
+### Assets
+- Replaced the main brand badge, full logo, favicon, Open Graph banner and social preview artwork using the supplied images.
+- Added `brand-desert-banner.webp` and `owl-emblem-desert.webp`.
+
+### Validation
+- Source-level review completed. Production build and browser/device visual QA still need to be run after installing dependencies.
+
+### Deploy
+- Added a PowerShell deployment script for Vercel Preview and Production, with clean dependency installation, local build verification and explicit production confirmation.
+- Added explicit Vite build/output configuration and a `.vercelignore` that excludes local dependencies and secrets.
+
+---
+
+## [0.2.0] — 2026-11-18
+### Added
+- Introduced the AI STUDIO OWL identity and a new cyber-owl visual mark.
+- Added a multi-niche AI discovery section for games, short-form series, AI videos and memes, virtual influencers, crypto/blockchain, and AI tools.
+- Added Portuguese (Brazil) and Spanish language controls; English remains the default on a fresh visit.
+- Added the future $OWL launch teaser with `CA: COMING SOON`; no contract or market data is published.
+
+### Changed
+- Updated the primary site URL, official X and YouTube links, SEO and social preview images.
+- Rebranded the main site, footer and trailer landing page to AI STUDIO OWL.
+- Updated the Bomber.Idle UI to remove visible references to the previous studio token while preserving the game's own currency and features.
+
+### Preserved
+- Existing games, lore, comic, wallet connection, game assets, and current integrations.
+- Existing Slither.Idle API endpoint; it was not changed because a replacement endpoint was not supplied.
+
+---
+
+---
 
 ## [Não lançado] - Bombers Overhaul 2.0
 Cada operador agora é uma classe de combate com habilidades, IA e visual próprios, e o elenco passa de 6 para **8 BOMBERS**. Detalhes, parâmetros e limites em [docs/BOMBERS-2.0.md](docs/BOMBERS-2.0.md).
@@ -73,7 +115,7 @@ Revisão geral: correções, testes e documentação. Veja os detalhes e o que a
 - **Baús com HP** por raridade: Comum 10, Raro 20, Épico 40, Mítico 80, Lendário 160, Super lendário 320. Os operadores agora atacam os baús (bomba ou golpe corpo a corpo); o dano fica acumulado, barra de vida aparece ao ser atingido e quem dá o golpe final leva a recompensa.
 - Dano da bomba = 8 + 2 x poder + 0,4 x (nível - 1). Jax golpeia o baú com 40% desse dano, gastando 0,3 de stamina.
 - **Enviar todos / Recolher todos** e botão Enviar/Recolher por operador (máximo 15 trabalhando).
-- **Alojamentos**: Casulo (150.000, 3 vagas, 15/min), Módulo (600.000, 5 vagas, 30/min); Torre (8 vagas, 60/min) vendida em $ASG, em breve. Fora de alojamento a reserva recupera 6/min. Os mais raros ocupam as melhores vagas.
+- **Alojamentos**: Casulo (150.000, 3 vagas, 15/min), Módulo (600.000, 5 vagas, 30/min); Torre (8 vagas, 60/min) reservada para uma atualização futura. Fora de alojamento a reserva recupera 6/min. Os mais raros ocupam as melhores vagas.
 - **Droide Zelador** (1.000.000 $BOMBERSI no demo): recolhe quem cai abaixo de 15% de stamina e devolve ao trabalho quem chega a 80%.
 ### Alterado
 - **Operadores maiores em campo** (1,5x), com barras de stamina e efeitos reposicionados.
@@ -104,7 +146,7 @@ Revisão geral: correções, testes e documentação. Veja os detalhes e o que a
 
 ## [1.4.0] - 2026-10-15
 ### Alterado
-- Identidade propria: "Herois" passam a se chamar **Operadores**; moeda do jogo **$BOMBERSI**; token do estudio **$ASG**.
+- Identidade propria: "Herois" passam a se chamar **Operadores**; moeda do jogo **$BOMBERSI**; token antigo do estúdio (descontinuado).
 - Botao de saque agora "Cofre - Sacar" (prepara o Cofre de Recompensas).
 - Textos da interface, README e TOKENOMICS atualizados.
 ### Adicionado
@@ -172,3 +214,10 @@ Primeira versao estavel do cliente e **base de todas as proximas versoes**.
 - 1.2: autenticacao (Sign-In With Solana) e banco de dados
 - 1.3: herois como NFT
 - 2.0: ranking com pool, marketplace e auditoria
+
+## 0.3.3
+- Marca corrigida para AI STUDIO OWL (sem o S); novo banner, brasao sem fundo, moeda $OWL corrigida.
+- Fundo do site (neon) aplicado como camada fixa; carrossel com rotacao automatica; banner do OWL: Gridbreakers.
+
+## 0.3.4
+- Logos sem circulos; slide 3 com o mesmo fundo do slide 7; botao MODO ESCURO/CLARO ao lado dos idiomas; Discord e Telegram adicionados.

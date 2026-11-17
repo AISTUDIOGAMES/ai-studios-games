@@ -10,6 +10,6 @@ migrations_dir = "migrations"
 
 [vars]
 TESTNET = "1"                                   # "1" = rede de teste (faucet ligado). Em produção: "0"
-ALLOW_ORIGIN = "https://mburns2026.github.io,https://aistudiosgames.vercel.app"   # sites autorizados a chamar a API (separe por vírgula)
+ALLOW_ORIGIN = "https://mburns2026.github.io,https://aistudioowl.vercel.app,https://aistudiosowl.vercel.app"   # sites autorizados a chamar a API (separe por vírgula)
 
 # WD_MIN_AGE_H = "24"                          # idade mínima (horas) da conta para sacar; padrão 24. Use "0" só em testes

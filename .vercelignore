@@ -1,0 +1,55 @@
+# Dependency folders and local build output
+node_modules/
+**/node_modules/
+dist/
+client/dist/
+.vercel/
+.git/
+
+# Auxiliary source projects are kept in this ZIP for development,
+# but are not part of the root Vite static website deployment.
+/client/
+/server/
+/programs/
+/slither-idle/
+/migrations/
+/tests/
+/docs/
+/nft/
+/images/
+/sprites/
+/assets/
+/Cargo.toml
+/Anchor.toml
+/bomberidle-faseE.patch
+/LEIA-ME*.txt
+/scripts/publish-bomber.mjs
+/lib/
+
+# Secrets and local environment files
+.env
+.env.*
+!.env.example
+**/.env
+**/.env.*
+**/.dev.vars
+**/.dev.vars.*
+*.pem
+*.key
+*keypair*.json
+*wallet*.json
+
+# Local caches and generated artifacts
+.wrangler/
+.mf/
+.cache/
+.vite/
+coverage/
+__pycache__/
+*.pyc
+*.log
+
+# Archive files should not be sent to the Vercel build
+*.zip
+*.7z
+*.rar

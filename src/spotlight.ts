@@ -23,6 +23,7 @@ interface Slide {
   image?: string;
   poster?: string;
   pos?: string;
+  alt?: string;
   game?: string;
   href?: string;
   cta: string;
@@ -30,13 +31,25 @@ interface Slide {
 
 const SLIDES: Slide[] = [
   {
+    tag: "WELCOME TO AI STUDIO OWL",
+    nav: "AI UNIVERSE",
+    kicker: "THE UNIVERSE OF AI",
+    title: "AI STUDIO OWL",
+    text: "Games, short-form series, AI videos, virtual creators, crypto and AI tools — all part of one expanding platform.",
+    image: "brand-owl-banner.webp",
+    pos: "50% 50%",
+    alt: "AI STUDIO OWL banner: the marble owl guardian in a steampunk city, Play Beyond the Grid",
+    href: "#ai-universe",
+    cta: "EXPLORE NOW",
+  },
+  {
     tag: "NEW RELEASE",
     nav: "OWL: GRIDBREAKERS",
     kicker: "TURN-BASED RPG // BROWSER PROTOTYPE",
     title: "OWL: GRIDBREAKERS",
     text: "Build a squad of three Operators, fight through five sectors and unlock the legendary Aeon and Orion.",
-    image: "banner-owl.webp",
-    pos: "50% 30%",
+    image: "owl-gridbreakers-banner.webp",
+    pos: "50% 50%",
     game: "gridbreakers",
     cta: "PLAY NOW",
   },
@@ -46,7 +59,6 @@ const SLIDES: Slide[] = [
     kicker: "AI WORLD OWL // VOL. 01",
     title: "THE OBSIDIAN SANCTUM",
     text: "The graphic novel series. Episodes 001 to 004. Every choice is a thread.",
-    image: "hero-keyart.webp",
     poster: "hq/p0-cover.webp",
     href: "#comic",
     cta: "READ THE SAGA",
@@ -114,9 +126,9 @@ export function spotlightMarkup(): string {
     const { href, newTab, locked } = linkFor(s);
     const first = i === 0;
     return `
-    <article class="sp-slide${first ? " is-active" : ""}" role="group" aria-roledescription="slide" aria-label="${i + 1} of ${n}"${first ? "" : " inert"}>
+    <article class="sp-slide${first ? " is-active is-brand-banner" : ""}" role="group" aria-roledescription="slide" aria-label="${i + 1} of ${n}"${first ? "" : " inert"}>
       ${s.image
-        ? `<div class="sp-bg"><img src="${esc(asset(s.image))}" alt="" width="1920" height="1080" ${first ? 'fetchpriority="high"' : 'loading="lazy"'} decoding="async"${s.pos ? ` style="object-position:${esc(s.pos)}"` : ""} /></div>`
+        ? `<div class="sp-bg"><img src="${esc(asset(s.image))}" alt="${esc(s.alt ?? "")}" width="${s.alt ? 1584 : 1920}" height="${s.alt ? 672 : 1080}" ${first ? 'fetchpriority="high"' : 'loading="lazy"'} decoding="async"${s.pos ? ` style="object-position:${esc(s.pos)}"` : ""} /></div>`
         : `<div class="sp-bg is-css" aria-hidden="true"><i></i></div>`}
       <div class="sp-shade"></div>
       ${s.poster ? `<div class="sp-poster"><img src="${esc(asset(s.poster))}" alt="${esc(s.title)} cover" loading="lazy" decoding="async" /></div>` : ""}
@@ -138,7 +150,7 @@ export function spotlightMarkup(): string {
 
   return `
       <section class="spotlight" id="spotlight" aria-roledescription="carousel" aria-label="Featured releases and news">
-        <h1 class="sp-sr">AI Studios Games: Play Beyond the Grid</h1>
+        <h1 class="sp-sr">AI STUDIO OWL: The Universe of AI</h1>
         <div class="sp-viewport">
           ${slides}
           <button class="sp-arrow sp-prev" type="button" aria-label="Previous slide">‹</button>
@@ -164,7 +176,7 @@ export function initSpotlight(): void {
   let index = 0;
   let elapsed = 0;
   let last = performance.now();
-  let userPaused = reduceMotion;
+  let userPaused = reduceMotion; // autoplay on (respects reduced-motion)
   let hovering = false;
   let focused = false;
   let inView = true;

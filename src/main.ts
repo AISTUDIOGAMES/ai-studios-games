@@ -6,17 +6,20 @@ import { GAMES, STATUS_LABEL, safeUrl, type Game } from "./games";
 import { NFTS } from "./nfts";
 import { spotlightMarkup, initSpotlight } from "./spotlight";
 import { initNftCards } from "./nftFx";
-import { SITE_URL, SOCIALS, WAITLIST_ENDPOINT, TOKEN_SYMBOL } from "./config";
+import { SITE_URL, CONTACT_EMAIL, SOCIALS, WAITLIST_ENDPOINT, TOKEN_SYMBOL } from "./config";
 import { FAQ, NEWS } from "./content";
 import { initAnalytics, track } from "./analytics";
 import { CHARACTERS, GROUP_LABEL, PROLOGUE, UNIVERSE, type Character } from "./lore";
 import { initComicReader } from "./comicReader";
 import { COMIC_VOLUME, COMIC_STATUS_LABEL, NEXT_VOLUME, type ComicEpisode } from "./comic";
+import { initLanguageSwitcher } from "./i18n";
+import { initThemeToggle } from "./theme";
+import "./desert-theme.css";
 
 /** Images live in /public/images and respect the Vite base path. */
 const img = (file: string) => `${import.meta.env.BASE_URL}images/${file}`;
 
-const logo = `<img class="brand-mark" src="${img("logo-badge.webp")}" alt="" width="64" height="64" decoding="async" />`;
+const logo = `<img class="brand-mark" src="${img("logo-badge.webp")}" alt="AI STUDIO OWL emblem" width="64" height="64" decoding="async" />`;
 
 
 const slitherArt = `
@@ -151,6 +154,7 @@ const liveSocials = SOCIALS.filter((s) => safeUrl(s.url));
 const waitlistOn = !!safeUrl(WAITLIST_ENDPOINT);
 const officialLinks = [
   { label: "WEBSITE", url: SITE_URL },
+  { label: "EMAIL", url: `mailto:${CONTACT_EMAIL}` },
   ...GAMES.filter((g) => safeUrl(g.url)).map((g) => ({ label: g.title, url: g.url.startsWith("/") ? SITE_URL + g.url : g.url })),
   ...liveSocials.map((s) => ({ label: s.label, url: s.url })),
 ];
@@ -219,23 +223,23 @@ const logSection = `
 
 const joinSection = `
       <section class="join-section" id="join">
-        <div class="section-heading"><div><div class="eyebrow"><span class="eyebrow-line"></span> THE COMMUNITY</div><h2>JOIN <span>THE GRID</span></h2></div><div class="section-note">NEW GAMES. NEW DROPS.<br/>BE THERE FIRST.</div></div>
+        <div class="section-heading"><div><div class="eyebrow"><span class="eyebrow-line"></span> THE COMMUNITY</div><h2>JOIN <span>THE OWL UNIVERSE</span></h2></div><div class="section-note">NEW IDEAS. NEW WORLDS.<br/>BE PART OF WHAT'S NEXT.</div></div>
         <div class="join">
           <div class="join-main">
-            <h3>${waitlistOn ? "GET THE NEXT DROP" : "CHANNELS OPENING SOON"}</h3>
-            <p>${waitlistOn ? "Leave your email and we will tell you when a new game or experiment goes live. Game updates only." : "The community channels and the waitlist are being set up. Until then, the games below are the best way to follow along."}</p>
+            <h3>${waitlistOn ? "GET THE NEXT UPDATE" : "FOLLOW AI STUDIO OWL"}</h3>
+            <p>${waitlistOn ? "Leave your email and we will share new AI projects, creative experiments and platform updates." : "Follow our official channels for new AI projects, experiments, creator culture, games and platform announcements."}</p>
             ${waitlistOn ? `<form class="waitlist" id="waitlistForm" novalidate>
               <label class="sr-only" for="wlEmail">Email address</label>
               <input id="wlEmail" name="email" type="email" placeholder="you@email.com" autocomplete="email" required />
               <input class="hp" name="_gotcha" tabindex="-1" autocomplete="off" aria-hidden="true" />
               <button class="button button-primary" type="submit">JOIN WAITLIST <span>↗</span></button>
-              <p class="wl-note" id="wlNote" role="status" aria-live="polite">We only use your email for AI Studios Games updates and never share it.</p>
+              <p class="wl-note" id="wlNote" role="status" aria-live="polite">We only use your email for AI STUDIO OWL updates and never share it.</p>
             </form>` : ""}
             ${liveSocials.length ? `<div class="socials">${liveSocials.map((s) => `<a class="button button-ghost" href="${esc(safeUrl(s.url)!)}" target="_blank" rel="noopener noreferrer" data-social="${esc(s.id)}">${esc(s.label)} <span>↗</span></a>`).join("")}</div>` : ""}
           </div>
           <aside class="official">
             <h4>OFFICIAL LINKS</h4>
-            <ul>${officialLinks.map((l) => `<li><span>${esc(l.label)}</span><a href="${esc(l.url)}" target="_blank" rel="noopener noreferrer">${esc(l.url.replace(/^https:\/\//, ""))}</a></li>`).join("")}</ul>
+            <ul>${officialLinks.map((l) => `<li><span>${esc(l.label)}</span><a href="${esc(l.url)}" target="_blank" rel="noopener noreferrer">${esc(l.url.replace(/^https:\/\//, "").replace(/^mailto:/, ""))}</a></li>`).join("")}</ul>
             <p class="safety"><b>STAY SAFE.</b> We will never ask for your seed phrase or private key, and we will never DM you first to connect a wallet. If a link is not listed here, do not trust it.</p>
           </aside>
         </div>
@@ -251,21 +255,40 @@ const faqSection = `
 
 document.querySelector<HTMLDivElement>("#app")!.innerHTML = `
   <div class="site-shell">
-    <div class="announcement"><span class="pulse"></span> GENESIS BUILD 001 <span class="announcement-divider">/</span> THE ARCADE IS ONLINE ${announceLink}</div>
+    <div class="announcement"><span class="pulse"></span> THE UNIVERSE OF AI <span class="announcement-divider">/</span> GAMES, CREATORS, CULTURE & TECHNOLOGY</div>
     <header class="topbar">
-      <a class="brand" href="#top" aria-label="AI Studios Games home">
+      <a class="brand" href="#top" aria-label="AI STUDIO OWL home">
         ${logo}
-        <span class="brand-type">AI STUDIOS <b>GAMES</b><small>PLAY BEYOND THE GRID</small></span>
+        <span class="brand-type">AI STUDIO <b>OWL</b><small>THE UNIVERSE OF AI</small></span>
       </a>
       <nav class="nav-links" aria-label="Main navigation">
-        <a href="#trailer">TRAILER</a><a href="#comic">COMIC</a><a href="#lore">LORE</a><a href="#arcade">GAMES</a><a href="#nfts">NFTS</a><a href="#about">THE STUDIO</a><a href="#token">${TOKEN_SYMBOL}</a><a href="#roadmap">ROADMAP</a><a href="#join">JOIN</a>
+        <a href="#ai-universe">EXPLORE</a><a href="#games">GAMES</a><a href="#lore">AI WORLD</a><a href="#trailer">VIDEO</a><a href="#about">STUDIO</a><a href="#token">${TOKEN_SYMBOL}</a><a href="#join">JOIN</a>
       </nav>
+      <div class="language-switch" role="group" aria-label="Select language">
+        <button type="button" data-language="en" aria-label="English" title="English">EN</button>
+        <button type="button" data-language="pt-BR" aria-label="Português brasileiro" title="Português">🇧🇷</button>
+        <button type="button" data-language="es" aria-label="Español" title="Español">🇪🇸</button>
+        <button type="button" class="theme-toggle" id="themeToggle" aria-label="Toggle dark / light mode" title="Toggle dark / light mode" aria-pressed="false"><span class="tt-ico" aria-hidden="true">◐</span><span class="tt-dark">DARK MODE</span><span class="tt-light">LIGHT MODE</span></button>
+      </div>
       <button class="wallet-btn" id="walletBtn"><span class="wallet-dot"></span><span id="walletLabel">CONNECT WALLET</span></button>
       <button class="menu-toggle" id="menuToggle" aria-label="Toggle navigation">☰</button>
     </header>
 
     <main id="top">
       ${spotlightMarkup()}
+
+      <section class="ai-categories section" id="ai-universe">
+        <div class="section-heading"><div><div class="eyebrow"><span class="eyebrow-line"></span> EXPLORE THE AI UNIVERSE</div><h2>ONE PLATFORM. <span>MANY WORLDS.</span></h2></div><div class="section-note">DISCOVER WHAT'S NEXT<br/>ACROSS THE AI ECOSYSTEM</div></div>
+        <p class="ai-intro">Explore the growing universe of AI STUDIO OWL — from games and short-form storytelling to virtual creators, internet culture, crypto and useful AI tools.</p>
+        <div class="category-grid">
+          <a class="category-card is-live" href="#games"><span class="category-icon">🎮</span><strong>GAMES</strong><p>PLAYABLE WORLDS, CHARACTERS AND EXPERIMENTS.</p><em>EXPLORE GAMES ↗</em></a>
+          <article class="category-card"><span class="category-icon">📱</span><strong>TIKTOK SERIES</strong><p>SHORT EPISODES, ORIGINAL STORIES AND VERTICAL ENTERTAINMENT.</p><em>COMING SOON</em></article>
+          <article class="category-card"><span class="category-icon">🎬</span><strong>AI VIDEOS &amp; MEMES</strong><p>GENERATIVE CLIPS, INTERNET HUMOR AND CREATIVE EXPERIMENTS.</p><em>COMING SOON</em></article>
+          <article class="category-card"><span class="category-icon">✨</span><strong>AI INFLUENCERS</strong><p>VIRTUAL PERSONALITIES, DIGITAL AVATARS AND CREATOR WORLDS.</p><em>COMING SOON</em></article>
+          <article class="category-card"><span class="category-icon">₿</span><strong>CRYPTO &amp; BLOCKCHAIN</strong><p>AI, DIGITAL ASSETS AND EMERGING BLOCKCHAIN CULTURE.</p><em>COMING SOON</em></article>
+          <article class="category-card"><span class="category-icon">🧠</span><strong>AI TOOLS &amp; TECHNOLOGY</strong><p>DISCOVER USEFUL SYSTEMS, CREATIVE WORKFLOWS AND NEW AI TECHNOLOGY.</p><em>COMING SOON</em></article>
+        </div>
+      </section>
 
       ${trailerSection}
 
@@ -304,18 +327,18 @@ document.querySelector<HTMLDivElement>("#app")!.innerHTML = `
 ${logSection}
 ${tokenSection}
 
-      <section class="manifesto" id="about"><div class="manifesto-mark">${logo}</div><div><div class="eyebrow"><span class="eyebrow-line"></span> OUR DIRECTIVE</div><h2>GAMES FIRST.<br/><span>LIMITS LAST.</span></h2><p>AI Studios Games is an independent playground for strange ideas, fast experiments, and browser-native worlds. We believe Web3 should add something meaningful to the game — never get in the way of playing it.</p></div><figure class="manifesto-coin"><img src="${img("coin.webp")}" alt="AI Studios Games bronze emblem coin" loading="lazy" decoding="async" width="170" height="170" /><figcaption>BUILT FOR THE<br/><b>NEXT LEVEL</b></figcaption></figure></section>
+      <section class="manifesto" id="about"><div class="manifesto-mark">${logo}</div><div><div class="eyebrow"><span class="eyebrow-line"></span> OUR DIRECTIVE</div><h2>IDEAS FIRST.<br/><span>LIMITS LAST.</span></h2><p>AI STUDIO OWL is an independent platform exploring the universe of artificial intelligence — games, video, storytelling, virtual creators, internet culture, crypto and useful AI technology. One creative ecosystem, built to keep expanding.</p></div><figure class="manifesto-coin"><img src="${img("logo-badge.webp")}" alt="AI STUDIO OWL cyber owl emblem" loading="lazy" decoding="async" width="170" height="170" /><figcaption>THE UNIVERSE<br/><b>OF AI</b></figcaption></figure></section>
 
       <section class="roadmap-section" id="roadmap"><div class="section-heading"><div><div class="eyebrow"><span class="eyebrow-line"></span> THE MISSION LOG</div><h2>FROM PIXELS <span>TO PROTOCOL</span></h2></div><div class="section-note">A WORK IN PROGRESS.<br/>A WORLD IN MOTION.</div></div><div class="roadmap">
-        <div class="roadmap-item active"><span class="roadmap-num">01</span><div><span class="roadmap-state">IN PROGRESS</span><h3>THE ARCADE</h3><p>Brand, website, first playable prototype, and Slither.Idle and Bomber.Idle linked as experiments.</p></div><span class="roadmap-icon">↗</span></div>
-        <div class="roadmap-item"><span class="roadmap-num">02</span><div><span class="roadmap-state">UP NEXT</span><h3>WALLET CONNECT</h3><p>Optional Solana wallet connection and Devnet experiments.</p></div><span class="roadmap-icon">◎</span></div>
-        <div class="roadmap-item"><span class="roadmap-num">03</span><div><span class="roadmap-state">ON THE HORIZON</span><h3>ON-CHAIN WORLDS</h3><p>Explore meaningful ownership, achievements, and game integrations.</p></div><span class="roadmap-icon">◇</span></div>
+        <div class="roadmap-item active"><span class="roadmap-num">01</span><div><span class="roadmap-state">IN PROGRESS</span><h3>THE ARCADE</h3><p>AI STUDIO OWL brand refresh, platform expansion and new AI-powered experiences across multiple niches.</p></div><span class="roadmap-icon">↗</span></div>
+        <div class="roadmap-item"><span class="roadmap-num">02</span><div><span class="roadmap-state">UP NEXT</span><h3>WALLET CONNECT</h3><p>Explore responsible integrations across AI, creative tools and emerging technologies.</p></div><span class="roadmap-icon">◎</span></div>
+        <div class="roadmap-item"><span class="roadmap-num">03</span><div><span class="roadmap-state">ON THE HORIZON</span><h3>ON-CHAIN WORLDS</h3><p>Expand the ecosystem with new categories, creator experiences and community projects.</p></div><span class="roadmap-icon">◇</span></div>
       </div></section>
 ${joinSection}
 ${faqSection}
     </main>
-    <p class="legal-note">AI STUDIOS GAMES MAKES BROWSER GAMES. NOTHING ON THIS SITE IS FINANCIAL ADVICE OR A PROMISE OF VALUE. DIGITAL ITEMS CAN LOSE ALL VALUE. NFT CARDS ARE PREVIEWS AND MINTING IS NOT LIVE. THE COMMUNITY TOKEN IS A VOLATILE MEMECOIN: DO YOUR OWN RESEARCH. NEVER SHARE YOUR SEED PHRASE.</p>
-    <footer><a class="brand footer-brand" href="#top">${logo}<span class="brand-type">AI STUDIOS <b>GAMES</b><small>PLAY BEYOND THE GRID</small></span></a><span>INDEPENDENT WORLDS. INFINITE CONTINUES.</span>${liveSocials.length ? `<nav class="footer-socials" aria-label="Community links">${liveSocials.map((s) => `<a href="${esc(safeUrl(s.url)!)}" target="_blank" rel="noopener noreferrer" data-social="${esc(s.id)}">${esc(s.label)} ↗</a>`).join("")}</nav>` : ""}<span>© 2026 AI STUDIOS GAMES</span></footer>
+    <p class="legal-note">AI STUDIO OWL IS A DIGITAL PLATFORM COVERING ARTIFICIAL INTELLIGENCE, ENTERTAINMENT, GAMES, CREATOR CULTURE AND EMERGING TECHNOLOGY. EXPERIMENTAL FEATURES MAY CHANGE. NEVER SHARE YOUR SEED PHRASE OR PRIVATE KEYS.</p>
+    <footer><a class="brand footer-brand" href="#top">${logo}<span class="brand-type">AI STUDIO <b>OWL</b><small>THE UNIVERSE OF AI</small></span></a><span>ONE PLATFORM. MANY WORLDS.</span>${liveSocials.length ? `<nav class="footer-socials" aria-label="Community links">${liveSocials.map((s) => `<a href="${esc(safeUrl(s.url)!)}" target="_blank" rel="noopener noreferrer" data-social="${esc(s.id)}">${esc(s.label)} ↗</a>`).join("")}</nav>` : ""}<span>© 2026 AI STUDIO OWL</span></footer>
     <div class="toast" id="toast" role="status" aria-live="polite"></div>
   </div>
 `;
@@ -328,6 +351,8 @@ initNftCards();
 initComicReader(img);
 initAnalytics();
 initGrowth();
+initLanguageSwitcher();
+initThemeToggle();
 
 function initGrowth(): void {
   document.addEventListener("click", (e) => {
@@ -348,7 +373,7 @@ async function shareGame(id: string): Promise<void> {
   const game = GAMES.find((g) => g.id === id);
   if (!game) return;
   const url = `${SITE_URL}/#game-${id}`;
-  const text = `${game.title} — play it in your browser on AI Studios Games`;
+  const text = `${game.title} — play it in your browser on AI STUDIO OWL`;
   track("Share", { game: id });
   if (navigator.share) {
     try { await navigator.share({ title: game.title, text, url }); return; }
@@ -373,7 +398,7 @@ function initWaitlist(): void {
     button.disabled = true;
     say("Sending…", "");
     try {
-      const res = await fetch(endpoint, { method: "POST", headers: { "Content-Type": "application/json", Accept: "application/json" }, body: JSON.stringify({ email, source: "aistudiosgames-site" }) });
+      const res = await fetch(endpoint, { method: "POST", headers: { "Content-Type": "application/json", Accept: "application/json" }, body: JSON.stringify({ email, source: "aistudioowl-site" }) });
       if (!res.ok) throw new Error(String(res.status));
       form.reset();
       say("You are on the list. See you on the Grid.", "ok");

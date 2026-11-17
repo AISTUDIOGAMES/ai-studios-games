@@ -1,0 +1,33 @@
+AI STUDIO OWL — RELEASE MANIFEST
+Site version: 0.3.1
+Visual identity: Desert Marble
+Deployment target: Vercel (root Vite/TypeScript website)
+
+Changes since v0.3.0:
+- Dedicated horizontal logo-lockup.webp derived from the approved Desert Marble brand banner.
+- Header and footer now use the horizontal lockup; the square crest remains for compact brand placements.
+- Official Desert Marble panoramic banner remains active on initial page load; carousel changes remain available by manual controls and autoplay can be started by the visitor.
+- Hero/banner sizing now follows its panoramic aspect ratio; progress controls sit below the image so the motto is not obscured.
+- Responsive sizing updated for desktop, tablet and mobile.
+- Fixed .vercelignore so root-only source folders are anchored and public/images, public/gridbreakers/assets and nested media/NFT asset folders are not excluded from Vercel CLI uploads.
+
+Included release assets:
+- DEPLOY-VERCEL.ps1: PowerShell deployment helper (Preview by default; Production requires confirmation)
+- README-DEPLOY-VERCEL.md: setup and deployment instructions
+- vercel.json: npm ci / npm run build / dist configuration
+- .vercelignore: excludes dependencies, secrets and non-root auxiliary source from CLI upload
+- docs/releases/AI_STUDIO_OWL_SITE_CONTEXT_MASTER_v0.3.1.pdf: consolidated site documentation and v0.3.1 hotfix notes
+- public/images/logo-lockup.webp: horizontal crop of supplied official branding artwork
+- public/images/brand-desert-banner.webp and related media assets
+
+Validation status:
+- ZIP structure and required visual assets verified.
+- .vercelignore patterns reviewed and anchored to root-only auxiliary folders; static public asset folders remain included.
+- TypeScript syntax transpilation and code-reference checks pending final local validation.
+- npm ci could not be completed in the preparation container because package registry access is unavailable.
+- Run npm ci and npm run build using DEPLOY-VERCEL.ps1 before deployment; the script stops on build errors.
+- No Preview or Production deployment was performed by this preparation.
+
+Important scope:
+- The script deploys the root static Vite/TypeScript website.
+- The Express app in server/ and the Slither.Idle Cloudflare Worker require separate hosting/deployment.

@@ -1108,7 +1108,7 @@
    b1.onclick = () => buy(1);
 @@ -444,7 +470,7 @@
        const own = el("b"), occ = el("b");
-       const buy = el("button", "", L.price === null ? "Em breve · $ASG" : `Comprar · ${fmt(L.price)} $BOMBERSI`);
+       const buy = el("button", "", L.price === null ? "Em breve" : `Comprar · ${fmt(L.price)} $BOMBERSI`);
        buy.disabled = L.price === null;
 -      buy.onclick = () => { const e = buyLodging(kind); toast(e ?? `${L.label} comprado`); };
 +      buy.onclick = () => { const e = buyLodging(kind); audio.play(e ? "uiError" : "upgrade"); toast(e ?? `${L.label} comprado`); };
