@@ -455,7 +455,7 @@ function openCapsules() {
       (line.firstChild as HTMLElement).style.color = RARITIES[r].css;
       body.append(line);
     });
-    body.append(el("p", "muted small", `Preço: ${fmt(CAPSULE_PRICE)} $BOMBERSI por cápsula. Limite de ${MAX_COLLECTION} operadores. A Cápsula Premium ($ASG) chega depois.`));
+    body.append(el("p", "muted small", `Preço: ${fmt(CAPSULE_PRICE)} $BOMBERSI por cápsula. Limite de ${MAX_COLLECTION} operadores. A Cápsula Premium chega em uma atualização futura.`));
   }, () => {
     bal.textContent = `${fmt(store.pending)} $BOMBERSI`;
     b1.disabled = store.pending < CAPSULE_PRICE;
@@ -474,7 +474,7 @@ function openLodging() {
       const card = el("div");
       card.style.cssText = "border:1px solid var(--line2);border-radius:10px;padding:10px;background:var(--card)";
       const own = el("b"), occ = el("b");
-      const buy = el("button", "", L.price === null ? "Em breve · $ASG" : `Comprar · ${fmt(L.price)} $BOMBERSI`);
+      const buy = el("button", "", L.price === null ? "Em breve" : `Comprar · ${fmt(L.price)} $BOMBERSI`);
       buy.disabled = L.price === null;
       buy.onclick = () => { const e = buyLodging(kind); audio.play(e ? "uiError" : "upgrade"); toast(e ?? `${L.label} comprado`); };
       const r1 = kv("Capacidade", `${L.cap} operadores`), r2 = kv("Recuperação", `${Math.round(L.rate * 60)}/min`);
@@ -513,7 +513,7 @@ function openLodging() {
       bbtn.textContent = !store.butler.owned ? `Comprar · ${fmt(BUTLER_PRICE)} $BOMBERSI` : store.butler.on ? "Desligar" : "Ligar";
       bbtn.disabled = !store.butler.owned && store.pending < BUTLER_PRICE;
     });
-    body.append(el("p", "muted small", `Limite de ${MAX_LODGINGS} alojamentos por carteira. A Torre será vendida em $ASG.`));
+    body.append(el("p", "muted small", `Limite de ${MAX_LODGINGS} alojamentos por carteira. A Torre será disponibilizada em uma atualização futura.`));
   }, () => upd.forEach((f) => f()), "lodging", "🏠");
 }
 
@@ -587,7 +587,7 @@ const HUB: Record<string, () => void> = {
       kv("Carteira", wallet ? `${wallet.slice(0, 4)}…${wallet.slice(-4)}` : "não conectada"),
       kv("Rede", "devnet (teste)"),
       kv("Moeda do jogo", "$BOMBERSI"),
-      kv("Token do estúdio", "$ASG"),
+      kv("Token do estúdio", "$OWL — em breve"),
     );
     // intensidade dos efeitos (fumaça, fagulhas, tremor de tela): preferência do aparelho, fora do save do jogo
     const fxRow = el("div", "kv");

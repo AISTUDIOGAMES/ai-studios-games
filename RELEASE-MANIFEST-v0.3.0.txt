@@ -1,0 +1,31 @@
+AI STUDIO OWL — RELEASE MANIFEST
+Site version: 0.3.0
+Visual identity: Desert Marble
+Deployment target: Vercel (root Vite/TypeScript website)
+
+Included release assets:
+- DEPLOY-VERCEL.ps1: PowerShell deployment helper (Preview by default; Production requires confirmation)
+- README-DEPLOY-VERCEL.md: setup and deployment instructions
+- vercel.json: npm ci / npm run build / dist configuration
+- .vercelignore: excludes dependencies, secrets and non-root auxiliary source from CLI upload
+- docs/releases/AI_STUDIO_OWL_SITE_CONTEXT_MASTER_v0.3.0.pdf: consolidated site documentation
+- public/trailer/trailer.mp4: original trailer media
+- public/audio/: platform audio
+- public/models/: 3D model assets
+- public/gridbreakers/assets/: game visuals and audio
+
+Excluded intentionally:
+- node_modules, dist, .vercel, .git
+- local .env files, private keys and wallet keypair JSON files
+
+Validation:
+- ZIP archive integrity checked successfully.
+- `public/` static assets total approximately 96.5 MB; this is close to the current Vercel Hobby static upload limit (100 MB), so a Hobby deployment may require moving large media to external storage/CDN.
+- Required media packages were found in the archive.
+- Production build could not be confirmed in the preparation environment because npm ci timed out and local node_modules was incomplete.
+- DEPLOY-VERCEL.ps1 runs a clean npm ci and npm run build, then stops if either fails.
+- No deployment was performed during package preparation.
+
+Important scope:
+- The script deploys the root static Vite/TypeScript website.
+- The Express app in server/ and the Slither.Idle Cloudflare Worker require separate hosting/deployment.

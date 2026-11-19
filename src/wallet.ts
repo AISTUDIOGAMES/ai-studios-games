@@ -13,7 +13,7 @@ import type { Wallet, WalletAccount } from "@wallet-standard/base";
 const CONNECT = "standard:connect";
 const DISCONNECT = "standard:disconnect";
 const EVENTS = "standard:events";
-const STORAGE_KEY = "asg:lastWallet";
+const STORAGE_KEY = "ai-studio-owl:lastWallet";
 
 type ConnectFeature = { connect(input?: { silent?: boolean }): Promise<{ accounts: readonly WalletAccount[] }> };
 type DisconnectFeature = { disconnect(): Promise<void> };

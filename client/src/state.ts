@@ -29,7 +29,7 @@ export type LodgeKind = "casulo" | "modulo" | "torre";
 export const LODGING: Record<LodgeKind, { label: string; cap: number; rate: number; price: number | null }> = {
   casulo: { label: "Casulo", cap: 3, rate: 0.25, price: 150000 }, // rate = stamina por segundo
   modulo: { label: "Módulo", cap: 5, rate: 0.5, price: 600000 },
-  torre: { label: "Torre", cap: 8, rate: 1, price: null }, // paga em $ASG: em breve
+  torre: { label: "Torre", cap: 8, rate: 1, price: null }, // premium tower feature is not enabled yet
 };
 export const MAX_LODGINGS = 20; // alojamentos por carteira
 export const BUTLER_PRICE = 1000000; // Droide Zelador (demo em $BOMBERSI)
@@ -368,7 +368,7 @@ export function restAll(): number { const n = workingIds.size; workingIds.clear(
 export function buyLodging(kind: LodgeKind): string | null {
   const L = LODGING[kind];
   if (!L) return "Alojamento inválido";
-  if (L.price === null) return "Disponível em breve (pago em $ASG)";
+  if (L.price === null) return "Disponível em breve";
   const total = store.lodging.casulo + store.lodging.modulo + store.lodging.torre;
   if (total >= MAX_LODGINGS) return `Limite de ${MAX_LODGINGS} alojamentos`;
   if (store.pending < L.price) return "$BOMBERSI insuficientes";

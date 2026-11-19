@@ -1,6 +1,6 @@
 import { defineConfig } from "vite";
 
-// "base" = pasta onde o jogo e publicado. Padrao: /bomber-idle/ (site AI Studios Games).
+// "base" = pasta onde o jogo e publicado. Padrao: /bomber-idle/ (site AI STUDIO OWL).
 // No GitHub Pages o workflow de deploy define VITE_BASE=/NOME-DO-REPO/ sozinho; para outro caminho:
 //   VITE_BASE=/outro/ npm run build -w client
 export default defineConfig({

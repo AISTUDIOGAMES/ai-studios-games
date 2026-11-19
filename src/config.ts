@@ -1,40 +1,21 @@
-/**
- * Growth settings: the only file you need to edit to turn community features on.
- * Anything left as "" is simply hidden on the site.
- */
+/** Public configuration for the AI STUDIO OWL platform. */
+export const SITE_URL = "https://aistudiosowl.vercel.app";
+export const CONTACT_EMAIL = "aistudioowl@gmail.com";
 
-/** Public address of the site. Change it to https://aistudiosgames.fun when the domain is live. */
-export const SITE_URL = "https://aistudiosgames.vercel.app";
-
-/** Community links. Fill in the ones you own (https only). Empty ones are not shown. */
+/** Official channels supplied by the project owner. */
 export const SOCIALS: { id: string; label: string; url: string }[] = [
-  { id: "x", label: "X / TWITTER", url: "https://x.com/AiStudioGameOwl" },
-  { id: "youtube", label: "YOUTUBE", url: "https://www.youtube.com/@aistudiogamesowl" },
-  { id: "telegram", label: "TELEGRAM", url: "" },
-  { id: "discord", label: "DISCORD", url: "https://discord.gg/bdCFfhBqq" },
-  { id: "github", label: "GITHUB", url: "" },
+  { id: "x", label: "X", url: "https://x.com/aistudioowl" },
+  { id: "youtube", label: "YOUTUBE", url: "https://www.youtube.com/@aistudioowl" },
+  { id: "discord", label: "DISCORD", url: "https://discord.gg/5wQXZqzpE" },
+  { id: "telegram", label: "TELEGRAM", url: "https://t.me/aistudioowl" },
 ];
 
-/**
- * Waitlist form endpoint (https). Works with any service that accepts a JSON POST with an
- * "email" field, for example a Formspree form: "https://formspree.io/f/xxxxxxx".
- * While empty, the waitlist form is hidden.
- */
+/** Waitlist is intentionally disabled until a real endpoint is configured. */
 export const WAITLIST_ENDPOINT = "";
-
-/**
- * Optional privacy-friendly analytics (Plausible). Put the site domain here, for example
- * "aistudiosgames.vercel.app". Empty = no analytics, nothing is loaded. Do-Not-Track is respected.
- */
+/** Optional privacy-friendly analytics. Empty means disabled. */
 export const ANALYTICS_DOMAIN = "";
 
-/**
- * Token launched on pump.fun (Solana). Edit ONLY this block to update the token section.
- * TOKEN_SYMBOL: confirm the exact ticker shown on your pump.fun page.
- * DEV_BUY_PCT: % of the supply the creator wallet bought at launch (see "Holders" on pump.fun).
- *   Use null to hide the line. Be honest here: holders can check it on-chain.
- */
-export const TOKEN_SYMBOL = "$ASG";
-export const TOKEN_NAME = "AI Studios Games";
-export const TOKEN_CA = "2t9TvrU2LF45xLGPZ9aTVzmkYg2kcdkcyvnUd18kpump";
-export const DEV_BUY_PCT: number | null = null;
+/** Future community token. No address, price, or market data exists yet. */
+export const TOKEN_SYMBOL = "$OWL";
+export const TOKEN_NAME = "AI Studio Owl";
+export const TOKEN_CA = "COMING SOON";

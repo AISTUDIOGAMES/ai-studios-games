@@ -1,0 +1,374 @@
+/* AI STUDIO OWL — Desert Marble visual identity v0.3.0
+   Warm limestone, parchment, sand and aged bronze. Cyan/violet are reserved
+   for the owl's eyes and tiny signature details in brand artwork. */
+@import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@500;600;700;800&family=Manrope:wght@400;500;600;700;800&family=DM+Mono:wght@400;500&display=swap');
+
+:root {
+  color-scheme: light;
+  font-family: 'Manrope', sans-serif;
+  color: #493d2f;
+  background: #eee7d9;
+  --bg: #eee7d9;
+  --panel: #f7f1e6;
+  --panel-raised: #fcf8ef;
+  --line: #d0c1a7;
+  --green: #a67b43;
+  --purple: #81684c;
+  --pink: #b17b5a;
+  --muted: #887963;
+  --ink: #403426;
+  --sand: #e5dac6;
+  --stone: #c8b898;
+  --bronze: #9a6f3e;
+  --marble-shadow: 0 16px 42px rgba(91, 68, 39, .10);
+}
+
+html { background: #eee7d9; }
+body {
+  color: var(--ink);
+  background-color: #eee7d9;
+  background-image:
+    radial-gradient(ellipse at 12% 8%, rgba(255,255,255,.82), transparent 42%),
+    radial-gradient(ellipse at 88% 28%, rgba(205,183,145,.22), transparent 42%),
+    radial-gradient(ellipse at 42% 82%, rgba(255,250,238,.76), transparent 52%),
+    repeating-linear-gradient(126deg, transparent 0 118px, rgba(151,119,76,.035) 120px, transparent 123px 238px),
+    repeating-linear-gradient(22deg, transparent 0 170px, rgba(255,255,255,.22) 172px, transparent 176px 320px);
+  background-attachment: fixed;
+}
+.site-shell { background: rgba(247, 241, 230, .48); }
+a { color: inherit; }
+
+/* Global type: editorial serif titles with clean readable sans-serif UI. */
+h1, h2, h3, h4,
+.section-heading h2, .play-header h2, .manifesto h2,
+.sp-title, .brand-type, .game-info h3, .game-art-title,
+.comic-info h3, .log-item h3, .join-main h3,
+.aso-card-head h3, .token-top strong {
+  font-family: 'Cinzel', Georgia, serif !important;
+  letter-spacing: .02em;
+}
+body, button, input, textarea, select,
+.nav-links a, .button, .announcement, .game-info p,
+.section-note, .official, .legal-note {
+  font-family: 'Manrope', sans-serif;
+}
+
+/* Header, navigation and wordmark. */
+.announcement {
+  color: #f9f3e8;
+  background: linear-gradient(90deg, #806344, #b18a54 52%, #806344);
+  border-bottom: 1px solid #d5bd94;
+  letter-spacing: .16em;
+}
+.pulse, .wallet-dot { background: #f4e8cd; box-shadow: 0 0 9px rgba(255,244,220,.55); }
+.topbar {
+  background: rgba(246, 240, 228, .94);
+  border-bottom: 1px solid #cbbb9f;
+  box-shadow: 0 6px 24px rgba(78, 57, 32, .06);
+  backdrop-filter: blur(14px);
+}
+.brand-mark {
+  object-fit: contain !important;
+  background: #f1eadc !important;
+  border: 1px solid #c7aa7c;
+  border-radius: 50% !important;
+  box-shadow: 0 3px 12px rgba(96, 66, 31, .16) !important;
+  filter: none !important;
+}
+.brand-type { color: #443627; font-weight: 700; }
+.brand-type b { color: #a77a42; }
+.brand-type small { color: #8a765a; font-family: 'DM Mono', monospace; }
+.nav-links a { color: #65543f; }
+.nav-links a:hover, .nav-links a:focus-visible { color: #a4773d; }
+.nav-links a::after { background: #ad844c; }
+.wallet-btn {
+  color: #59452f;
+  background: rgba(174, 135, 79, .09);
+  box-shadow: inset 0 0 0 1px #b99a6b;
+}
+.wallet-btn:hover { color: #342719; background: rgba(174,135,79,.17); box-shadow: inset 0 0 0 1px #9c713b; }
+.wallet-dot { background: #a77a42; box-shadow: 0 0 9px rgba(167,122,66,.35); }
+.menu-toggle { color: #9b713e; }
+.language-switch button { background: #f8f2e8; border-color: #d0bea0; color: #594832; }
+.language-switch button:hover, .language-switch button.is-active { border-color: #a87c43; box-shadow: 0 2px 10px rgba(124,88,45,.13); }
+
+/* Brand carousel: the supplied OWL parchment banner is the opening slide. */
+.spotlight {
+  background: #eee7d9;
+  border-bottom: 1px solid #cbb997;
+}
+.sp-viewport { background: #eee7d9; }
+.sp-slide.is-brand-banner .sp-bg { background: #eee7d9; }
+.sp-slide.is-brand-banner .sp-bg img { object-fit: contain; transform: none !important; animation: none !important; }
+.sp-slide.is-brand-banner .sp-shade,
+.sp-slide.is-brand-banner .sp-content { display: none; }
+.sp-bar {
+  background: linear-gradient(0deg, rgba(232,222,204,.97), rgba(245,239,228,.88));
+  border-top: 1px solid #cbb895;
+  backdrop-filter: blur(10px);
+}
+.sp-seg { color: #88765d; border-top-color: rgba(128,98,60,.22); }
+.sp-seg::before { background: #a8793f; box-shadow: 0 0 9px rgba(168,121,63,.28); }
+.sp-seg:hover, .sp-seg.is-active { color: #493827; }
+.sp-seg.is-active b { color: #9b6d35; }
+.sp-pause { color: #755c3e; border-top-color: rgba(128,98,60,.22); border-left-color: rgba(128,98,60,.18); }
+.sp-arrow { color: #f8f0e3; background: rgba(83,61,37,.68); border-color: rgba(245,231,209,.6); }
+.sp-arrow:hover, .sp-arrow:focus-visible { color: #fff8e9; border-color: #d9b67d; background: rgba(110,78,42,.86); }
+.sp-tag { color: #a67b43; border-color: rgba(166,123,67,.55); background: rgba(166,123,67,.09); }
+.sp-tag i { background: #a67b43; box-shadow: 0 0 8px rgba(166,123,67,.28); }
+.sp-kicker { color: #9a7550; }
+.sp-title { color: #fbf4e7; text-shadow: 0 3px 20px rgba(42,30,17,.50); }
+.sp-text { color: rgba(255,248,235,.9); }
+.sp-poster { border-color: rgba(230,209,172,.65); box-shadow: 0 24px 55px rgba(73,53,28,.28); }
+@media (min-width: 701px) { .sp-viewport { height: clamp(430px, 48vw, 700px); } }
+@media (max-width: 700px) {
+  .sp-viewport { height: 245px; }
+  .sp-slide.is-brand-banner .sp-bg img { object-fit: contain; }
+  .sp-bar { min-height: 48px; }
+}
+
+/* Site sections and headings. */
+.section, .games-section, .roadmap-section,
+.trailer-section, .comic-section, .lore-section,
+.nft-section, .log-section, .join-section, .faq-section,
+.token-section, .ai-categories, .roadmap-section {
+  color: #493d2f;
+}
+.section-heading h2, .play-header h2, .manifesto h2,
+.comic-info h3, .sp-title { color: #463728; }
+.section-heading h2 span, .play-header h2 span { color: #a87943; }
+.section-note { color: #88765d; }
+.eyebrow, .eyebrow-line, .period, .hero-stats .green,
+.scroll-mark, .bottom-right b { color: #a77a43; }
+.eyebrow-line { background: #aa7c43; }
+.hero-text, .hero-stats span { color: #77674f; }
+.hero-stats strong { color: #493a29; }
+.hero-stats > i { background: #cdbd9f; }
+.hero-grid { opacity: .24; background-image: linear-gradient(rgba(147,119,80,.12) 1px,transparent 1px), linear-gradient(90deg,rgba(147,119,80,.12) 1px,transparent 1px); }
+.hero-glow { background: radial-gradient(circle, rgba(199,164,109,.18), transparent 70%); }
+.hero-art { background: linear-gradient(180deg,#c9b28a,#9f8055 50%,#5f4934); border-left-color: rgba(137,100,57,.35); }
+.art-sun { background: linear-gradient(180deg,#e9d1a3,#b78a52 60%,#8b6840); box-shadow: 0 0 70px rgba(168,129,76,.25); }
+.city i, .city-back i, .city-front i { background: linear-gradient(90deg,#786246,#9b7b4e); border-top-color: #d8bd8a; }
+.city i:before { background: repeating-linear-gradient(0deg,#e6cf9f 0 2px,transparent 2px 13px); }
+.city-front i { background: #5a4937; border-color: #b78e57; }
+.road { background: linear-gradient(180deg,#9b805d,#5a4632); border-top-color: #d0b07b; }
+.road-lines { background: linear-gradient(#e2c58f,transparent); box-shadow: 0 0 8px rgba(206,173,116,.55); }
+.art-label span, .art-coordinate { color: #f2e4c9; }
+.art-label b { color: #f3d7a4; }
+.art-corner { border-color: #bd955e; }
+.hero-bottomline { color: #88765e; }
+
+/* Marble card surfaces, borders and calm shadows. */
+.game-card, .log-item, .faq-item, .token-box,
+.token-panel, .official, .join, .category-card,
+.aso-card, .comic-cover, .trailer-frame, .nft-card,
+.dossier, .roster-btn, .lore-prologue, .roadmap-item {
+  background-color: rgba(249, 244, 234, .91);
+  border-color: #d1c1a4;
+  box-shadow: 0 10px 30px rgba(91, 68, 39, .07);
+}
+.game-info { background: rgba(249,244,234,.94); }
+.game-info h3, .log-item h3, .join-main h3, .dossier-body h3 { color: #493a29; }
+.game-info p, .log-item p, .join-main > p, .faq-item p,
+.token-box p, .comic-blurb, .dossier-body p { color: #75654e; }
+.game-kicker, .comic-kicker { color: #95714a; }
+.status-pill { border-color: #baa27c; color: #8f6835; background: rgba(194,160,108,.08); }
+.status-pill i { background: #ad8249; }
+.game-meta { color: #8b795f; border-color: #ddcfb8; }
+.game-art { background: linear-gradient(150deg,#dac9aa,#b59b72 55%,#746047); }
+.game-sky { background: linear-gradient(180deg,rgba(240,230,211,.02),rgba(55,39,22,.55)); }
+.game-art-tag { color: #f5e7cb; }
+.game-art-title { color: #fff3dc; text-shadow: 0 2px 10px rgba(47,32,17,.48); }
+.game-art-title b { color: #e4c28a; }
+.button-primary {
+  background: linear-gradient(135deg,#b18a54 0%,#8c6638 100%);
+  color: #fff8eb;
+  box-shadow: 0 5px 15px rgba(126,88,43,.18);
+}
+.button-primary:hover { background: linear-gradient(135deg,#c39a61,#9b713e); box-shadow: 0 8px 18px rgba(126,88,43,.20); }
+.button-ghost {
+  color: #604a32;
+  background: rgba(250,246,237,.86);
+  box-shadow: inset 0 0 0 1px #cbb896;
+}
+.button-ghost::before, .button-ghost::after { border-color: #a98049; }
+.button-ghost:hover { color: #3e2f1f; background: rgba(218,199,166,.24); box-shadow: inset 0 0 0 1px #a77a43, 0 5px 15px rgba(126,88,43,.10); }
+.button-ghost:focus-visible, .button-primary:focus-visible { outline-color: #966c3c; }
+.play-icon { color: #a77a43; }
+
+/* Content blocks, NFT vault, comic and timeline. */
+.trailer-section, .comic-section { border-top-color: #d2c2a7; background: linear-gradient(145deg,rgba(245,238,224,.88),rgba(232,222,204,.65)); }
+.trailer-frame { background: #e1d5c1; box-shadow: var(--marble-shadow); }
+.comic-cover { background: #eee4d2; }
+.comic-kicker span, .ep-row.is-live .ep-num { color: #a77a43; }
+.ep-row { border-color: #d8c9b0; }
+.ep-num { color: #a08b6c; }
+.ep-body b { color: #55432f; }
+.ep-body em { color: #8c7a61; }
+.ep-row.ep-next .ep-body b { color: #8c704f; }
+a.ep-row.is-live:hover { background: rgba(174,135,79,.09); }
+.lore-section, .nft-section { background: transparent; }
+.nft-modal { background: rgba(61,45,27,.82); }
+.nft-modal-box { background: #f7f0e3; border-color: #b59668; }
+.nft-modal-head { border-bottom-color: #d5c4a7; }
+.nft-modal-head h3 { color: #91683a; }
+.nft-modal-close { color: #4a3b2a; }
+.nft-modal-status, .nft-modal-hint { color: #89785f; border-top-color: #d8c8af; }
+.nft-modal-stage model-viewer { background: radial-gradient(circle at 50% 40%,#e5dac7,#c8b797 70%); }
+.roadmap-item { background: rgba(250,246,237,.8); }
+.roadmap-state, .roadmap-icon, .roadmap-num { color: #9a7448; }
+
+/* AI categories and $OWL announcement. */
+.ai-categories { background: linear-gradient(180deg,rgba(226,213,191,.30),rgba(249,244,234,.35)); }
+.ai-intro { color: #74634c; }
+.category-card { background: linear-gradient(145deg,rgba(251,247,238,.97),rgba(234,223,204,.90) 72%); border-color: #cdb995; }
+.category-card:after { background: rgba(177,139,83,.12); }
+.category-card:hover { border-color: #a77a43; box-shadow: 0 14px 32px rgba(91,68,39,.12); }
+.category-card.is-live { border-color: #a77a43; background: linear-gradient(145deg,#f6edda,#e8d8bd 72%); }
+.category-icon { filter: none; }
+.category-card strong { color: #493826; }
+.category-card p { color: #7d6b53; }
+.category-card em, .category-card:not(.is-live) em { color: #9d713e; }
+.aso-section { border-top-color: #d1c0a2; background: radial-gradient(ellipse at 70% 25%,rgba(196,163,111,.19),transparent 55%),linear-gradient(180deg,rgba(232,221,201,.42),rgba(248,243,233,.6)); }
+.aso-card { background: linear-gradient(135deg,#fbf7ed,#e8dcc7 66%,#d8c5a6); border-color: #b99b6d; box-shadow: 0 18px 45px rgba(87,63,34,.13); }
+.aso-card:before { background: linear-gradient(180deg,#c09a61,#8b673d); }
+.aso-orbit { border-color: #b89665; color: #916b3e; box-shadow: 0 0 18px rgba(169,126,67,.15); background: #f3ead9; }
+.aso-card-head small, .aso-facts small, .aso-ca small { color: #89765a; }
+.aso-card-head h3 { color: #4a3826; }
+.aso-status { border-color: #b99a6a; background: rgba(169,126,67,.10); color: #8f6534; }
+.aso-card > p { color: #6e5b43; }
+.aso-facts { border-color: #d0bea0; }
+.aso-facts b { color: #4d3b28; }
+.aso-ca { background: rgba(255,251,242,.72); border-color: #c8b18c; }
+.aso-ca code { color: #8d6535; }
+.aso-card .aso-disclaimer { color: #85745c; }
+.token-section .section-heading h2 span { color: #a87943; }
+
+/* Newsletter, official details, forms, footer and system notices. */
+.join { background: linear-gradient(110deg,#f8f2e6,#e9ddc8); border-color: #cfbea1; }
+.official { background: rgba(250,246,237,.88); border-color: #d1c0a3; }
+.official h4, .official li a:hover { color: #987044; }
+.official li { border-bottom-color: #e0d3be; }
+.official li span { color: #89775e; }
+.official li a { color: #5c4932; }
+.waitlist input[type=email] { background: #fffaf1; border-color: #d2c0a1; color: #463828; }
+.waitlist input[type=email]:focus { border-color: #a77a43; }
+.wl-note { color: #87755b; }
+.wl-note.is-ok { color: #7d713b; }
+.wl-note.is-error { color: #a44f42; }
+.safety { border-left-color: #a87a45; background: rgba(181,137,79,.10); color: #735d43; }
+.safety b { color: #956c3f; }
+.faq-item[open] { border-color: #b39262; }
+.faq-item summary { color: #51402d; }
+.faq-item summary:after { color: #a77a43; }
+.faq-item summary:focus-visible { outline-color: #a77a43; }
+.legal-note { border-top-color: #d4c4a8; color: #8a795f; }
+footer { color: #69553c; border-top: 1px solid #cdbb9c; background: rgba(235,226,210,.72); }
+.footer-socials a { color: #806b50; }
+.footer-socials a:hover { color: #a77a43; }
+.music-player { background: rgba(248,243,233,.96); border-color: #cfbc9c; box-shadow: 0 8px 25px rgba(78,57,31,.15); }
+.music-btn { background: #f4ecde; border-color: #c7b18b; color: #98703e; }
+.music-meta b { color: #4d3b28; }
+.music-meta small { color: #89765a; }
+.wallet-modal-backdrop { background: rgba(62,45,27,.70); }
+.wallet-modal { background: #f8f2e7; border-color: #cbb48c; border-top-color: #9d713f; box-shadow: 0 12px 40px rgba(58,40,20,.24); }
+.wallet-modal h3 { color: #8f673b; }
+.wallet-option { border-color: #d1bea0; color: #54432f; }
+.wallet-option:hover, .wallet-option:focus-visible { border-color: #a77a43; }
+.wallet-modal p { color: #88765d; }
+.toast { background: #f9f3e7; color: #51402c; border-color: #cbb48d; box-shadow: 0 8px 26px rgba(76,54,30,.15); }
+
+/* Responsive header keeps the new square crest crisp at all sizes. */
+@media (max-width: 700px) {
+  .topbar { background: rgba(246,240,228,.98); }
+  .nav-links { background: #f7f1e6; border: 1px solid #d1c0a3; box-shadow: 0 12px 25px rgba(74,53,30,.14); }
+  .nav-links a { color: #594832; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sp-slide.is-brand-banner .sp-bg img { animation: none !important; transform: none !important; }
+}
+
+/* Fine-grained legacy component overrides that used fixed charcoal surfaces. */
+.nft-bg { opacity: .12; filter: sepia(.32) saturate(.72); }
+.nft-bg:after { background: linear-gradient(180deg,#eee7d9 0,rgba(238,231,217,.12) 28%,rgba(238,231,217,.12) 68%,#eee7d9 100%); }
+.nft-card { background: rgba(249,244,234,.96); }
+.nft-card:hover { border-color: #ae8955; box-shadow: 0 14px 34px rgba(91,68,39,.14); }
+.nft-frame { background: #e6dac6; border: 1px solid #d0bea0; }
+.nft-info h3 { color: #4a3927; }
+.nft-info small, .nft-note { color: #86745a; }
+.nft-price { color: #8c6337; border-color: #c4aa81; background: #f6eddd; }
+.nft-gold { border-color: #b18b55; box-shadow: 0 7px 22px rgba(143,104,54,.10); }
+.nft-gold:hover { border-color: #9d713c; box-shadow: 0 14px 32px rgba(143,104,54,.16); }
+.nft-gold .nft-price { color: #8f683b; border-color: #c4a16e; }
+.manifesto { background: linear-gradient(110deg,#faf5ea,#e8dcc6); border-color: #cdbc9e; box-shadow: var(--marble-shadow); }
+.manifesto:after { background: rgba(183,146,91,.16); }
+.manifesto h2 span { color: #927047; }
+.manifesto p { color: #74634b; }
+.manifesto-stamp { border-color: #c0a77e; color: #8f7048; }
+.manifesto-coin img { border-color: #c2a477; box-shadow: 0 8px 24px rgba(106,77,39,.17); background: #f2eadc; }
+.manifesto-coin figcaption { color: #8a6d48; }
+.lore-section { background: linear-gradient(180deg,rgba(227,214,191,.28),rgba(249,245,236,.4)); }
+.lore-prologue { background: rgba(249,244,234,.94); border-color: #d2c1a4; border-left-color: #a77a43; }
+.lore-chapter { color: #88765e; }
+.lore-chapter b { color: #9d7547; }
+.lore-prologue h3 { color: #493a29; }
+.lore-text p { color: #75644c; }
+.dossier { background: linear-gradient(135deg,#faf5e9,#e8dcc7); border-color: #cdbb9c; box-shadow: 0 12px 34px rgba(91,68,39,.09); }
+.dossier-stage { background: radial-gradient(closest-side at 50% 55%,rgba(188,157,111,.22),transparent 78%),#e7dcc9; border-color: #d1c0a4; }
+.dossier-body h3 { color: #493827; }
+.dossier-body p { color: #74634d; }
+.dossier-role { color: #8f6b42; border-color: #c8b08a; }
+.dossier-kicker, .roster-label { color: #927b5c; }
+.roster-btn { background: #f8f2e7; border-color: #d4c3a6; color: #7a674d; font-family: 'Manrope',sans-serif; }
+.roster-btn:hover { color: #4a3826; border-color: #a77a43; }
+.roster-btn[aria-selected="true"] { color: #8d673c; border-color: #ae8955; background: #ede1cb; box-shadow: 0 5px 15px rgba(138,101,54,.10); }
+.roster-btn:focus-visible, .nft-bio:focus-visible { outline-color: #a77a43; }
+.roadmap { border-color: #d1c1a5; }
+.roadmap-item h3 { color: #4b3a28; }
+.roadmap-item p { color: #79684f; }
+.toast { border-left-color: #a77a43; }
+
+/* v0.3.2: new AI STUDIO OWL banner (1584x672) shown whole, never cropped. */
+.sp-viewport:has(.sp-slide.is-brand-banner.is-active) { height: auto; aspect-ratio: 1584 / 672; max-height: 78vh; }
+.sp-slide.is-brand-banner .sp-bg { background: #2b2118; }
+.sp-slide.is-brand-banner .sp-bg img { object-fit: contain; object-position: center; width: 100%; height: 100%; }
+@media (max-width: 700px) { .sp-viewport:has(.sp-slide.is-brand-banner.is-active) { height: auto; aspect-ratio: 1584 / 672; } }
+/* $OWL coin */
+.aso-coin { width: 96px; height: 96px; flex: none; object-fit: contain; border-radius: 50%; filter: drop-shadow(0 8px 14px rgba(70,48,24,.35)); }
+@media (max-width: 560px) { .aso-coin { width: 68px; height: 68px; } }
+
+/* v0.3.3: site-wide background artwork (public/images/site-background.webp). Adjust opacity here. */
+body { position: relative; }
+body::before { content: ""; position: fixed; inset: 0; z-index: -1; pointer-events: none;
+  background: url("/images/site-background.webp") center / cover no-repeat; opacity: .3; }
+html { scroll-behavior: smooth; }
+@media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
+
+/* v0.3.4: logos without circular frames */
+.brand-mark, img.brand-mark, .manifesto-coin img {
+  border: 0 !important; border-radius: 0 !important; background: transparent !important;
+  box-shadow: none !important; transform: none !important; object-fit: contain !important;
+  filter: drop-shadow(0 4px 8px rgba(70,48,24,.28)) !important;
+}
+.manifesto-coin img { width: 190px; height: 190px; }
+
+/* v0.3.4: dark / light toggle */
+.language-switch .theme-toggle { width: auto; min-width: 0; padding: 0 9px; gap: 6px; grid-auto-flow: column; opacity: 1;
+  background: #f8f2e8; border-color: #d0bea0; color: #594832; font: 700 8px/1 'DM Mono', monospace; letter-spacing: .8px; white-space: nowrap; }
+.theme-toggle .tt-ico { font-size: 12px; }
+.theme-toggle .tt-light { display: none; }
+html[data-theme="dark"] .theme-toggle .tt-dark { display: none; }
+html[data-theme="dark"] .theme-toggle .tt-light { display: inline; }
+@media (max-width: 560px) { .theme-toggle .tt-dark, .theme-toggle .tt-light { display: none !important; } .language-switch .theme-toggle { padding: 0 7px; } }
+
+/* Dark mode: the whole Desert Marble palette is inverted, then photos/art are restored. */
+html[data-theme="dark"] { filter: invert(1) hue-rotate(180deg); background: #eee7d9; }
+html[data-theme="dark"] img, html[data-theme="dark"] video, html[data-theme="dark"] canvas,
+html[data-theme="dark"] iframe, html[data-theme="dark"] model-viewer,
+html[data-theme="dark"] .nft-bg, html[data-theme="dark"] body::before { filter: invert(1) hue-rotate(180deg) !important; }
+html[data-theme="dark"] .brand-mark, html[data-theme="dark"] .manifesto-coin img, html[data-theme="dark"] .aso-coin { filter: invert(1) hue-rotate(180deg) drop-shadow(0 4px 8px rgba(0,0,0,.4)) !important; }
+html[data-theme="dark"] body::before { opacity: .22; }
+/* Carousel keeps its original artwork and text colours in dark mode. */
+html[data-theme="dark"] .sp-viewport { filter: invert(1) hue-rotate(180deg); }
+html[data-theme="dark"] .sp-viewport img { filter: none !important; }

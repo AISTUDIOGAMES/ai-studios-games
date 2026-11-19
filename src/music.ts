@@ -16,7 +16,7 @@ const TRACKS: { title: string; file: string }[] = [
   { title: "Dune's Last Stand", file: "audio/dunes-last-stand.mp3" },
 ];
 
-const KEY = "aistudios:music";
+const KEY = "ai-studio-owl:music";
 const VOLUME = 0.35;
 
 type Saved = { muted?: boolean; index?: number; time?: number };

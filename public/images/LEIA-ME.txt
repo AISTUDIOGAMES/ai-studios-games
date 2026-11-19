@@ -12,3 +12,12 @@ Usadas pelo site (games.ts / main.ts):
 
 ATENCAO: universe.ts comenta que os sprites ficam em public/images/universe,
 mas o RPG procura em images/uni-*.webp. Confira onde os arquivos realmente estao.
+
+AI STUDIO OWL Desert Marble brand assets (v0.3.0):
+  logo-badge.webp       brasao principal fornecido pelo proprietario da marca
+  logo-full.webp        banner panoramico / assinatura completa
+  brand-desert-banner.webp banner principal do primeiro slide da home
+  owl-emblem-desert.webp copia otimizada do brasao principal
+  favicon.png           icone da aba atualizado
+  og-banner.jpg         imagem Open Graph atualizada
+  og-share.jpg          imagem de compartilhamento social atualizada

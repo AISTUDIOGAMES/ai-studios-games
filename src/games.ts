@@ -74,7 +74,7 @@ const ALL_GAMES: Game[] = [
     status: "prototype",
     kind: "external",
     url: GRIDBREAKERS_URL,
-    cover: "banner-owl.webp",
+    cover: "owl-gridbreakers-banner.webp",
     home: true,
     meta: ["⌁ IDLE AUTO-BATTLER", "◈ 8 OPERATORS", "◎ BROWSER PROTOTYPE"],
   },
