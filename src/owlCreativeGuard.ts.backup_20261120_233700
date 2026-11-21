@@ -1,0 +1,146 @@
+import { GRIDBREAKERS_KNOWLEDGE } from "./owlKnowledge";
+
+function normalize(value: string): string {
+  return value.normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase();
+}
+
+/** Analisa principalmente a descrição operacional da proposta. */
+function getFunctionalText(answer: string): string {
+  const normalized = normalize(answer);
+
+  const header = /(?:^|\n)\s*(?:funcionamento|como funciona|gameplay loop)\s*[:—-]\s*/i;
+  const match = header.exec(normalized);
+
+  let section = match
+    ? normalized.slice(match.index + match[0].length)
+    : normalized.slice(0, 1400);
+
+  const end = section.search(
+    /\n\s*(?:diferencial|impacto|balanceamento|risco|consideracoes|implementacao|observacao)\s*[:—-]/i
+  );
+
+  if (end >= 0) section = section.slice(0, end);
+
+  // Não penaliza uma simples comparação negativa com sistemas proibidos.
+  return section
+    .split(/(?<=[.!?;])\s+|\n+/)
+    .filter((sentence) =>
+      !/\b(?:nao\s+(?:utiliza|usa|inclui|depende|repete)|sem\s+(?:utilizar|usar|incluir)|diferente\s+de|ao\s+contrario\s+de|em\s+vez\s+de|evita|dispensa)\b/.test(sentence)
+    )
+    .join(" ");
+}
+
+export function validateCreativeAnswer(
+  question: string,
+  answer: string
+): string | null {
+  const q = normalize(question);
+  const a = normalize(answer);
+  const functionalText = getFunctionalText(answer);
+
+  const knowledge = normalize(GRIDBREAKERS_KNOWLEDGE)
+    .replace(/\+/g, "")
+    .replace(/,/g, ".");
+
+  // 1. Respeitar a quantidade solicitada.
+  const asksOne =
+    /\b(?:uma unica|uma so|apenas uma|somente uma)\s+(?:nova\s+)?(?:ideia|mecanica|proposta)\b/.test(q) ||
+    /\buma\s+(?:unica\s+)?mecanica\s+nova\b/.test(q) ||
+    /\buma\s+ideia\s+nova\b/.test(q);
+
+  const headings = [
+    ...a.matchAll(
+      /^\s*(?:\d+[.)]\s*)?(?:\*\*)?(?:mecanica|ideia|proposta)\s+(?:nova\s*)?(?:\d+)?\s*[:—-]/gim
+    )
+  ];
+
+  if (asksOne && headings.length > 1) {
+    return "Foi solicitada uma única ideia, mas a resposta apresentou várias propostas.";
+  }
+
+  // 2. Sistemas explicitamente proibidos.
+  if (/\b(?:nao utilize|nao use|evite|sem incluir|sem usar)\b/.test(q)) {
+    const excluded = [
+      {
+        question: /\bgacha\b/,
+        answer: /\bgacha\b|\bsummon\b|\binvoc(?:a|am|ar|acao)\s+(?:de\s+)?(?:personagens?|herois?)\b/,
+        reason: "A proposta utiliza invocação de personagens, relacionada ao sistema Gacha."
+      },
+      {
+        question: /\bdungeons?\b/,
+        answer: /\bdungeons?\b|\bmasmorras?\b/,
+        reason: "A proposta reutiliza o sistema de Dungeons."
+      },
+      {
+        question: /\bechoes?\b/,
+        answer: /\becho(?:es)?\b/,
+        reason: "A proposta reutiliza o sistema Echoes."
+      },
+      {
+        question: /\bancient tower\b/,
+        answer: /\bancient tower\b/,
+        reason: "A proposta reutiliza Ancient Tower."
+      },
+      {
+        question: /\bformacao de equipe\b|\bformacao de party\b/,
+        answer: /\bformacao de equipe\b|\bformacao de party\b|\bteam formation\b|\bparty formation\b/,
+        reason: "A proposta reutiliza a formação de equipe."
+      },
+      {
+        question: /\binvocacao de personagens\b/,
+        answer: /\binvoc(?:a|am|ar|acao)\s+(?:de\s+)?(?:personagens?|herois?)\b/,
+        reason: "A proposta reutiliza invocação de personagens."
+      }
+    ];
+
+    for (const item of excluded) {
+      if (item.question.test(q) && item.answer.test(functionalText)) {
+        return item.reason;
+      }
+    }
+  }
+
+  // 3. Sistemas e bônus já implementados.
+  const duplicateChecks = [
+    {
+      pattern: /\bbonus (?:de |do |dos )?(?:equipe|set|conjunto|colecao|equipamento)\b/,
+      reason: "Bônus de equipamentos e coleções já existem no GRIDBREAKERS."
+    },
+    {
+      pattern: /\bdificuldade (?:adaptativa|dinamica)\b|\bdynamic difficulty\b/,
+      reason: "A dificuldade adaptativa já existe no jogo."
+    }
+  ];
+
+  for (const check of duplicateChecks) {
+    if (check.pattern.test(functionalText)) return check.reason;
+  }
+
+  // 4. Não apresentar números desconhecidos como atributos oficiais.
+  const statExpressions = [
+    /([+-]?\s*\d+(?:[.,]\d+)?)\s*%\s*(atk|def|hp|spd|crit)\b/gi,
+    /\b(atk|def|hp|spd|crit)\s*(?:de|:)?\s*([+-]?\s*\d+(?:[.,]\d+)?)\s*%/gi
+  ];
+
+  for (const expression of statExpressions) {
+    for (const match of functionalText.matchAll(expression)) {
+      const value = (
+        expression === statExpressions[0] ? match[1] : match[2]
+      ).replace(/[+\s]/g, "").replace(",", ".");
+
+      const stat = expression === statExpressions[0]
+        ? match[2]
+        : match[1];
+
+      const fact = `${value}% ${stat}`;
+
+      if (!knowledge.includes(fact)) {
+        return `Valor de atributo não confirmado: ${fact.toUpperCase()}.`;
+      }
+    }
+  }
+
+  return null;
+}

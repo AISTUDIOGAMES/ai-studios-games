@@ -88,3 +88,4 @@ desktop.ini
 *.rar
 *.zip
 *.7z
+!.env.example

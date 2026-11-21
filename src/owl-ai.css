@@ -1,0 +1,66 @@
+/* OWL_AI chat widget — uses the site's theme variables, so it fits both Neon and Desert Marble. */
+.owl-ai {
+  --oa-bg: var(--panel, #10131b);
+  --oa-line: var(--line, #242833);
+  --oa-accent: var(--green, #b6ff3b);
+  --oa-violet: var(--purple, #8a72ff);
+  --oa-text: var(--ink, #e9eaf0);
+  --oa-muted: var(--muted, #8b90a0);
+  position: fixed; right: 18px; bottom: 18px; z-index: 900; font-family: inherit;
+}
+.owl-ai-fab {
+  position: relative; width: 58px; height: 58px; border-radius: 50%; cursor: pointer; display: grid; place-items: center;
+  background: var(--oa-bg); border: 1.5px solid var(--oa-accent); color: var(--oa-accent);
+  box-shadow: 0 0 18px color-mix(in srgb, var(--oa-accent) 35%, transparent), 0 8px 24px #0006;
+  transition: transform .2s, box-shadow .2s;
+}
+.owl-ai-fab:hover { transform: translateY(-2px) scale(1.05); box-shadow: 0 0 26px color-mix(in srgb, var(--oa-accent) 55%, transparent), 0 10px 28px #0007; }
+.owl-ai-fab:focus-visible, .owl-ai-close:focus-visible, .owl-ai-send:focus-visible, .owl-ai-chip:focus-visible, .owl-ai-input:focus-visible { outline: 2px solid var(--oa-accent); outline-offset: 2px; }
+.owl-ai-fab-icon { font-size: 28px; line-height: 1; }
+.owl-ai-fab-ring { position: absolute; inset: -6px; border-radius: 50%; border: 1px solid var(--oa-violet); opacity: .55; animation: owl-ai-pulse 2.6s ease-out infinite; pointer-events: none; }
+.owl-ai.open .owl-ai-fab-ring { display: none; }
+@keyframes owl-ai-pulse { 0% { transform: scale(.92); opacity: .65; } 100% { transform: scale(1.28); opacity: 0; } }
+
+.owl-ai-panel {
+  position: absolute; right: 0; bottom: 72px; width: min(380px, calc(100vw - 28px)); height: min(540px, calc(100vh - 120px));
+  display: flex; flex-direction: column; overflow: hidden; color: var(--oa-text);
+  background: var(--oa-bg); border: 1px solid var(--oa-accent); border-radius: 10px;
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--oa-violet) 35%, transparent), 0 18px 60px #0009, 0 0 30px color-mix(in srgb, var(--oa-accent) 18%, transparent);
+}
+.owl-ai-panel[hidden] { display: none; }
+.owl-ai-head { display: flex; align-items: center; gap: 10px; padding: 11px 14px; border-bottom: 1px solid var(--oa-line); background: linear-gradient(90deg, color-mix(in srgb, var(--oa-accent) 12%, transparent), color-mix(in srgb, var(--oa-violet) 14%, transparent)); }
+.owl-ai-avatar { width: 34px; height: 34px; display: grid; place-items: center; border: 1px solid var(--oa-accent); border-radius: 50%; font-size: 18px; }
+.owl-ai-heading { flex: 1; display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+.owl-ai-title { font: 800 18px/1 'Barlow Condensed', 'Cinzel', sans-serif; letter-spacing: 1.6px; color: var(--oa-accent); }
+.owl-ai-sub { font-size: 8px; letter-spacing: 1px; color: var(--oa-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.owl-ai-close { background: none; border: 0; color: var(--oa-muted); font-size: 16px; cursor: pointer; padding: 6px; }
+.owl-ai-close:hover { color: var(--oa-accent); }
+
+.owl-ai-log { flex: 1; overflow-y: auto; padding: 14px; display: flex; flex-direction: column; gap: 9px; scroll-behavior: smooth; }
+.owl-ai-msg { max-width: 88%; padding: 9px 12px; border-radius: 8px; font-size: 11px; line-height: 1.7; white-space: pre-wrap; overflow-wrap: anywhere; }
+.owl-ai-msg.bot { align-self: flex-start; background: color-mix(in srgb, var(--oa-text) 6%, transparent); border: 1px solid var(--oa-line); border-left: 2px solid var(--oa-accent); }
+.owl-ai-msg.user { align-self: flex-end; background: var(--oa-accent); color: #0b0d08; font-weight: 700; }
+html[data-theme="desert"] .owl-ai-msg.user { color: #fff; }
+.owl-ai-msg.thinking { color: var(--oa-muted); font-style: italic; animation: owl-ai-blink 1.2s ease-in-out infinite; }
+.owl-ai-msg.error { border-left-color: #ff6b6b; color: #ff8a8a; }
+@keyframes owl-ai-blink { 50% { opacity: .45; } }
+
+.owl-ai-chips { display: flex; flex-wrap: wrap; gap: 6px; padding: 0 14px 10px; }
+.owl-ai-chips[hidden] { display: none; }
+.owl-ai-chip { background: transparent; color: var(--oa-text); border: 1px solid var(--oa-line); border-radius: 999px; padding: 6px 10px; font: inherit; font-size: 9px; cursor: pointer; transition: border-color .2s, color .2s; }
+.owl-ai-chip:hover { border-color: var(--oa-accent); color: var(--oa-accent); }
+
+.owl-ai-form { display: flex; gap: 8px; padding: 10px 12px; border-top: 1px solid var(--oa-line); }
+.owl-ai-input { flex: 1; min-width: 0; height: 40px; padding: 0 12px; font: inherit; font-size: 16px; color: var(--oa-text); background: color-mix(in srgb, var(--oa-text) 5%, transparent); border: 1px solid var(--oa-line); border-radius: 6px; }
+.owl-ai-input::placeholder { color: var(--oa-muted); }
+.owl-ai-input:focus { border-color: var(--oa-accent); }
+.owl-ai-send { height: 40px; padding: 0 14px; border: 0; border-radius: 6px; background: var(--oa-accent); color: #0b0d08; font: 700 9px 'Space Mono', monospace; letter-spacing: .8px; cursor: pointer; }
+html[data-theme="desert"] .owl-ai-send { color: #fff; }
+.owl-ai-send:disabled, .owl-ai-input:disabled { opacity: .55; cursor: wait; }
+.owl-ai-note { margin: 0; padding: 0 14px 10px; font-size: 7px; line-height: 1.6; letter-spacing: .4px; color: var(--oa-muted); }
+
+@media (max-width: 560px) {
+  .owl-ai { right: 12px; bottom: 12px; }
+  .owl-ai-panel { position: fixed; left: 8px; right: 8px; bottom: 82px; width: auto; height: min(70vh, 540px); }
+}
+@media (prefers-reduced-motion: reduce) { .owl-ai-fab, .owl-ai-fab-ring, .owl-ai-msg.thinking { animation: none; transition: none; } .owl-ai-log { scroll-behavior: auto; } }

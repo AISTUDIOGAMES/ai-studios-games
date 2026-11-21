@@ -14,7 +14,9 @@ import { initComicReader } from "./comicReader";
 import { COMIC_VOLUME, COMIC_STATUS_LABEL, NEXT_VOLUME, type ComicEpisode } from "./comic";
 import { initLanguageSwitcher } from "./i18n";
 import { initThemeToggle } from "./theme";
-import "./desert-theme.css";
+import { initOwlAi } from "./owl-ai";
+import "./owl-ai.css";
+import "./neon-theme.css";
 
 /** Images live in /public/images and respect the Vite base path. */
 const img = (file: string) => `${import.meta.env.BASE_URL}images/${file}`;
@@ -265,10 +267,10 @@ document.querySelector<HTMLDivElement>("#app")!.innerHTML = `
         <a href="#ai-universe">EXPLORE</a><a href="#games">GAMES</a><a href="#lore">AI WORLD</a><a href="#trailer">VIDEO</a><a href="#about">STUDIO</a><a href="#token">${TOKEN_SYMBOL}</a><a href="#join">JOIN</a>
       </nav>
       <div class="language-switch" role="group" aria-label="Select language">
-        <button type="button" data-language="en" aria-label="English" title="English"><svg class="flag" viewBox="0 0 30 20" width="22" height="15" aria-hidden="true" focusable="false"><rect width="30" height="20" fill="#fff"/><rect y="0.00" width="30" height="1.54" fill="#b22234"/><rect y="3.08" width="30" height="1.54" fill="#b22234"/><rect y="6.15" width="30" height="1.54" fill="#b22234"/><rect y="9.23" width="30" height="1.54" fill="#b22234"/><rect y="12.31" width="30" height="1.54" fill="#b22234"/><rect y="15.38" width="30" height="1.54" fill="#b22234"/><rect y="18.46" width="30" height="1.54" fill="#b22234"/><rect width="13" height="10.8" fill="#3c3b6e"/><circle cx="2" cy="2" r=".7" fill="#fff"/><circle cx="5" cy="2" r=".7" fill="#fff"/><circle cx="8" cy="2" r=".7" fill="#fff"/><circle cx="11" cy="2" r=".7" fill="#fff"/><circle cx="2" cy="5" r=".7" fill="#fff"/><circle cx="5" cy="5" r=".7" fill="#fff"/><circle cx="8" cy="5" r=".7" fill="#fff"/><circle cx="11" cy="5" r=".7" fill="#fff"/><circle cx="2" cy="8" r=".7" fill="#fff"/><circle cx="5" cy="8" r=".7" fill="#fff"/><circle cx="8" cy="8" r=".7" fill="#fff"/><circle cx="11" cy="8" r=".7" fill="#fff"/></svg></button>
-        <button type="button" data-language="pt-BR" aria-label="Português brasileiro" title="Português"><svg class="flag" viewBox="0 0 30 20" width="22" height="15" aria-hidden="true" focusable="false"><rect width="30" height="20" fill="#009c3b"/><polygon points="15,2 27.5,10 15,18 2.5,10" fill="#ffdf00"/><circle cx="15" cy="10" r="4.4" fill="#002776"/><path d="M10.8 9.2q4.6-1.2 8.6 1.4" stroke="#fff" stroke-width=".9" fill="none"/></svg></button>
-        <button type="button" data-language="es" aria-label="Español" title="Español"><svg class="flag" viewBox="0 0 30 20" width="22" height="15" aria-hidden="true" focusable="false"><rect width="30" height="20" fill="#c60b1e"/><rect y="5" width="30" height="10" fill="#ffc400"/></svg></button>
-        <button type="button" class="theme-toggle" id="themeToggle" aria-label="Toggle dark / light mode" title="Toggle dark / light mode" aria-pressed="false"><span class="tt-ico" aria-hidden="true">◐</span><span class="tt-dark">DARK MODE</span><span class="tt-light">LIGHT MODE</span></button>
+        <button type="button" data-language="en" aria-label="English" title="English">EN</button>
+        <button type="button" data-language="pt-BR" aria-label="Português brasileiro" title="Português">🇧🇷</button>
+        <button type="button" data-language="es" aria-label="Español" title="Español">🇪🇸</button>
+        <button type="button" class="theme-toggle" id="themeToggle" aria-label="Switch theme" title="Switch theme" aria-pressed="false"><span class="tt-ico" aria-hidden="true">◐</span><span class="tt-to-desert">DESERT MODE</span><span class="tt-to-neon">NEON MODE</span></button>
       </div>
       <button class="wallet-btn" id="walletBtn"><span class="wallet-dot"></span><span id="walletLabel">CONNECT WALLET</span></button>
       <button class="menu-toggle" id="menuToggle" aria-label="Toggle navigation">☰</button>
@@ -353,6 +355,7 @@ initAnalytics();
 initGrowth();
 initLanguageSwitcher();
 initThemeToggle();
+initOwlAi();
 
 function initGrowth(): void {
   document.addEventListener("click", (e) => {

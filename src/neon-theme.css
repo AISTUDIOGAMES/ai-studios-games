@@ -1,0 +1,40 @@
+/* AI STUDIO OWL — Neon Grid theme (default).
+   Restores the original dark neon identity: lime #b6ff3b, violet #8a72ff, pink #ff4fd8 on #090b10.
+   The Desert Marble light theme (desert-theme.css) is loaded on demand when the user picks it. */
+:root,
+html[data-theme="neon"] {
+  color-scheme: dark;
+  font-family: 'Space Mono', monospace;
+  color: #e9eaf0;
+  background: #090b10;
+  --bg: #090b10;
+  --panel: #10131b;
+  --line: #242833;
+  --green: #b6ff3b;
+  --purple: #8a72ff;
+  --pink: #ff4fd8;
+  --muted: #8b90a0;
+}
+html[data-theme="neon"] body { background: var(--bg); }
+
+/* ---- Theme toggle (shared by both themes) ---- */
+.language-switch .theme-toggle {
+  width: auto; min-width: 0; padding: 0 9px; gap: 6px; grid-auto-flow: column; opacity: 1;
+  background: #0d1421; border: 1px solid #303b52; color: #e9eaf0; border-radius: 5px;
+  font: 700 8px/1 'Space Mono', monospace; letter-spacing: .8px; white-space: nowrap; cursor: pointer;
+}
+.language-switch .theme-toggle:hover { border-color: var(--green); box-shadow: 0 0 12px #b6ff3b22; }
+.theme-toggle .tt-ico { font-size: 12px; color: var(--green); }
+/* The button names the theme you will switch TO. */
+.theme-toggle .tt-to-neon { display: none; }
+html[data-theme="desert"] .theme-toggle .tt-to-neon { display: inline; }
+html[data-theme="desert"] .theme-toggle .tt-to-desert { display: none; }
+@media (max-width: 560px) {
+  .theme-toggle .tt-to-neon, .theme-toggle .tt-to-desert { display: none !important; }
+  .language-switch .theme-toggle { padding: 0 7px; }
+}
+
+/* ---- Neon glow details ---- */
+html[data-theme="neon"] .brand-mark { filter: drop-shadow(0 0 8px #b6ff3b35); }
+html[data-theme="neon"] h1 .outlined { text-shadow: 0 0 24px #b6ff3b1a; }
+html[data-theme="neon"] .button-primary:hover { box-shadow: 0 0 24px #b6ff3b28; }
